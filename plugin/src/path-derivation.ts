@@ -5,10 +5,11 @@ export function unscopedName(packageName: string): string {
 	return packageName.startsWith("@") ? (packageName.split("/")[1] ?? packageName) : packageName;
 }
 
-/** Normalize baseRoute: ensure leading slash, strip trailing slash */
+/** Normalize baseRoute: ensure leading slash, strip trailing slash, preserve root "/" */
 export function normalizeBaseRoute(route: string): string {
 	const withSlash = route.startsWith("/") ? route : `/${route}`;
-	return withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash;
+	const stripped = withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash;
+	return stripped === "" ? "/" : stripped;
 }
 
 export interface PathDerivationInput {

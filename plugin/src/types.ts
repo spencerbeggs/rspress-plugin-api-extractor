@@ -550,13 +550,21 @@ export interface MultiApiConfig {
 
 	/**
 	 * Path to tsconfig.json OR async function returning compiler options.
-	 * Overrides global tsconfig.
+	 *
+	 * @remarks
+	 * In multi-API mode, the Twoslash TypeScript environment is shared across
+	 * all APIs. Only the first API entry's tsconfig is used. If you need
+	 * different compiler options per package, use separate site configurations.
 	 */
 	tsconfig?: PathLike | (() => Promise<TypeResolutionCompilerOptions>);
 
 	/**
 	 * Direct compiler options for Twoslash.
 	 * Merged on top of tsconfig if both are provided.
+	 *
+	 * @remarks
+	 * Same shared-environment limitation as `tsconfig` — only the first API
+	 * entry's compilerOptions are used in multi-API mode.
 	 */
 	compilerOptions?: TypeResolutionCompilerOptions;
 }

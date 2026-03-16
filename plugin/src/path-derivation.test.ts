@@ -20,6 +20,12 @@ describe("normalizeBaseRoute", () => {
 	it("preserves clean routes", () => {
 		expect(normalizeBaseRoute("/foobar")).toBe("/foobar");
 	});
+	it("preserves root route", () => {
+		expect(normalizeBaseRoute("/")).toBe("/");
+	});
+	it("handles empty string input", () => {
+		expect(normalizeBaseRoute("")).toBe("/");
+	});
 });
 
 describe("deriveOutputPaths", () => {

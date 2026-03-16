@@ -1289,7 +1289,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// Capture RSPress root directory for OG image auto-detection
 	let docsRoot: string | undefined;
 
-	// Performance manager (initialized in config hook)
+	// Performance manager (initialized in beforeBuild)
 	let perfManager: PerformanceManager | undefined;
 
 	// Build start time for duration tracking
@@ -1310,8 +1310,14 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Clear VFS registry from previous builds to avoid stale configs
 			VfsRegistry.clear();
 
+			// Initialize performance manager
+			const performanceThresholds = options.performance?.thresholds;
+			const { PerformanceManager: PerfMgr } = await import("./performance-manager.js");
+			perfManager = PerfMgr.getInstance(debugLogger, performanceThresholds);
+			debugLogger.debug(`PerformanceManager initialized (thresholds: ${performanceThresholds ? "custom" : "default"})`);
+
 			// Mark start of build for performance tracking
-			perfManager?.mark("build.start");
+			perfManager.mark("build.start");
 
 			debugLogger.verbose("🚀 RSPress API Extractor Plugin");
 			if (options.logFile) {
@@ -1995,13 +2001,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				}
 			}
 
-			// Initialize performance manager with custom thresholds
-			const performanceThresholds = options.performance?.thresholds;
-			perfManager = require("./performance-manager.js").PerformanceManager.getInstance(
-				debugLogger,
-				performanceThresholds,
-			);
-			debugLogger.debug(`PerformanceManager initialized (thresholds: ${performanceThresholds ? "custom" : "default"})`);
+			// Performance manager is initialized in beforeBuild (async context)
 
 			// Inject Shiki transformer for cross-linking type references in code blocks
 			const updatedConfig = { ..._config };

@@ -27,6 +27,9 @@ export function validatePluginOptions(
 	}
 
 	if (apis) {
+		if (apis.length === 0) {
+			throw new Error("'apis' must contain at least one API configuration.");
+		}
 		if (multiVersion) {
 			throw new Error(
 				"multiVersion is not supported with 'apis' (multi-API mode). Use 'api' (single-API mode) for versioned documentation.",

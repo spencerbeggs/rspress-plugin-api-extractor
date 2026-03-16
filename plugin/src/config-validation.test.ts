@@ -37,6 +37,10 @@ describe("validatePluginOptions", () => {
 		).toThrow("required when multiVersion");
 	});
 
+	it("errors when apis array is empty", () => {
+		expect(() => validatePluginOptions({ apis: [] }, {})).toThrow("at least one");
+	});
+
 	it("errors when version keys don't match multiVersion.versions", () => {
 		expect(() =>
 			validatePluginOptions(
