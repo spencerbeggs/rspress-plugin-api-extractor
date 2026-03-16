@@ -1,13 +1,13 @@
 {
-	"name": "example-module",
+	"name": "kitchensink",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Example ECMA module package",
+	"description": "Kitchen sink example module demonstrating all API Extractor features",
 	"keywords": [],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
-		"directory": "example-module"
+		"directory": "modules/kitchensink"
 	},
 	"license": "MIT",
 	"author": {
