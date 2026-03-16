@@ -1,73 +1,113 @@
-# pnpm-module-template
+# rspress-plugin-api-extractor
 
-A personal template repository by
-[C. Spencer Beggs](https://spencerbeg.gs) for developing and publishing Node.js
-modules to [npm](https://www.npmjs.com/) and
-[GitHub Packages](https://github.com/features/packages).
+[![npm version](https://img.shields.io/npm/v/rspress-plugin-api-extractor)](https://www.npmjs.com/package/rspress-plugin-api-extractor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-You're welcome to clone or fork this template for your own use.
+An [RSPress](https://rspress.dev/) plugin that generates interactive API
+documentation from
+[Microsoft API Extractor](https://api-extractor.com/) models. Point it at your
+`.api.json` files and get a full documentation site with syntax-highlighted
+signatures, Twoslash hover tooltips, cross-linked type references, and
+copy-paste code examples.
 
-## What's Included
+## Features
 
-- **Build pipeline** — Dual-output builds (development + production) via
-  [Rslib](https://rslib.rs/) with automatic `package.json` transformation for
-  publishing
-- **Code quality** — [Biome](https://biomejs.dev/) for linting and formatting,
-  with git hooks for pre-commit checks and commit message validation
-- **Testing** — [Vitest](https://vitest.dev/) with v8 coverage
-- **Versioning** — [Changesets](https://github.com/changesets/changesets) for
-  version management and changelog generation
-- **CI/CD** — GitHub Actions for automated testing, building, and publishing
-  with provenance attestation
-- **TypeScript** — Strict mode, composite builds, ESM-first with `.js` import
-  extensions
+- Generate complete API docs from `.api.json` models (classes, interfaces,
+  functions, types, enums, variables, namespaces)
+- Interactive Twoslash tooltips with type information on hover
+- Automatic cross-linking between type references across your API
+- Single-package sites with RSPress multiVersion and i18n support
+- Multi-package documentation portals
+- SSG-compatible React components that output clean markdown for LLM
+  consumption
+
+## Installation
+
+```bash
+npm install rspress-plugin-api-extractor
+```
 
 ## Quick Start
 
-1. Click **"Use this template"** on GitHub (or clone the repo directly)
-2. Update `package.json` with your package name, repository URL, and homepage
-3. Update the `repo` field in `.changeset/config.json`
-4. Replace the placeholder code in `src/` with your own
-5. Install dependencies:
+```typescript
+// rspress.config.ts
+import { defineConfig } from "@rspress/core";
+import { ApiExtractorPlugin } from "rspress-plugin-api-extractor";
 
-   ```bash
-   pnpm install
-   ```
-
-6. Start developing:
-
-   ```bash
-   pnpm run test:watch    # Run tests in watch mode
-   pnpm run lint:fix      # Auto-fix lint issues
-   pnpm run build         # Build dev + prod outputs
-   ```
-
-## Project Structure
-
-```text
-src/               Source code and tests
-lib/configs/       Shared tool configurations (commitlint, lint-staged, markdownlint)
-dist/dev/          Development build output
-dist/npm/          Production build output (published to registries)
-.github/workflows/ CI/CD workflows
-.changeset/        Changeset configuration
+export default defineConfig({
+  plugins: [
+    ApiExtractorPlugin({
+      api: {
+        packageName: "my-library",
+        model: "./api/my-library.api.json",
+      },
+    }),
+  ],
+});
 ```
 
-## Publishing
+The plugin reads your `.api.json` model and generates MDX pages under your
+docs directory, organized by category (classes, interfaces, functions, etc.)
+with full navigation metadata.
 
-Packages are published to both npm and GitHub Packages with provenance
-attestation. The build pipeline automatically transforms `package.json` for
-publishing — the source file stays `"private": true` and the builder handles the
-rest.
+## Configuration Modes
 
-See the [Changesets documentation](https://github.com/changesets/changesets) for
-how versioning and releases work.
+### Single API (`api`)
 
-## Claude Code
+For single-package documentation sites. Supports RSPress multiVersion and
+i18n:
 
-This template includes configuration for
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code). See
-[CLAUDE.md](CLAUDE.md) for details on the design-first development workflow.
+```typescript
+ApiExtractorPlugin({
+  api: {
+    packageName: "my-library",
+    model: "./api/my-library.api.json",
+    packageJson: "./dist/package.json",
+    tsconfig: "./tsconfig.json",
+  },
+})
+```
+
+### Multi API (`apis`)
+
+For documentation portals hosting multiple packages:
+
+```typescript
+ApiExtractorPlugin({
+  apis: [
+    { packageName: "core", model: "./api/core.api.json" },
+    { packageName: "utils", model: "./api/utils.api.json" },
+  ],
+})
+```
+
+## Companion Build Tool
+
+This plugin is designed to work with
+[@savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder),
+which generates `.api.json` models as part of the TypeScript build pipeline
+via `apiModel: true`.
+
+## Repository Structure
+
+This is a monorepo with the plugin source and test infrastructure:
+
+| Directory | Purpose |
+| --------- | ------- |
+| `plugin/` | The published `rspress-plugin-api-extractor` package |
+| `modules/` | Example TypeScript modules for testing |
+| `sites/` | RSPress test sites covering different configurations |
+
+## Development
+
+```bash
+pnpm install
+pnpm run build        # Build modules + plugin
+pnpm dev              # Start the basic test site with HMR
+pnpm dev:versioned    # Start the versioned test site
+pnpm dev:i18n         # Start the i18n test site
+pnpm dev:multi        # Start the multi-API portal test site
+```
 
 ## License
 
