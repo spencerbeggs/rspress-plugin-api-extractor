@@ -20,11 +20,11 @@ export default defineConfig({
 		ApiExtractorPlugin({
 			logLevel: "debug",
 			api: {
-				name: "Example Module",
-				packageName: "example-module",
-				model: path.join(__dirname, "../example-module/dist/npm/example-module.api.json"),
-				packageJson: path.join(__dirname, "../example-module/dist/npm/package.json"),
-				tsconfig: path.join(__dirname, "../example-module/tsconfig.json"),
+				name: "Kitchen Sink",
+				packageName: "kitchensink",
+				model: path.join(__dirname, "../../modules/kitchensink/dist/npm/kitchensink.api.json"),
+				packageJson: path.join(__dirname, "../../modules/kitchensink/dist/npm/package.json"),
+				tsconfig: path.join(__dirname, "../../modules/kitchensink/tsconfig.json"),
 				apiFolder: "api",
 				theme: {
 					light: "github-light-default",

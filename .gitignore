@@ -30,9 +30,9 @@ pnpm-release.json
 !.env.*.example
 
 # Plugin build artifacts
-docs-site/docs/example-module/
-docs-site/docs/api/
-docs-site/.rspress/
+sites/*/docs/api/
+sites/*/docs/*/api/
+sites/*/.rspress/
 api-docs-snapshot.db
 
 # Claude AI files
