@@ -301,7 +301,8 @@ async function generateApiDocs(
 	const crossLinkData = markdownCrossLinker.initialize(items, baseRoute, categories);
 	// API scope is derived from baseRoute to match file path inference in remark plugins
 	// e.g., baseRoute "/example-module" -> scope "example-module"
-	const apiScope = baseRoute.replace(/^\//, "").split("/")[0];
+	// When baseRoute is "/" (single-API mode), fall back to packageName to ensure a non-empty scope
+	const apiScope = baseRoute.replace(/^\//, "").split("/")[0] || packageName;
 
 	// Extract namespace members and add their routes to cross-link data
 	const namespaceMembers = ApiParser.extractNamespaceMembers(apiPackage);
