@@ -21,12 +21,12 @@ export default defineConfig({
 	},
 	plugins: [
 		ApiExtractorPlugin({
-			logLevel: "debug",
+			logLevel: "info",
 			api: {
 				packageName: "kitchensink",
-				model: path.join(__dirname, "../../modules/kitchensink/dist/npm/kitchensink.api.json"),
-				packageJson: path.join(__dirname, "../../modules/kitchensink/dist/npm/package.json"),
-				tsconfig: path.join(__dirname, "../../modules/kitchensink/tsconfig.json"),
+				model: path.join(__dirname, "lib/models/kitchensink/kitchensink.api.json"),
+				packageJson: path.join(__dirname, "lib/models/kitchensink/package.json"),
+				tsconfig: path.join(__dirname, "lib/models/kitchensink/tsconfig.json"),
 				theme: { light: "github-light-default", dark: "github-dark-default" },
 			},
 		}),

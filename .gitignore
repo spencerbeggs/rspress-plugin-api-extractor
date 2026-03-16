@@ -30,6 +30,7 @@ pnpm-release.json
 !.env.*.example
 
 # Plugin build artifacts
+sites/*/lib/models/
 sites/*/docs/api/
 sites/*/docs/*/api/
 sites/*/.rspress/

@@ -20,17 +20,17 @@ export default defineConfig({
 	},
 	plugins: [
 		ApiExtractorPlugin({
-			logLevel: "debug",
+			logLevel: "info",
 			api: {
 				packageName: "versioned-module",
 				versions: {
 					v1: {
-						model: path.join(__dirname, "../../modules/versioned-v1/dist/npm/versioned-v1.api.json"),
-						packageJson: path.join(__dirname, "../../modules/versioned-v1/dist/npm/package.json"),
+						model: path.join(__dirname, "lib/models/versioned-v1/versioned-v1.api.json"),
+						packageJson: path.join(__dirname, "lib/models/versioned-v1/package.json"),
 					},
 					v2: {
-						model: path.join(__dirname, "../../modules/versioned-v2/dist/npm/versioned-v2.api.json"),
-						packageJson: path.join(__dirname, "../../modules/versioned-v2/dist/npm/package.json"),
+						model: path.join(__dirname, "lib/models/versioned-v2/versioned-v2.api.json"),
+						packageJson: path.join(__dirname, "lib/models/versioned-v2/package.json"),
 					},
 				},
 				theme: { light: "github-light-default", dark: "github-dark-default" },
