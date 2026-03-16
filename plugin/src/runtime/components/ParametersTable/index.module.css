@@ -1,0 +1,116 @@
+/**
+ * Parameters Table styles
+ * Displays function/method parameters with name, type, and description
+ */
+
+.table {
+	position: relative;
+	margin: 0;
+	border: 1px solid var(--api-color-border);
+	border-top: none;
+	border-radius: 0 0 var(--api-border-radius) var(--api-border-radius);
+	overflow: hidden;
+}
+
+html.rp-dark .table {
+	border-color: var(--api-color-border);
+}
+
+.scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.table table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 0;
+	font-size: var(--api-font-size-base);
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.table thead {
+	background-color: var(--api-color-bg);
+	border-bottom: 1px solid var(--api-color-border);
+}
+
+.table th {
+	padding: var(--api-spacing-md) var(--api-spacing-lg);
+	text-align: left;
+	font-weight: 600;
+	color: var(--api-color-text);
+	white-space: nowrap;
+}
+
+.table th:first-child {
+	width: 20%;
+	min-width: 120px;
+}
+
+.table th:nth-child(2) {
+	width: 30%;
+	min-width: 150px;
+}
+
+.table th:last-child {
+	width: 50%;
+}
+
+.table td {
+	padding: var(--api-spacing-md) var(--api-spacing-lg);
+	border-top: 1px solid var(--api-color-border);
+	vertical-align: top;
+}
+
+.table td:first-child {
+	width: 20%;
+	min-width: 120px;
+}
+
+.table td:nth-child(2) {
+	width: 30%;
+	min-width: 150px;
+}
+
+.table td:last-child {
+	width: 50%;
+}
+
+.table td code,
+.table th code {
+	font-size: var(--api-font-size-sm);
+	padding: 0.125rem 0.375rem;
+	background-color: var(--api-color-code-bg);
+	border-radius: var(--api-border-radius-sm);
+}
+
+/* Override default paragraph/list margins in description cells */
+.table td:last-child p:first-child {
+	margin-top: 0;
+}
+
+.table td:last-child p:last-child,
+.table td:last-child ul:last-child,
+.table td:last-child ol:last-child {
+	margin-bottom: 0;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+	.table td,
+	.table th {
+		padding: var(--api-spacing-sm) var(--api-spacing-md);
+		font-size: var(--api-font-size-sm);
+	}
+
+	.table td:first-child,
+	.table th:first-child {
+		min-width: 100px;
+	}
+
+	.table td:nth-child(2),
+	.table th:nth-child(2) {
+		min-width: 120px;
+	}
+}

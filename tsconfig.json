@@ -1,3 +1,10 @@
 {
-	"extends": ["@savvy-web/rslib-builder/tsconfig/ecma/lib.json"]
+	"$schema": "https://json.schemastore.org/tsconfig.json",
+	"files": [],
+	"references": [
+		{ "path": "plugin" },
+		{ "path": "modules/kitchensink" },
+		{ "path": "modules/versioned-v1" },
+		{ "path": "modules/versioned-v2" }
+	]
 }

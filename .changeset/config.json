@@ -3,14 +3,14 @@
 	"changelog": [
 		"@savvy-web/changesets/changelog",
 		{
-			"repo": "spencerbeggs/pnpm-module-template"
+			"repo": "spencerbeggs/rspress-plugin-api-extractor"
 		}
 	],
 	"commit": false,
 	"access": "restricted",
 	"baseBranch": "main",
 	"updateInternalDependencies": "patch",
-	"ignore": [],
+	"ignore": ["versioned-v1", "versioned-v2", "kitchensink", "basic", "versioned", "i18n", "multi"],
 	"privatePackages": {
 		"tag": true,
 		"version": true

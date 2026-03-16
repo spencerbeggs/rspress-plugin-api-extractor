@@ -1,0 +1,37 @@
+{
+	"name": "kitchensink",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Kitchen sink example module demonstrating all API Extractor features",
+	"keywords": [],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+		"directory": "modules/kitchensink"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "C. Spencer Beggs",
+		"email": "spencer@beggs.codes",
+		"url": "https://spencerbeg.gs"
+	},
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "turbo run build:dev build:prod",
+		"build:dev": "rslib build --config-loader native --env-mode dev",
+		"build:prod": "rslib build --config-loader native --env-mode npm",
+		"types:check": "tsgo --noEmit"
+	},
+	"devDependencies": {
+		"@microsoft/api-extractor": "^7.55.2",
+		"@rslib/core": "^0.19.3",
+		"@savvy-web/rslib-builder": "^0.7.0",
+		"@types/node": "^25.1.0",
+		"@types/ws": "^8.18.1",
+		"@typescript/native-preview": "7.0.0-dev.20260128.1",
+		"vitest": "^4.0.18"
+	}
+}

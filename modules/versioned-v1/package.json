@@ -1,0 +1,34 @@
+{
+	"name": "versioned-v1",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Versioned module v1 — baseline API for version testing",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+		"directory": "modules/versioned-v1"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "C. Spencer Beggs",
+		"email": "spencer@beggs.codes",
+		"url": "https://spencerbeg.gs"
+	},
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "turbo run build:dev build:prod",
+		"build:dev": "rslib build --config-loader native --env-mode dev",
+		"build:prod": "rslib build --config-loader native --env-mode npm",
+		"types:check": "tsgo --noEmit"
+	},
+	"devDependencies": {
+		"@microsoft/api-extractor": "^7.55.2",
+		"@rslib/core": "^0.19.3",
+		"@savvy-web/rslib-builder": "^0.7.0",
+		"@types/node": "^25.1.0",
+		"@typescript/native-preview": "7.0.0-dev.20260128.1"
+	}
+}

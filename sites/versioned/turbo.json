@@ -1,0 +1,29 @@
+{
+	"$schema": "https://turborepo.com/schema.v2.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"cache": false,
+			"dependsOn": ["^build"],
+			"outputLogs": "full",
+			"outputs": ["dist/**"]
+		},
+		"dev": {
+			"cache": false,
+			"dependsOn": ["^build"],
+			"interactive": true,
+			"persistent": true
+		},
+		"preview": {
+			"cache": false,
+			"dependsOn": ["build"],
+			"persistent": true
+		},
+		"types:check": {
+			"cache": true,
+			"dependsOn": ["^build"],
+			"outputLogs": "errors-only",
+			"outputs": []
+		}
+	}
+}

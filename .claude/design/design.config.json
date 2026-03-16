@@ -1,0 +1,185 @@
+{
+	"version": "1.0.0",
+	"project": {
+		"name": "spencerbeggs/rspress-plugin-api-extractor",
+		"type": "monorepo",
+		"repository": "https://github.com/spencerbeggs/rspress-plugin-api-extractor",
+		"maintainer": "C. Spencer Beggs"
+	},
+	"paths": {
+		"designDocs": ".claude/design",
+		"plans": ".claude/plans",
+		"skills": ".claude/skills",
+		"context": "CLAUDE.md",
+		"localContext": "CLAUDE.local.md"
+	},
+	"modules": {
+		"rspress-plugin-api-extractor": {
+			"path": "plugin",
+			"designDocsPath": ".claude/design/rspress-plugin-api-extractor",
+			"categories": [
+				"architecture",
+				"performance",
+				"observability",
+				"cross-linking",
+				"import-generation",
+				"source-mapping"
+			],
+			"maintainer": "Spencer Beggs",
+			"userDocs": {
+				"readme": "plugin/README.md",
+				"repoDocs": null,
+				"siteDocs": null
+			}
+		}
+	},
+	"skills": {
+		"baseNamespace": "/",
+		"enabled": [
+			"design-init",
+			"design-validate",
+			"design-update",
+			"design-archive",
+			"design-link",
+			"design-search",
+			"design-compare",
+			"design-sync",
+			"design-audit",
+			"design-report",
+			"plan-validate",
+			"plan-create",
+			"plan-list",
+			"plan-complete",
+			"plan-explore",
+			"docs-generate-readme",
+			"docs-generate-repo",
+			"docs-generate-site",
+			"docs-sync",
+			"docs-review",
+			"context-review",
+			"context-update",
+			"context-split",
+			"context-validate",
+			"context-audit"
+		]
+	},
+	"quality": {
+		"designDocs": {
+			"maxLineLength": 120,
+			"requireFrontmatter": true,
+			"requireTOC": true,
+			"minSections": ["Overview", "Current State", "Rationale"]
+		},
+		"userDocs": {
+			"level1": {
+				"targetWordCount": [200, 500],
+				"maxLineLength": 80,
+				"requireSections": ["Features", "Installation", "Usage"]
+			},
+			"level2": {
+				"maxLineLength": 120,
+				"requireNavigation": true
+			},
+			"level3": {
+				"framework": "rspress",
+				"requireMetadata": true,
+				"requireCodeExamples": true
+			}
+		},
+		"context": {
+			"rootMaxLines": 500,
+			"childMaxLines": 300,
+			"requireDesignDocPointers": true
+		},
+		"plans": {
+			"maxLineLength": 120,
+			"requireFrontmatter": true,
+			"requiredFields": ["name", "title", "created", "status", "progress"],
+			"validStatuses": ["ready", "in-progress", "blocked", "completed", "abandoned"],
+			"progressRange": [0, 100],
+			"stalenessThresholdDays": 30,
+			"archiveAfterDays": 30
+		}
+	},
+	"integration": {
+		"ci": {
+			"enabled": true,
+			"validateOnPR": true,
+			"syncOnMerge": false
+		},
+		"git": {
+			"trackDesignDocs": true,
+			"requireReviewForChanges": false
+		},
+		"plans": {
+			"enabled": true,
+			"bidirectionalLinking": true,
+			"autoSyncProgress": false,
+			"validateOnCommit": true,
+			"cacheMetadata": true,
+			"cacheTTL": 300
+		}
+	},
+	"subagents": {
+		"context-doc-agent": {
+			"enabled": true,
+			"description": "Maintain lean, effective CLAUDE.md files for AI agent context",
+			"skills": ["context-validate", "context-audit", "context-review", "context-update", "context-split"],
+			"tools": ["Read", "Grep", "Glob", "Bash"],
+			"file": ".claude/agents/context-doc-agent.md"
+		},
+		"design-doc-agent": {
+			"enabled": true,
+			"description": "Maintain internal design documentation and implementation plans",
+			"skills": [
+				"design-validate",
+				"design-init",
+				"design-update",
+				"design-sync",
+				"design-prune",
+				"design-review",
+				"design-audit",
+				"design-search",
+				"design-index",
+				"design-export",
+				"design-compare",
+				"design-link",
+				"design-report",
+				"design-archive",
+				"design-config",
+				"plan-validate",
+				"plan-create",
+				"plan-list",
+				"plan-complete",
+				"plan-explore"
+			],
+			"tools": ["Read", "Grep", "Glob", "Edit", "Write", "Bash"],
+			"file": ".claude/agents/design-doc-agent.md"
+		},
+		"rspress-doc-agent": {
+			"enabled": true,
+			"description": "Write and maintain RSPress 2.0 documentation sites",
+			"skills": [
+				"rspress-page",
+				"rspress-nav",
+				"rspress-frontmatter",
+				"rspress-components",
+				"rspress-api-docs",
+				"rspress-examples",
+				"rspress-guide",
+				"rspress-navigation",
+				"rspress-review",
+				"rspress-sync"
+			],
+			"tools": ["Read", "Grep", "Glob", "Edit", "Write", "Bash"],
+			"file": ".claude/agents/rspress-doc-agent.md"
+		},
+		"docs-gen-agent": {
+			"enabled": true,
+			"description": "Generate user-facing documentation from design docs",
+			"skills": ["docs-generate-readme", "docs-generate-repo", "docs-generate-site", "docs-sync", "docs-review"],
+			"tools": ["Read", "Grep", "Glob", "Edit", "Write"],
+			"file": ".claude/agents/docs-gen-agent.md"
+		}
+	}
+}
