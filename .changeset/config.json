@@ -10,7 +10,7 @@
 	"access": "restricted",
 	"baseBranch": "main",
 	"updateInternalDependencies": "patch",
-	"ignore": [],
+	"ignore": ["versioned-v1", "versioned-v2", "kitchensink", "basic", "versioned", "i18n", "multi"],
 	"privatePackages": {
 		"tag": true,
 		"version": true
