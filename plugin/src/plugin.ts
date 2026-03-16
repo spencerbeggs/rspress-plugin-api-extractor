@@ -23,6 +23,7 @@ import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
 import { CategoryResolver } from "./category-resolver.js";
 import { CodeBlockStatsCollector } from "./code-block-stats.js";
+import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
 import { FileGenerationStatsCollector } from "./file-generation-stats.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
@@ -42,6 +43,7 @@ import {
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { ApiModelLoader } from "./model-loader.js";
 import { OpenGraphResolver } from "./og-resolver.js";
+import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import type { PerformanceManager } from "./performance-manager.js";
 import { PrettierErrorStatsCollector } from "./prettier-error-stats.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
@@ -58,17 +60,19 @@ import type {
 	ExternalPackageSpec,
 	LlmsPluginOptions,
 	LogLevel,
+	MultiApiConfig,
 	OpenGraphImageConfig,
 	PackageJson,
+	SingleApiConfig,
 	SourceConfig,
 	TypeResolutionCompilerOptions,
+	VersionConfig,
 } from "./types.js";
 import {
 	DEFAULT_CATEGORIES,
 	extractAutoDetectedPackages,
-	isVersionedApiModel,
+	isVersionConfig,
 	mergeLlmsPluginConfig,
-	normalizeApis,
 	validateExternalPackages,
 } from "./types.js";
 import { resolveTypeScriptConfig } from "./typescript-config.js";
@@ -93,27 +97,6 @@ function normalizeMarkdownSpacing(content: string): string {
 			// Remove blank lines after ## headings before content
 			.replace(/^(#{2}\s+.+?)\n\n+/gm, "$1\n\n")
 	);
-}
-
-/**
- * Compute the output directory path from docsDir and apiFolder
- */
-function computeOutputDir(docsDir: string, apiFolder?: string | null): string {
-	const folder = apiFolder ?? "api";
-	return folder ? path.join(docsDir, folder) : docsDir;
-}
-
-/**
- * Compute the full route path from baseRoute and apiFolder
- */
-function computeRouteBase(baseRoute: string, apiFolder?: string | null): string {
-	const folder = apiFolder ?? "api";
-	// Ensure baseRoute has leading slash
-	const normalizedBase = baseRoute.startsWith("/") ? baseRoute : `/${baseRoute}`;
-	// Ensure baseRoute doesn't have trailing slash
-	const cleanBase = normalizedBase.endsWith("/") ? normalizedBase.slice(0, -1) : normalizedBase;
-
-	return folder ? `${cleanBase}/${folder}` : cleanBase;
 }
 
 /**
@@ -1357,12 +1340,16 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Clear file context map for this build
 			fileContextMap.clear();
 
-			// Normalize APIs
-			const apis = normalizeApis(options.apis);
+			// Read RSPress config for multiVersion
+			const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } }).multiVersion;
+			const rspressRoot = docsRoot || process.cwd();
+
+			// Count APIs for build start event
+			const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
 
 			// Emit build start event (we'll update externalPackageCount after collecting them)
 			debugLogger.buildStart({
-				apiCount: apis.length,
+				apiCount,
 				externalPackageCount: 0, // Will be updated in externalPackagesLoaded event
 			});
 
@@ -1375,7 +1362,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 			// Collect virtual file systems for all APIs to enable Twoslash
 			combinedVfs = new Map<string, string>();
-			// TEMPORARILY DISABLED: const packageNames = new Set<string>();
 
 			// First, collect all API data and VFS before generating docs
 			const apiConfigs: Array<{
@@ -1398,206 +1384,281 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Collect all external packages to load
 			const allExternalPackages: ExternalPackageSpec[] = [];
 
+			// Track the first API-level tsconfig/compilerOptions for TypeScript config resolution
+			let firstApiTsconfig: SingleApiConfig["tsconfig"] | MultiApiConfig["tsconfig"];
+			let firstApiCompilerOptions: SingleApiConfig["compilerOptions"] | MultiApiConfig["compilerOptions"];
+
 			try {
 				const categoryResolver = new CategoryResolver();
 				const pluginDefaults = categoryResolver.mergeCategories(DEFAULT_CATEGORIES, options.defaultCategories);
 
 				const loadTimer = debugLogger.startTimer("Loading API models");
 
-				// Load all APIs in parallel for better performance
-				const apiResults = await Promise.all(
-					apis.map(async (api) => {
-						if (isVersionedApiModel(api)) {
-							// Set API context for performance tracking
-							perfManager?.setContext({ api: api.name || api.packageName });
+				/** Helper to process a single API model (shared by single and multi modes) */
+				const processSimpleApi = async (
+					api: SingleApiConfig | MultiApiConfig,
+					model: NonNullable<SingleApiConfig["model"]> | MultiApiConfig["model"],
+					outputDir: string,
+					fullRoute: string,
+				) => {
+					// Set API context for performance tracking
+					perfManager?.setContext({ api: api.name || api.packageName });
+					perfManager?.mark("api.load.simple.start");
 
-							// Handle versioned API - load all versions in parallel
-							const versionResults = await Promise.all(
-								Object.entries(api.versions).map(async ([version, versionValue]) => {
-									// Set version context for performance tracking
-									perfManager?.setContext({ version });
-									perfManager?.mark(`api.load.${version}.start`);
+					const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(model);
 
-									const {
-										apiPackage,
-										packageJson: versionPackageJson,
-										categories: versionCategories,
-										source: versionSource,
-										externalPackages: versionExternalPackages,
-										autoDetectDependencies: versionAutoDetectDependencies,
-										llmsPlugin: versionLlms,
-										ogImage: versionOgImage,
-									} = await ApiModelLoader.loadVersionModel(versionValue);
+					perfManager?.mark("api.load.simple.end");
+					perfManager?.measure("api.load", "api.load.simple.start", "api.load.simple.end");
+					perfManager?.increment("api.simple.loaded");
+					const resolvedCategories = categoryResolver.resolveCategoryConfig(pluginDefaults, api.categories);
+					const resolvedSource = categoryResolver.resolveSourceConfig(api.source, loaderSource);
+					const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin);
 
-									perfManager?.mark(`api.load.${version}.end`);
-									perfManager?.measure("api.load", `api.load.${version}.start`, `api.load.${version}.end`);
-									perfManager?.increment("api.versions.loaded");
-									const resolvedCategories = categoryResolver.resolveCategoryConfig(
-										pluginDefaults,
-										api.categories,
-										versionCategories,
-									);
-									const resolvedSource = categoryResolver.resolveSourceConfig(api.source, versionSource);
-									const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin, versionLlms);
+					// Load package.json
+					const packageJson = api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined;
 
-									// Load package.json (version config takes precedence, then package-level config)
-									const packageJson =
-										versionPackageJson ||
-										(api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined);
+					// Validate that explicit externalPackages don't conflict with peerDependencies
+					validateExternalPackages(api.externalPackages, packageJson);
 
-									// Validate that explicit externalPackages don't conflict with peerDependencies
-									validateExternalPackages(versionExternalPackages || api.externalPackages, packageJson);
+					// Collect external packages (explicit config takes precedence, then auto-detected from package.json)
+					const externalPackages =
+						api.externalPackages || extractAutoDetectedPackages(packageJson, api.autoDetectDependencies);
 
-									// Collect external packages (version config takes precedence, then package-level config, then auto-detected from package.json)
-									const autoDetectOptions = versionAutoDetectDependencies || api.autoDetectDependencies;
-									const externalPackages =
-										versionExternalPackages ||
-										api.externalPackages ||
-										extractAutoDetectedPackages(packageJson, autoDetectOptions);
+					// Track external packages
+					if (externalPackages && externalPackages.length > 0) {
+						perfManager?.increment("external.packages.total", externalPackages.length);
+					}
 
-									// Track external packages
-									if (externalPackages && externalPackages.length > 0) {
-										perfManager?.increment("external.packages.total", externalPackages.length);
-									}
+					// Generate virtual file system from API model for Twoslash
+					perfManager?.mark("vfs.generate.simple.start");
+					const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
+					const vfs = pkg.generateVfs();
+					prependImportsToVfs(vfs, apiPackage, api.packageName);
+					perfManager?.mark("vfs.generate.simple.end");
+					perfManager?.measure("vfs.generate", "vfs.generate.simple.start", "vfs.generate.simple.end");
 
-									// Generate virtual file system from API model for Twoslash
-									perfManager?.mark(`vfs.generate.${version}.start`);
-									const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
-									const vfs = pkg.generateVfs();
-									prependImportsToVfs(vfs, apiPackage, api.packageName);
-									perfManager?.mark(`vfs.generate.${version}.end`);
-									perfManager?.measure("vfs.generate", `vfs.generate.${version}.start`, `vfs.generate.${version}.end`);
+					// Resolve ogImage with cascading: API > global
+					const resolvedOgImage = api.ogImage ?? options.ogImage;
 
-									// Compute output directory: docsDir/version/[apiFolder]
-									const versionDir = path.join(api.docsDir, version);
-									const outputDir = computeOutputDir(versionDir, api.apiFolder);
+					// Normalize theme configuration
+					const resolvedTheme = normalizeThemeConfig(api.theme);
 
-									// Compute route: baseRoute/version/[apiFolder]
-									const versionRoute = `${api.baseRoute}/${version}`;
-									const fullRoute = computeRouteBase(versionRoute, api.apiFolder);
+					return {
+						vfs,
+						externalPackages: externalPackages || [],
+						config: {
+							apiPackage,
+							packageName: api.packageName,
+							apiName: api.name,
+							outputDir,
+							baseRoute: fullRoute,
+							categories: resolvedCategories,
+							source: resolvedSource,
+							packageJson,
+							llmsPlugin: resolvedLlms,
+							siteUrl: options.siteUrl,
+							ogImage: resolvedOgImage,
+							docsDir: path.dirname(outputDir),
+							docsRoot,
+							theme: resolvedTheme,
+						},
+					};
+				};
 
-									// Resolve ogImage with cascading: version > API > global
-									const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
+				if (options.api) {
+					// === Single-API mode ===
+					const api = options.api;
+					const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
 
-									// Normalize theme configuration (versioned APIs use package-level theme)
-									const resolvedTheme = normalizeThemeConfig(api.theme);
+					// Capture tsconfig for later resolution
+					firstApiTsconfig = api.tsconfig;
+					firstApiCompilerOptions = api.compilerOptions;
 
-									return {
-										vfs,
-										externalPackages: externalPackages || [],
-										config: {
-											apiPackage,
-											packageName: `${api.packageName} (${version})`,
-											apiName: api.name,
-											outputDir,
-											baseRoute: fullRoute,
-											categories: resolvedCategories,
-											source: resolvedSource,
-											packageJson,
-											llmsPlugin: resolvedLlms,
-											siteUrl: options.siteUrl,
-											ogImage: resolvedOgImage,
-											docsDir: api.docsDir,
-											docsRoot,
-											theme: resolvedTheme,
-										},
-									};
-								}),
-							);
-
-							// Clear version context after processing all versions
-							perfManager?.clearContext("version");
-
-							return versionResults;
-						}
-
-						// Handle simple API
-						// Set API context for performance tracking
+					if (rspressMultiVersion && api.versions) {
+						// Versioned single-API mode
 						perfManager?.setContext({ api: api.name || api.packageName });
-						perfManager?.mark("api.load.simple.start");
 
-						const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(api.model);
+						const versionResults = await Promise.all(
+							Object.entries(api.versions).map(async ([version, versionValue]) => {
+								// Set version context for performance tracking
+								perfManager?.setContext({ version });
+								perfManager?.mark(`api.load.${version}.start`);
 
-						perfManager?.mark("api.load.simple.end");
-						perfManager?.measure("api.load", "api.load.simple.start", "api.load.simple.end");
-						perfManager?.increment("api.simple.loaded");
-						const resolvedCategories = categoryResolver.resolveCategoryConfig(pluginDefaults, api.categories);
-						const resolvedSource = categoryResolver.resolveSourceConfig(api.source, loaderSource);
-						const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin);
+								// Normalize version value to VersionConfig
+								const versionConfig: VersionConfig = isVersionConfig(versionValue)
+									? versionValue
+									: { model: versionValue };
 
-						// Load package.json
-						const packageJson = api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined;
-
-						// Validate that explicit externalPackages don't conflict with peerDependencies
-						validateExternalPackages(api.externalPackages, packageJson);
-
-						// Collect external packages (explicit config takes precedence, then auto-detected from package.json)
-						const externalPackages =
-							api.externalPackages || extractAutoDetectedPackages(packageJson, api.autoDetectDependencies);
-
-						// Track external packages
-						if (externalPackages && externalPackages.length > 0) {
-							perfManager?.increment("external.packages.total", externalPackages.length);
-						}
-
-						// Generate virtual file system from API model for Twoslash
-						perfManager?.mark("vfs.generate.simple.start");
-						const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
-						const vfs = pkg.generateVfs();
-						prependImportsToVfs(vfs, apiPackage, api.packageName);
-						perfManager?.mark("vfs.generate.simple.end");
-						perfManager?.measure("vfs.generate", "vfs.generate.simple.start", "vfs.generate.simple.end");
-
-						// Compute output directory: docsDir/[apiFolder]
-						const outputDir = computeOutputDir(api.docsDir, api.apiFolder);
-
-						// Compute route: baseRoute/[apiFolder]
-						const fullRoute = computeRouteBase(api.baseRoute, api.apiFolder);
-
-						// Resolve ogImage with cascading: API > global
-						const resolvedOgImage = api.ogImage ?? options.ogImage;
-
-						// Normalize theme configuration
-						const resolvedTheme = normalizeThemeConfig(api.theme);
-
-						return [
-							{
-								vfs,
-								externalPackages: externalPackages || [],
-								config: {
+								const {
 									apiPackage,
-									packageName: api.packageName,
-									apiName: api.name,
-									outputDir,
-									baseRoute: fullRoute,
-									categories: resolvedCategories,
-									source: resolvedSource,
-									packageJson,
-									llmsPlugin: resolvedLlms,
-									siteUrl: options.siteUrl,
-									ogImage: resolvedOgImage,
-									docsDir: api.docsDir,
-									docsRoot,
-									theme: resolvedTheme,
-								},
-							},
-						];
-					}),
-				);
+									packageJson: versionPackageJson,
+									categories: versionCategories,
+									source: versionSource,
+									externalPackages: versionExternalPackages,
+									autoDetectDependencies: versionAutoDetectDependencies,
+									llmsPlugin: versionLlms,
+									ogImage: versionOgImage,
+								} = await ApiModelLoader.loadVersionModel(versionConfig);
 
-				// Flatten and merge results
-				for (const results of apiResults) {
-					for (const result of results) {
-						// Merge VFS
-						for (const [filepath, content] of result.vfs.entries()) {
-							combinedVfs.set(filepath, content);
+								perfManager?.mark(`api.load.${version}.end`);
+								perfManager?.measure("api.load", `api.load.${version}.start`, `api.load.${version}.end`);
+								perfManager?.increment("api.versions.loaded");
+								const resolvedCategories = categoryResolver.resolveCategoryConfig(
+									pluginDefaults,
+									api.categories,
+									versionCategories,
+								);
+								const resolvedSource = categoryResolver.resolveSourceConfig(api.source, versionSource);
+								const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin, versionLlms);
+
+								// Load package.json (version config takes precedence, then package-level config)
+								const packageJson =
+									versionPackageJson ||
+									(api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined);
+
+								// Validate that explicit externalPackages don't conflict with peerDependencies
+								validateExternalPackages(versionExternalPackages || api.externalPackages, packageJson);
+
+								// Collect external packages (version > package > auto-detected)
+								const autoDetectOptions = versionAutoDetectDependencies || api.autoDetectDependencies;
+								const externalPackages =
+									versionExternalPackages ||
+									api.externalPackages ||
+									extractAutoDetectedPackages(packageJson, autoDetectOptions);
+
+								// Track external packages
+								if (externalPackages && externalPackages.length > 0) {
+									perfManager?.increment("external.packages.total", externalPackages.length);
+								}
+
+								// Generate virtual file system from API model for Twoslash
+								perfManager?.mark(`vfs.generate.${version}.start`);
+								const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
+								const vfs = pkg.generateVfs();
+								prependImportsToVfs(vfs, apiPackage, api.packageName);
+								perfManager?.mark(`vfs.generate.${version}.end`);
+								perfManager?.measure("vfs.generate", `vfs.generate.${version}.start`, `vfs.generate.${version}.end`);
+
+								// Compute output directory and route using deriveOutputPaths for this version
+								const versionDir = path.join(rspressRoot, version);
+								const apiFolder = api.apiFolder ?? "api";
+								const outputDir = apiFolder
+									? path.join(versionDir, baseRoute.replace(/^\//, ""), apiFolder)
+									: path.join(versionDir, baseRoute.replace(/^\//, ""));
+								const fullRoute = apiFolder ? `${baseRoute}/${apiFolder}` : baseRoute;
+
+								// Resolve ogImage with cascading: version > API > global
+								const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
+
+								// Normalize theme configuration (versioned APIs use package-level theme)
+								const resolvedTheme = normalizeThemeConfig(api.theme);
+
+								return {
+									vfs,
+									externalPackages: externalPackages || [],
+									config: {
+										apiPackage,
+										packageName: `${api.packageName} (${version})`,
+										apiName: api.name,
+										outputDir,
+										baseRoute: fullRoute,
+										categories: resolvedCategories,
+										source: resolvedSource,
+										packageJson,
+										llmsPlugin: resolvedLlms,
+										siteUrl: options.siteUrl,
+										ogImage: resolvedOgImage,
+										docsDir: versionDir,
+										docsRoot,
+										theme: resolvedTheme,
+									},
+								};
+							}),
+						);
+
+						// Clear version context after processing all versions
+						perfManager?.clearContext("version");
+
+						// Flatten and merge version results
+						for (const result of versionResults) {
+							for (const [filepath, content] of result.vfs.entries()) {
+								combinedVfs.set(filepath, content);
+							}
+							if (result.externalPackages.length > 0) {
+								allExternalPackages.push(...result.externalPackages);
+							}
+							apiConfigs.push(result.config);
 						}
-						// Collect external packages
-						if (result.externalPackages.length > 0) {
-							allExternalPackages.push(...result.externalPackages);
+					} else {
+						// Non-versioned single-API mode
+						const derivedPaths = deriveOutputPaths({
+							mode: "single",
+							docsRoot: rspressRoot,
+							baseRoute,
+							apiFolder: api.apiFolder ?? "api",
+							locales: [],
+							defaultLang: undefined,
+							versions: [],
+							defaultVersion: undefined,
+						});
+
+						// For single non-versioned, use the first derived path
+						const dp = derivedPaths[0];
+						if (dp && api.model) {
+							const result = await processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
+							for (const [filepath, content] of result.vfs.entries()) {
+								combinedVfs.set(filepath, content);
+							}
+							if (result.externalPackages.length > 0) {
+								allExternalPackages.push(...result.externalPackages);
+							}
+							apiConfigs.push(result.config);
 						}
-						// Add config
-						apiConfigs.push(result.config);
+					}
+				} else if (options.apis) {
+					// === Multi-API mode ===
+					const multiResults = await Promise.all(
+						options.apis.map(async (api) => {
+							const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
+
+							// Capture tsconfig from first API if not yet set
+							if (!firstApiTsconfig && api.tsconfig) {
+								firstApiTsconfig = api.tsconfig;
+							}
+							if (!firstApiCompilerOptions && api.compilerOptions) {
+								firstApiCompilerOptions = api.compilerOptions;
+							}
+
+							const derivedPaths = deriveOutputPaths({
+								mode: "multi",
+								docsRoot: rspressRoot,
+								baseRoute,
+								apiFolder: api.apiFolder ?? "api",
+								locales: [],
+								defaultLang: undefined,
+								versions: [],
+								defaultVersion: undefined,
+							});
+
+							const dp = derivedPaths[0];
+							if (!dp) return [];
+
+							const result = await processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
+							return [result];
+						}),
+					);
+
+					// Flatten and merge results
+					for (const results of multiResults) {
+						for (const result of results) {
+							for (const [filepath, content] of result.vfs.entries()) {
+								combinedVfs.set(filepath, content);
+							}
+							if (result.externalPackages.length > 0) {
+								allExternalPackages.push(...result.externalPackages);
+							}
+							apiConfigs.push(result.config);
+						}
 					}
 				}
 
@@ -1609,16 +1670,14 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Resolve TypeScript compiler options from configuration cascade
 				// Uses project root (cwd) for resolving tsconfig.json paths
 				const projectRoot = process.cwd();
-				// Construct TypeScriptConfig from top-level fields
+				// Construct TypeScriptConfig from API-level fields (tsconfig/compilerOptions now live on api/apis)
 				const globalTsConfig =
-					options.tsconfig || options.compilerOptions
-						? { tsconfig: options.tsconfig, compilerOptions: options.compilerOptions }
+					firstApiTsconfig || firstApiCompilerOptions
+						? { tsconfig: firstApiTsconfig, compilerOptions: firstApiCompilerOptions }
 						: undefined;
 				const resolvedCompilerOptions: TypeResolutionCompilerOptions = await resolveTypeScriptConfig(
 					projectRoot,
-					globalTsConfig, // global plugin config
-					// Note: Per-API and per-version configs could be added here if needed
-					// For now, we use the global config for all packages
+					globalTsConfig,
 				);
 
 				debugLogger.verbose(
@@ -1883,20 +1942,56 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 		// Use config hook to modify RSPress configuration
 		config(_config: UserConfig): UserConfig {
+			// Validate plugin options against RSPress config
+			validatePluginOptions(options, _config as { multiVersion?: { default: string; versions: string[] } });
+
 			// Capture docs root for OG image auto-detection (resolve to absolute path)
 			if (_config.root) {
 				docsRoot = path.isAbsolute(_config.root) ? _config.root : path.resolve(process.cwd(), _config.root);
 			}
 
+			// Read RSPress config values for path derivation
+			const rspressRoot = docsRoot || process.cwd();
+			const rspressLocales = (_config as { locales?: Array<{ lang: string }> }).locales?.map((l) => l.lang) ?? [];
+			const rspressLang = (_config as { lang?: string }).lang;
+			const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } }).multiVersion;
+
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
 			// This runs before beforeBuild, so directories must exist for _meta.json processing
-			const apis = normalizeApis(options.apis);
-			for (const api of apis) {
-				const baseRoute = api.baseRoute ?? `/${api.packageName}`;
-				const docsDir = api.docsDir ?? path.join(docsRoot || process.cwd(), "docs/en", baseRoute.replace(/^\//, ""));
-				const outputDir = computeOutputDir(docsDir, api.apiFolder);
-				// Synchronously create directory (config hook is sync)
-				fs.mkdirSync(outputDir, { recursive: true });
+			if (options.api) {
+				const api = options.api;
+				const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
+				const versions = rspressMultiVersion?.versions ?? [];
+				const derivedPaths = deriveOutputPaths({
+					mode: "single",
+					docsRoot: rspressRoot,
+					baseRoute,
+					apiFolder: api.apiFolder ?? "api",
+					locales: rspressLocales,
+					defaultLang: rspressLang,
+					versions,
+					defaultVersion: rspressMultiVersion?.default,
+				});
+				for (const dp of derivedPaths) {
+					fs.mkdirSync(dp.outputDir, { recursive: true });
+				}
+			} else if (options.apis) {
+				for (const api of options.apis) {
+					const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
+					const derivedPaths = deriveOutputPaths({
+						mode: "multi",
+						docsRoot: rspressRoot,
+						baseRoute,
+						apiFolder: api.apiFolder ?? "api",
+						locales: rspressLocales,
+						defaultLang: rspressLang,
+						versions: [],
+						defaultVersion: undefined,
+					});
+					for (const dp of derivedPaths) {
+						fs.mkdirSync(dp.outputDir, { recursive: true });
+					}
+				}
 			}
 
 			// Initialize performance manager with custom thresholds
@@ -1934,8 +2029,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 			// Extract theme from the first API config for user-authored markdown files
 			// (remarkWithApi runs globally, so we use the first API's theme as default)
-			const firstApi = apis[0];
-			const remarkTheme = firstApi && "theme" in firstApi ? normalizeThemeConfig(firstApi.theme) : undefined;
+			const firstApiTheme = options.api?.theme ?? options.apis?.[0]?.theme;
+			const remarkTheme = normalizeThemeConfig(firstApiTheme);
 
 			// This enables users to write ```typescript with-api blocks in their markdown
 			// with full Twoslash support and cross-linking
