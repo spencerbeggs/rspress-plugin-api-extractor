@@ -211,6 +211,9 @@ importers:
 
   sites/basic:
     dependencies:
+      kitchensink:
+        specifier: workspace:*
+        version: link:../../modules/kitchensink
       rspress-plugin-api-extractor:
         specifier: workspace:*
         version: link:../../plugin/dist
@@ -236,6 +239,9 @@ importers:
 
   sites/i18n:
     dependencies:
+      kitchensink:
+        specifier: workspace:*
+        version: link:../../modules/kitchensink
       rspress-plugin-api-extractor:
         specifier: workspace:*
         version: link:../../plugin/dist
@@ -261,9 +267,15 @@ importers:
 
   sites/multi:
     dependencies:
+      kitchensink:
+        specifier: workspace:*
+        version: link:../../modules/kitchensink
       rspress-plugin-api-extractor:
         specifier: workspace:*
         version: link:../../plugin/dist
+      versioned-v1:
+        specifier: workspace:*
+        version: link:../../modules/versioned-v1
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.0
@@ -289,6 +301,12 @@ importers:
       rspress-plugin-api-extractor:
         specifier: workspace:*
         version: link:../../plugin/dist
+      versioned-v1:
+        specifier: workspace:*
+        version: link:../../modules/versioned-v1
+      versioned-v2:
+        specifier: workspace:*
+        version: link:../../modules/versioned-v2
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.0

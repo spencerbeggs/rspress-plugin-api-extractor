@@ -10,6 +10,7 @@
 		"types:check": "tsgo --noEmit"
 	},
 	"dependencies": {
+		"kitchensink": "workspace:*",
 		"rspress-plugin-api-extractor": "workspace:*"
 	},
 	"devDependencies": {
