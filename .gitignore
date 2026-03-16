@@ -31,6 +31,7 @@ pnpm-release.json
 
 # Plugin build artifacts
 docs-site/docs/example-module/
+docs-site/docs/api/
 docs-site/.rspress/
 api-docs-snapshot.db
 

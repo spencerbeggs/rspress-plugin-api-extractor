@@ -1468,7 +1468,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				if (options.api) {
 					// === Single-API mode ===
 					const api = options.api;
-					const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
+					const baseRoute = normalizeBaseRoute(api.baseRoute ?? "/");
 
 					// Capture tsconfig for later resolution
 					firstApiTsconfig = api.tsconfig;
@@ -1960,7 +1960,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// This runs before beforeBuild, so directories must exist for _meta.json processing
 			if (options.api) {
 				const api = options.api;
-				const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
+				const baseRoute = normalizeBaseRoute(api.baseRoute ?? "/");
 				const versions = rspressMultiVersion?.versions ?? [];
 				const derivedPaths = deriveOutputPaths({
 					mode: "single",
