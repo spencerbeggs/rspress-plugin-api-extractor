@@ -5,61 +5,58 @@ repository.
 
 ## Project Status
 
-This is a **base template repository** for developing and publishing Node.js
-modules to npm and GitHub Packages. It is not a working library — it contains
-placeholder source code in `src/` that should be replaced when starting a new
-project.
+RSPress plugin for generating API documentation from TypeScript API Extractor
+models. This is a **monorepo with three workspaces**.
 
-The design documentation system is available via Claude Code skills and agents
-but no design docs exist yet in this template.
+Design documentation lives in `.claude/design/rspress-plugin-api-extractor/`.
 
-## Getting Started (After Cloning This Template)
+## Workspaces
 
-When starting a new project from this template, follow this lifecycle:
+| Workspace | Package Name | Private | Purpose |
+| --------- | ------------ | ------- | ------- |
+| `plugin/` | `rspress-plugin-api-extractor` | Publishable | The main RSPress plugin |
+| `example-module/` | `example-module` | Yes | Test fixture — demo TypeScript module with API Extractor model generation |
+| `docs-site/` | `docs-site` | Yes | Minimal RSPress 2.0 test harness that loads the plugin with the example-module's API model |
 
-1. **Rename the package** — Update `name` in `package.json` (e.g.,
-   `@spencerbeggs/my-new-lib`), update `repository.url` and `homepage`, and
-   update the `repo` field in `.changeset/config.json`
-2. **Replace placeholder code** — Delete the example `Foo`/`Bar` code in
-   `src/index.ts` and `src/index.test.ts`
-3. **Initialize design documentation** — Run `/design-init` to create your
-   first design document describing the library's architecture
-4. **Follow the design-first workflow** — Design docs → `/plan-create` →
-   implementation. This ensures Claude understands the full architecture before
-   writing code
-5. **Implement iteratively** — Use the plan to guide implementation, updating
-   design docs as the architecture evolves
+### plugin/
+
+The publishable package. Uses a **custom rslib config with `@rslib/core`
+directly** (NOT `@savvy-web/rslib-builder`). Exports two entry points:
+
+- `.` — Main plugin (`dist/index.js`)
+- `./runtime` — React components for SSG-compatible rendering (`dist/runtime/index.js`)
+
+### example-module/
+
+Private test fixture using `@savvy-web/rslib-builder` to build a demo
+TypeScript module. Produces dual outputs:
+
+- `dist/dev/` — Development build with source maps
+- `dist/npm/` — Production build with API Extractor model
+
+### docs-site/
+
+Private minimal RSPress 2.0 site. Depends on `rspress-plugin-api-extractor`
+via `workspace:*`. Outputs static HTML to `dist/`.
 
 ## Build Pipeline
 
-This project uses
-[@savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder) to
-produce dual build outputs via [Rslib](https://rslib.rs/):
-
-| Output | Directory | Purpose |
-| ------ | --------- | ------- |
-| Development | `dist/dev/` | Local development with source maps |
-| Production | `dist/npm/` | Published to npm and GitHub Packages |
-
 ### How `private: true` Works
 
-The source `package.json` is marked `"private": true` — **this is intentional
-and correct**. During the build, rslib-builder reads the `publishConfig` field
-and transforms the output `package.json`:
+The source `package.json` in `plugin/` is marked `"private": true` — **this is
+intentional and correct**. The `publishConfig` field controls how the package is
+published. Never manually set `"private": false` in the source `package.json`.
 
-- Sets `"private": false` based on `publishConfig.access`
-- Rewrites `exports` to point at compiled output
-- Strips `devDependencies`, `scripts`, `publishConfig`, and `devEngines`
-
-The `rslib.config.ts` `transform()` callback controls what gets removed. Never
-manually set `"private": false` in the source `package.json`.
+The `example-module/` workspace uses rslib-builder which transforms
+`package.json` during build — sets `"private": false` based on
+`publishConfig.access`, rewrites `exports`, and strips dev-only fields.
 
 ### Publish Targets
 
-The `publishConfig.targets` array defines where packages are published:
+The `plugin/` package publishes to:
 
-- **GitHub Packages** — `https://npm.pkg.github.com/` (from `dist/npm/`)
-- **npm registry** — `https://registry.npmjs.org/` (from `dist/npm/`)
+- **GitHub Packages** — `https://npm.pkg.github.com/`
+- **npm registry** — `https://registry.npmjs.org/`
 
 Both targets publish with provenance attestation enabled.
 
@@ -67,21 +64,22 @@ Both targets publish with provenance attestation enabled.
 
 [Turbo](https://turbo.build/) manages build task dependencies and caching:
 
-- `types:check` runs first (no dependencies)
+- `build` tasks depend on `^build` (upstream workspaces build first)
 - `build:dev` and `build:prod` both depend on `types:check`
+- `types:check` runs first (no dependencies)
 - Cache excludes: `*.md`, `.changeset/**`, `.claude/**`, `.github/**`,
   `.husky/**`, `.vscode/**`
 - Environment pass-through: `GITHUB_ACTIONS`, `CI`
 
 ## Savvy-Web Tool References
 
-This template depends on several `@savvy-web/*` packages. These are in active
+This project depends on several `@savvy-web/*` packages. These are in active
 development — if behavior seems unexpected, explore both the GitHub docs and the
 installed source.
 
 | Package | Purpose | GitHub | Local Source |
 | ------- | ------- | ------ | ------------ |
-| rslib-builder | Build pipeline, dual output, package.json transform | [savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder) | `node_modules/@savvy-web/rslib-builder/` |
+| rslib-builder | Build pipeline for example-module (dual output, package.json transform) | [savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder) | `node_modules/@savvy-web/rslib-builder/` |
 | commitlint | Conventional commit + DCO enforcement | [savvy-web/commitlint](https://github.com/savvy-web/commitlint) | `node_modules/@savvy-web/commitlint/` |
 | changesets | Versioning, changelogs, release management | [savvy-web/changesets](https://github.com/savvy-web/changesets) | `node_modules/@savvy-web/changesets/` |
 | lint-staged | Pre-commit file linting via Biome | [savvy-web/lint-staged](https://github.com/savvy-web/lint-staged) | `node_modules/@savvy-web/lint-staged/` |
@@ -92,6 +90,9 @@ TypeScript configuration extends from rslib-builder:
 
 ## Commands
 
+Root scripts run across all workspaces. Per-workspace commands can be run with
+`pnpm --filter <workspace> run <script>`.
+
 ### Development
 
 ```bash
@@ -100,7 +101,7 @@ pnpm run lint:fix          # Auto-fix lint issues
 pnpm run lint:fix:unsafe   # Auto-fix including unsafe transforms
 pnpm run lint:md           # Check markdown with markdownlint
 pnpm run lint:md:fix       # Auto-fix markdown issues
-pnpm run typecheck         # Type-check via Turbo (runs tsgo)
+pnpm run typecheck         # Type-check all workspaces via Turbo (runs tsgo)
 pnpm run test              # Run all tests
 pnpm run test:watch        # Run tests in watch mode
 pnpm run test:coverage     # Run tests with v8 coverage report
@@ -109,16 +110,22 @@ pnpm run test:coverage     # Run tests with v8 coverage report
 ### Building
 
 ```bash
-pnpm run build             # Build dev + prod outputs via Turbo
-pnpm run build:dev         # Build development output only
-pnpm run build:prod        # Build production/npm output only
-pnpm run build:inspect     # Inspect production build config (verbose)
+pnpm run build             # Build all workspaces via Turbo
+```
+
+### Per-Workspace Examples
+
+```bash
+pnpm --filter plugin run build          # Build the plugin only
+pnpm --filter example-module run build  # Build the example module only
+pnpm --filter docs-site run dev         # Start docs site dev server
+pnpm --filter docs-site run preview     # Preview docs site production build
 ```
 
 ### Running a Specific Test
 
 ```bash
-pnpm vitest run src/index.test.ts
+pnpm vitest run plugin/src/index.test.ts
 ```
 
 ## Code Quality and Hooks
