@@ -1,0 +1,102 @@
+{
+	"name": "rspress-plugin-api-extractor",
+	"version": "0.0.1",
+	"private": true,
+	"description": "RSPress plugin for generating API documentation from TypeScript API Extractor models",
+	"keywords": ["rspress", "plugin", "api-extractor", "documentation", "typescript"],
+	"homepage": "https://github.com/spencerbeggs/rspress-plugin-api-extractor#readme",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+		"directory": "plugin"
+	},
+	"license": "MIT",
+	"author": "Spencer Beggs",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime/index.d.ts",
+			"import": "./dist/runtime/index.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"build": "rslib build",
+		"dev": "rslib build --watch",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"types:check": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"@shikijs/twoslash": "^3.21.0",
+		"async": "^3.2.6",
+		"better-sqlite3": "^12.6.2",
+		"clsx": "^2.1.1",
+		"gray-matter": "^4.0.3",
+		"hast-util-to-jsx-runtime": "^2.3.6",
+		"image-size": "^2.0.2",
+		"mdast-util-from-markdown": "^2.0.2",
+		"mdast-util-to-hast": "^13.2.1",
+		"prettier": "^3.8.1",
+		"react-markdown": "^10.1.0",
+		"semver": "^7.7.3",
+		"type-registry-effect": "^0.1.0",
+		"typescript": "^5.9.3",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@microsoft/api-extractor": "^7.55.2",
+		"@microsoft/api-extractor-model": "^7.32.2",
+		"@microsoft/tsdoc": "^0.16.0",
+		"@rsbuild/plugin-react": "^1.4.3",
+		"@rslib/core": "^0.19.3",
+		"@rspress/core": "^2.0.0",
+		"@rspress/plugin-llms": "^2.0.0",
+		"@types/async": "^3.2.25",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/hast": "^3.0.4",
+		"@types/mdast": "^4.0.4",
+		"@types/node": "^25.1.0",
+		"@types/react": "^19.2.10",
+		"@types/semver": "^7.7.1",
+		"@types/unist": "^3.0.3",
+		"@typescript/native-preview": "7.0.0-dev.20260128.1",
+		"mdast-util-mdx-jsx": "^3.2.0",
+		"react": "^19.2.4",
+		"sass": "^1.97.3",
+		"shiki": "^3.21.0",
+		"unified": "^11.0.5",
+		"unist-util-visit": "^5.1.0",
+		"vitest": "^4.0.18"
+	},
+	"peerDependencies": {
+		"@microsoft/api-extractor-model": "^7.32.2",
+		"@rspress/core": "^2.0.0",
+		"react": "^19.2.4"
+	},
+	"publishConfig": {
+		"access": "public",
+		"directory": "dist",
+		"linkDirectory": true,
+		"targets": [
+			{
+				"protocol": "npm",
+				"registry": "https://npm.pkg.github.com/",
+				"directory": "dist",
+				"access": "public",
+				"provenance": true
+			},
+			{
+				"protocol": "npm",
+				"registry": "https://registry.npmjs.org/",
+				"directory": "dist",
+				"access": "public",
+				"provenance": true
+			}
+		]
+	}
+}

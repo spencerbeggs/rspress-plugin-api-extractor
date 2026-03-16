@@ -1,0 +1,62 @@
+/**
+ * Signature Code Block CSS Module
+ * Displays syntax-highlighted code with optional wrapping
+ */
+
+.code {
+	container-type: inline-size;
+	position: relative;
+	overflow: visible;
+	border-bottom-left-radius: var(--api-border-radius);
+	border-bottom-right-radius: var(--api-border-radius);
+}
+
+.code :global(pre) {
+	max-height: none;
+	height: auto;
+	margin: 0;
+	padding: var(--api-spacing-lg);
+	overflow: visible;
+	background-color: var(--shiki-light-bg);
+	border-radius: 0 0 var(--api-border-radius) var(--api-border-radius);
+}
+
+html.rp-dark .code :global(pre) {
+	background-color: var(--shiki-dark-bg);
+}
+
+.code :global(code) {
+	display: flex;
+	background-color: unset;
+	flex-direction: column;
+	justify-content: center;
+	min-height: var(--api-font-size-md);
+	line-height: var(--api-line-height-base);
+}
+
+/* Apply syntax highlighting colors from Shiki CSS variables */
+.code :global(code span) {
+	color: var(--shiki-light);
+}
+
+html.rp-dark .code :global(code span) {
+	color: var(--shiki-dark);
+}
+
+/* Ensure blank lines are visible (empty .line spans collapse in flex layout) */
+.code :global(.line) {
+	min-height: 1lh;
+	background: transparent;
+}
+
+/* Wrapped state */
+.wrapped :global(pre) {
+	overflow: visible;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+.wrapped :global(code) {
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}

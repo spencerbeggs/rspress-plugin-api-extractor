@@ -1,0 +1,143 @@
+/**
+ * Signature Toolbar CSS Module
+ * Displays heading, summary, and action buttons
+ */
+
+.toolbar {
+	display: flex;
+	justify-content: flex-end;
+	align-items: flex-end;
+	gap: var(--api-spacing-sm);
+	padding: var(--api-spacing-sm);
+	background-color: var(--api-color-bg);
+	border-top-left-radius: var(--api-border-radius);
+	border-top-right-radius: var(--api-border-radius);
+}
+
+html.rp-dark .toolbar {
+	background-color: var(--api-color-bg);
+	border-bottom-color: var(--api-color-border);
+}
+
+/* Toolbar with member heading */
+.toolbar:has(.memberHeading) {
+	justify-content: space-between;
+}
+
+.toolbar :global(h2),
+.toolbar :global(h3) {
+	font-size: var(--api-font-size-lg);
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-left: var(--api-spacing-sm);
+	font-family: var(--rp-font-family-mono);
+}
+
+/* Left section of toolbar - heading and summary stacked */
+.toolbarLeft {
+	display: flex;
+	flex-direction: column;
+	gap: var(--api-spacing-sm);
+	flex: 1;
+}
+
+/* ===== Member Heading ===== */
+.memberHeading {
+	position: relative;
+	margin: 0;
+	font-size: var(--api-font-size-md);
+	font-weight: 600;
+	color: var(--api-color-text);
+	height: auto;
+	overflow: visible;
+	line-height: var(--api-line-height-base);
+	user-select: auto;
+}
+
+html.rp-dark .memberHeading {
+	color: var(--api-color-text);
+}
+
+/* Anchor link positioning */
+.memberHeading :global(.rp-header-anchor) {
+	position: absolute;
+	left: -1.2rem;
+	opacity: 0;
+	transition:
+		color 0.25s,
+		opacity 0.25s;
+	font-weight: 500;
+	font-size: inherit;
+	text-decoration: none;
+	color: var(--rp-c-brand);
+}
+
+.memberHeading:hover :global(.rp-header-anchor) {
+	opacity: 0.85;
+}
+
+.memberHeading :global(.rp-header-anchor):hover {
+	border-bottom: 1px solid var(--rp-c-brand);
+	opacity: 0.85;
+}
+
+/* h2 signature heading needs to match RSPress h2 styles */
+.memberHeadingH2 {
+	font-size: var(--api-font-size-lg);
+	font-weight: 600;
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-top: 0;
+	border-top: none;
+	line-height: 2rem;
+	text-transform: lowercase;
+}
+
+/* Prevent RSPress from adding ::before pseudo-element */
+.memberHeadingH2::before,
+.memberHeadingH2::after {
+	content: none;
+	display: none;
+	margin: 0;
+	padding: 0;
+}
+
+/* h2 anchor link needs more space due to larger font */
+.memberHeadingH2 :global(.rp-header-anchor) {
+	left: -1.5rem;
+	font-size: var(--api-font-size-lg);
+}
+
+/* ===== Summary Bar ===== */
+.summary {
+	padding: 0;
+	padding-left: var(--api-spacing-sm);
+	background-color: transparent;
+	border: none;
+	font-size: var(--api-font-size-md);
+	line-height: var(--api-line-height-base);
+	color: var(--api-color-text-secondary);
+}
+
+html.rp-dark .summary {
+	background-color: transparent;
+	border: none;
+	color: var(--api-color-text-secondary);
+}
+
+/* Override default paragraph/list margins in summary */
+.summary p:first-child {
+	margin-top: 0;
+}
+
+.summary p:last-child,
+.summary ul:last-child,
+.summary ol:last-child {
+	margin-bottom: 0;
+}
+
+/* Button group container */
+.buttons {
+	display: flex;
+	gap: var(--api-spacing-sm);
+}

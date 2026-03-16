@@ -1,0 +1,33 @@
+/**
+ * SignatureBlock CSS Module
+ * Wrapper styles for signature blocks
+ */
+
+.block {
+	position: relative;
+	margin: var(--api-spacing-xl) 0;
+	border-radius: var(--api-border-radius);
+	overflow: visible;
+	border: 1px solid var(--api-color-border);
+}
+
+html.rp-dark .block {
+	border-color: var(--api-color-border);
+}
+
+/* Connected to parameters table - remove bottom border radius */
+.hasParameters {
+	margin-bottom: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+/* Nested code block loses bottom border radius when connected to parameters */
+.hasParameters :global(.api-signature-code) {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.hasParameters :global(.api-signature-code) pre {
+	border-radius: 0;
+}

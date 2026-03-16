@@ -1,0 +1,43 @@
+/**
+ * Button components styles (CSS Modules)
+ * Includes Copy, Wrap, and Button Group components
+ */
+
+/* ===== Button Group Container ===== */
+.buttonGroup {
+	display: flex;
+	gap: var(--api-spacing-sm);
+}
+
+/* ===== Base Button Styles ===== */
+.button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--api-spacing-xs);
+	padding: var(--api-spacing-xs) var(--api-spacing-md);
+	font-size: var(--api-font-size-sm);
+	font-weight: 500;
+	line-height: var(--api-line-height-button);
+	color: var(--api-color-text);
+	background-color: var(--api-color-bg-secondary);
+	border: 1px solid var(--api-color-border-secondary);
+	border-radius: var(--api-border-radius);
+	cursor: pointer;
+	transition: all var(--api-transition-fast);
+}
+
+.button:hover {
+	background-color: var(--api-color-hover-bg);
+	border-color: var(--api-color-border-hover);
+}
+
+.button:active {
+	background-color: var(--api-color-active-bg);
+	transform: scale(0.98);
+}
+
+.button svg {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}

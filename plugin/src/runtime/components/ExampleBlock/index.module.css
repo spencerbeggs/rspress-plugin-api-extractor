@@ -1,0 +1,16 @@
+/**
+ * ExampleBlock CSS Module
+ * Wrapper styles for example code blocks
+ */
+
+.block {
+	position: relative;
+	margin: var(--api-spacing-xl) 0;
+	border-radius: var(--api-border-radius);
+	overflow: visible;
+	border: 1px solid var(--api-color-border);
+}
+
+html.rp-dark .block {
+	border-color: var(--api-color-border);
+}

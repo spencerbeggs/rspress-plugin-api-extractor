@@ -1,0 +1,116 @@
+/**
+ * Design tokens for API documentation components
+ * CSS custom properties for theming
+ */
+
+:root {
+	/* Light mode colors */
+	--api-color-bg: #f6f8fa;
+	--api-color-bg-secondary: #fff;
+	--api-color-text: #24292f;
+	--api-color-text-secondary: #57606a;
+	--api-color-border: #e1e4e8;
+	--api-color-border-secondary: #d0d7de;
+	--api-color-border-hover: #b1b8c0;
+	--api-color-hover-bg: #f3f4f6;
+	--api-color-active-bg: #e5e7eb;
+	--api-color-link: #0969da;
+	--api-color-link-hover: #0550ae;
+	--api-color-code-bg: rgba(175, 184, 193, 0.2);
+
+	/* Spacing */
+	--api-spacing-xs: 0.375rem;
+	--api-spacing-sm: 0.5rem;
+	--api-spacing-md: 0.75rem;
+	--api-spacing-lg: 1rem;
+	--api-spacing-xl: 1.5rem;
+
+	/* Border radius */
+	--api-border-radius: 6px;
+	--api-border-radius-sm: 3px;
+	--api-border-radius-md: 4px;
+
+	/* Typography */
+	--api-font-size-sm: 0.875rem;
+	--api-font-size-base: 0.9375rem;
+	--api-font-size-md: 1rem;
+	--api-font-size-lg: 1.2rem;
+	--api-line-height-base: 1.5;
+	--api-line-height-button: 1.25rem;
+
+	/* Transitions */
+	--api-transition-fast: 0.15s ease;
+	--api-transition-base: 0.2s ease;
+	--api-transition-slow: 0.3s ease;
+
+	/* Shadows */
+	--api-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--api-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+	/* Z-index */
+	--api-z-index-dropdown: 40;
+	--api-z-index-tooltip: 999;
+	--api-z-index-popup: 1000;
+
+	/* Breakpoints */
+	--api-breakpoint-mobile: 768px;
+}
+
+/* Shiki dual-theme switching for API doc code blocks */
+/* Shiki generates --api-shiki-light and --api-shiki-dark as inline CSS variables on each span */
+/* With defaultColor: false, we apply the color via CSS rules instead of inline styles */
+/* Scoped to .api-doc-code to avoid conflicts with user's default --shiki-* code blocks */
+
+/* Light mode (default): use --api-shiki-light color */
+.api-doc-code .shiki,
+.api-doc-code .shiki span {
+	color: var(--api-shiki-light);
+	background-color: var(--api-shiki-light-bg, inherit);
+	font-style: var(--api-shiki-light-font-style, inherit);
+	font-weight: var(--api-shiki-light-font-weight, inherit);
+	text-decoration: var(--api-shiki-light-text-decoration, inherit);
+}
+
+/* Dark mode: switch to --api-shiki-dark color */
+html.rp-dark .api-doc-code .shiki,
+html.rp-dark .api-doc-code .shiki span {
+	color: var(--api-shiki-dark);
+	background-color: var(--api-shiki-dark-bg, inherit);
+	font-style: var(--api-shiki-dark-font-style, inherit);
+	font-weight: var(--api-shiki-dark-font-weight, inherit);
+	text-decoration: var(--api-shiki-dark-text-decoration, inherit);
+}
+
+/* Dark mode */
+html.rp-dark {
+	--api-color-bg: #161b22;
+	--api-color-bg-secondary: #21262d;
+	--api-color-text: #e6edf3;
+	--api-color-text-secondary: #8b949e;
+	--api-color-border: #30363d;
+	--api-color-border-hover: #8b949e;
+	--api-color-hover-bg: #30363d;
+	--api-color-active-bg: #161b22;
+	--api-color-link: #58a6ff;
+	--api-color-link-hover: #79c0ff;
+	--api-color-code-bg: rgba(110, 118, 129, 0.4);
+}
+
+/* ===== Global Styles ===== */
+
+/* Social Links Dark Mode Support */
+/* Dark mode support for Source Code button in API documentation */
+html.rp-dark .rp-social-links__item {
+	background-color: var(--api-color-bg-secondary);
+	border-color: var(--api-color-border);
+	color: var(--api-color-text);
+}
+
+html.rp-dark .rp-social-links__item:hover {
+	background-color: var(--api-color-hover-bg);
+	border-color: var(--api-color-border-hover);
+}
+
+html.rp-dark .rp-social-links__item:active {
+	background-color: var(--api-color-active-bg);
+}

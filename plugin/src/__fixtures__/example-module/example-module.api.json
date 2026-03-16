@@ -1,0 +1,2884 @@
+{
+  "metadata": {
+    "toolPackage": "@microsoft/api-extractor",
+    "toolVersion": "7.55.2",
+    "schemaVersion": 1011,
+    "oldestForwardsCompatibleVersion": 1001,
+    "tsdocConfig": {
+      "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+      "noStandardTags": true,
+      "tagDefinitions": [
+        {
+          "tagName": "@alpha",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@beta",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@defaultValue",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@decorator",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@deprecated",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@eventProperty",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@example",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@experimental",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@inheritDoc",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@internal",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@label",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@link",
+          "syntaxKind": "inline",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@override",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@packageDocumentation",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@param",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@privateRemarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@public",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@readonly",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@remarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@returns",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@sealed",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@see",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@throws",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@typeParam",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@virtual",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@jsx",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxRuntime",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxFrag",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxImportSource",
+          "syntaxKind": "block"
+        }
+      ],
+      "supportForTags": {
+        "@alpha": true,
+        "@beta": true,
+        "@defaultValue": true,
+        "@decorator": true,
+        "@deprecated": true,
+        "@eventProperty": true,
+        "@example": true,
+        "@experimental": true,
+        "@inheritDoc": true,
+        "@internal": true,
+        "@label": true,
+        "@link": true,
+        "@override": true,
+        "@packageDocumentation": true,
+        "@param": true,
+        "@privateRemarks": true,
+        "@public": true,
+        "@readonly": true,
+        "@remarks": true,
+        "@returns": true,
+        "@sealed": true,
+        "@see": true,
+        "@throws": true,
+        "@typeParam": true,
+        "@virtual": true,
+        "@jsx": true,
+        "@jsxRuntime": true,
+        "@jsxFrag": true,
+        "@jsxImportSource": true
+      },
+      "reportUnsupportedHtmlElements": false
+    }
+  },
+  "kind": "Package",
+  "canonicalReference": "example-module!",
+  "docComment": "/**\n * \\@savvy-web/example-module\n *\n * A demonstration module showcasing well-documented TypeScript APIs with cross-referencing types, classes, interfaces, enums, functions, and namespaces.\n *\n * @packageDocumentation\n */\n",
+  "name": "example-module",
+  "preserveMemberOrder": false,
+  "members": [
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "example-module!",
+      "name": "",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Class",
+          "canonicalReference": "example-module!AsyncTask:class",
+          "docComment": "/**\n * An asynchronous task with status tracking and timeout support.\n *\n * @remarks\n *\n * Wraps an async function in a lifecycle tracked by {@link TaskStatus}. Optionally integrates with a {@link Logger} for operational visibility.\n *\n * Use the convenience function {@link runTask} instead of constructing directly when you only need the {@link Result}.\n *\n * @typeParam T - The type the task produces on success\n *\n * @example\n * ```typescript\n * import { AsyncTask, TaskStatus } from \"example-module\";\n *\n * const task = new AsyncTask({\n *   label: \"fetch-data\",\n *   execute: async () => {\n *     const res = await fetch(\"https://api.example.com/data\");\n *     return res.json();\n *   },\n *   timeoutMs: 5000,\n * });\n *\n * const result = await task.run();\n * console.log(task.status); // TaskStatus.Completed\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class AsyncTask<T> "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "AsyncTask",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "example-module!AsyncTask:constructor(1)",
+              "docComment": "/**\n * Create a new AsyncTask.\n *\n * @param options - Task configuration – see {@link TaskOptions}\n *\n * @param logger - Optional {@link Logger} for internal diagnostics\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "TaskOptions",
+                  "canonicalReference": "example-module!TaskOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", logger?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Logger",
+                  "canonicalReference": "example-module!Logger:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "logger",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 5
+                  },
+                  "isOptional": true
+                }
+              ]
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!AsyncTask#cancel:member(1)",
+              "docComment": "/**\n * Cancel the task. Only effective if the task is still {@link TaskStatus.Pending}.\n *\n * @returns `true` if the task was successfully cancelled\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "cancel(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "cancel"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "example-module!AsyncTask#label:member",
+              "docComment": "/**\n * Human-readable label for identification\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly label: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "label",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!AsyncTask#run:member(1)",
+              "docComment": "/**\n * Execute the task and return a {@link Result}.\n *\n * @returns A {@link Result | Result\\<T\\>} indicating success or failure\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "run(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Result",
+                  "canonicalReference": "example-module!Result:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "run"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "example-module!AsyncTask#status:member",
+              "docComment": "/**\n * Current lifecycle status – see {@link TaskStatus}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "status: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "TaskStatus",
+                  "canonicalReference": "example-module!TaskStatus:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "status",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!Callable:interface",
+          "docComment": "/**\n * An object that can be called as a function to parse a string into a number.\n *\n * @remarks\n *\n * Demonstrates a **call signature** inside an interface. Consumers can assign any compatible function to a variable typed as {@link Callable}.\n *\n * @example\n * ```typescript\n * import type { Callable } from \"example-module\";\n *\n * const parse: Callable = (input: string) => Number.parseFloat(input);\n * console.log(parse(\"3.14\")); // 3.14\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface Callable "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "Callable",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "CallSignature",
+              "canonicalReference": "example-module!Callable:call(1)",
+              "docComment": "/**\n * Parse `input` and return a numeric representation.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ]
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!Constructable:interface",
+          "docComment": "/**\n * An object that can be instantiated with `new` to produce a {@link Result}.\n *\n * @remarks\n *\n * Demonstrates a **construct signature** inside an interface. Any class whose constructor accepts a single `label` string and returns a {@link Result | Result\\<string\\>} satisfies this contract.\n *\n * @example\n * ```typescript\n * import type { Constructable, Result } from \"example-module\";\n *\n * const Factory: Constructable = class {\n *   constructor(label: string) {\n *     return { ok: true, value: label } as Result<string>;\n *   }\n * } as unknown as Constructable;\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface Constructable "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "Constructable",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "ConstructSignature",
+              "canonicalReference": "example-module!Constructable:new(1)",
+              "docComment": "/**\n * Create a new {@link Result | Result\\<string\\>} identified by `label`.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "new (label: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Result",
+                  "canonicalReference": "example-module!Result:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "label",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ]
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "example-module!createLogEntry:function(1)",
+          "docComment": "/**\n * Create a {@link LogEntry} from primitive values.\n *\n * @param level - Severity level\n *\n * @param message - Human-readable message\n *\n * @param source - Source component identifier\n *\n * @returns A fully-formed {@link LogEntry}\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createLogEntry(level: "
+            },
+            {
+              "kind": "Reference",
+              "text": "LogLevel",
+              "canonicalReference": "example-module!LogLevel:enum"
+            },
+            {
+              "kind": "Content",
+              "text": ", message: "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": ", source: "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "LogEntry",
+              "canonicalReference": "example-module!LogEntry:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 7,
+            "endIndex": 8
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "level",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "message",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "source",
+              "parameterTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "isOptional": false
+            }
+          ],
+          "name": "createLogEntry"
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "example-module!DEFAULT_LOGGER_OPTIONS:var",
+          "docComment": "/**\n * Default {@link LoggerOptions} used when none are provided.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "DEFAULT_LOGGER_OPTIONS: "
+            },
+            {
+              "kind": "Reference",
+              "text": "LoggerOptions",
+              "canonicalReference": "example-module!LoggerOptions:interface"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "DEFAULT_LOGGER_OPTIONS",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "Namespace",
+          "canonicalReference": "example-module!Formatters:namespace",
+          "docComment": "/**\n * Utilities for formatting values into human-readable strings.\n *\n * @remarks\n *\n * All formatters accept the raw value and return a formatted string. They are designed to compose with {@link Logger} transports – for example you can use {@link Formatters.formatEntry} inside a {@link LogTransport} to produce structured text output.\n *\n * @example\n * ```typescript\n * import { Formatters, Logger, LogLevel } from \"example-module\";\n *\n * const logger = new Logger();\n * logger.addTransport((entry) => {\n *   console.log(Formatters.formatEntry(entry));\n * });\n * logger.info(\"ready\");\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare namespace Formatters "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "Formatters",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Formatters.formatDuration:function(1)",
+              "docComment": "/**\n * Format a duration in milliseconds into a human-readable string.\n *\n * @param ms - Duration in milliseconds\n *\n * @returns A string like `\"1.23s\"` or `\"456ms\"`\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function formatDuration(ms: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "ms",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "formatDuration"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Formatters.formatEntry:function(1)",
+              "docComment": "/**\n * Format a {@link LogEntry} into a human-readable string.\n *\n * @param entry - The log entry to format\n *\n * @param options - Formatting options – see {@link FormatOptions}\n *\n * @returns A formatted string representation\n *\n * @example\n * ```typescript\n * import { Formatters, createLogEntry, LogLevel } from \"example-module\";\n *\n * const entry = createLogEntry(LogLevel.Info, \"hello\", \"app\");\n * console.log(Formatters.formatEntry(entry));\n * // \"[INFO] hello (app)\"\n * ```\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function formatEntry(entry: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogEntry",
+                  "canonicalReference": "example-module!LogEntry:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "FormatOptions",
+                  "canonicalReference": "example-module!Formatters.FormatOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "entry",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "name": "formatEntry"
+            },
+            {
+              "kind": "Interface",
+              "canonicalReference": "example-module!Formatters.FormatOptions:interface",
+              "docComment": "/**\n * Options controlling how {@link formatEntry} produces output.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "interface FormatOptions "
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "FormatOptions",
+              "preserveMemberOrder": false,
+              "members": [
+                {
+                  "kind": "PropertySignature",
+                  "canonicalReference": "example-module!Formatters.FormatOptions#includeTimestamp:member",
+                  "docComment": "/**\n * Whether to include the timestamp – defaults to `true`\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "includeTimestamp?: "
+                    },
+                    {
+                      "kind": "Content",
+                      "text": "boolean"
+                    },
+                    {
+                      "kind": "Content",
+                      "text": ";"
+                    }
+                  ],
+                  "isReadonly": false,
+                  "isOptional": true,
+                  "releaseTag": "Public",
+                  "name": "includeTimestamp",
+                  "propertyTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                },
+                {
+                  "kind": "PropertySignature",
+                  "canonicalReference": "example-module!Formatters.FormatOptions#style:member",
+                  "docComment": "/**\n * Output style – defaults to {@link Style.Compact}\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "style?: "
+                    },
+                    {
+                      "kind": "Reference",
+                      "text": "Style",
+                      "canonicalReference": "example-module!Formatters.Style:enum"
+                    },
+                    {
+                      "kind": "Content",
+                      "text": ";"
+                    }
+                  ],
+                  "isReadonly": false,
+                  "isOptional": true,
+                  "releaseTag": "Public",
+                  "name": "style",
+                  "propertyTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                }
+              ],
+              "extendsTokenRanges": []
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Formatters.formatResult:function(1)",
+              "docComment": "/**\n * Format a {@link Result} into a summary string.\n *\n * @param result - The result to summarise\n *\n * @typeParam T - The result value type\n *\n * @returns `\"ok: <value>\"` or `\"error: <message>\"`\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function formatResult<T>(result: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Result",
+                  "canonicalReference": "example-module!Result:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "result",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "formatResult"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Formatters.levelLabel:function(1)",
+              "docComment": "/**\n * Map {@link LogLevel} to its string label.\n *\n * @param level - The log level to convert\n *\n * @returns An uppercase string label such as `\"DEBUG\"` or `\"ERROR\"`\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function levelLabel(level: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogLevel",
+                  "canonicalReference": "example-module!LogLevel:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "level",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "levelLabel"
+            },
+            {
+              "kind": "Enum",
+              "canonicalReference": "example-module!Formatters.Style:enum",
+              "docComment": "/**\n * Output style for formatted log entries.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "enum Style "
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "Style",
+              "preserveMemberOrder": true,
+              "members": [
+                {
+                  "kind": "EnumMember",
+                  "canonicalReference": "example-module!Formatters.Style.Compact:member",
+                  "docComment": "/**\n * Compact single-line format\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "Compact = "
+                    },
+                    {
+                      "kind": "Content",
+                      "text": "\"compact\""
+                    }
+                  ],
+                  "initializerTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "releaseTag": "Public",
+                  "name": "Compact"
+                },
+                {
+                  "kind": "EnumMember",
+                  "canonicalReference": "example-module!Formatters.Style.Verbose:member",
+                  "docComment": "/**\n * Multi-line format with full metadata\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "Verbose = "
+                    },
+                    {
+                      "kind": "Content",
+                      "text": "\"verbose\""
+                    }
+                  ],
+                  "initializerTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "releaseTag": "Public",
+                  "name": "Verbose"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "example-module!KeysOfType:type",
+          "docComment": "/**\n * Extract only the keys of `T` whose values are of type `V`.\n *\n * @remarks\n *\n * This utility type is used internally by {@link pickNumeric} and can be useful in generic data-transformation code.\n *\n * @typeParam T - The source object type\n *\n * @typeParam V - The value type to match\n *\n * @example\n * ```typescript\n * import type { KeysOfType } from \"example-module\";\n *\n * interface Stats { name: string; count: number; active: boolean; score: number; }\n * type NumericKeys = KeysOfType<Stats, number>;\n * //   ^? type NumericKeys = \"count\" | \"score\"\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type KeysOfType<T, V> = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    [K in keyof T]: T[K] extends V ? K : never;\n}[keyof T]"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "KeysOfType",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "V",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!LogEntry:interface",
+          "docComment": "/**\n * A structured log entry produced by the {@link Logger} class.\n *\n * @remarks\n *\n * Each entry combines a {@link LogLevel} severity with a human-readable message and associated {@link LogMeta | metadata}.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface LogEntry "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LogEntry",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogEntry#level:member",
+              "docComment": "/**\n * Severity level of this entry\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "level: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogLevel",
+                  "canonicalReference": "example-module!LogLevel:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "level",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogEntry#message:member",
+              "docComment": "/**\n * Human-readable message\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "message",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogEntry#meta:member",
+              "docComment": "/**\n * Metadata associated with this entry\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "meta: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogMeta",
+                  "canonicalReference": "example-module!LogMeta:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "meta",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "example-module!Logger:class",
+          "docComment": "/**\n * A structured logger with pluggable transports and severity filtering.\n *\n * @remarks\n *\n * Create a {@link Logger} with optional {@link LoggerOptions}, then register one or more {@link LogTransport | transports} to receive {@link LogEntry} objects.\n *\n * All emitted entries include {@link LogMeta} with a timestamp and source.\n *\n * @example\n * ```typescript\n * import { Logger, LogLevel } from \"example-module\";\n *\n * const logger = new Logger({ minLevel: LogLevel.Info, defaultSource: \"app\" });\n * logger.addTransport((entry) => console.log(entry.message));\n * logger.info(\"Server started\");\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class Logger "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "Logger",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "example-module!Logger:constructor(1)",
+              "docComment": "/**\n * Create a new Logger instance.\n *\n * @param options - Configuration options – see {@link LoggerOptions}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LoggerOptions",
+                  "canonicalReference": "example-module!LoggerOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": true
+                }
+              ]
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#addTransport:member(1)",
+              "docComment": "/**\n * Register a {@link LogTransport} to receive future log entries.\n *\n * @param transport - The transport function to add\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "addTransport(transport: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogTransport",
+                  "canonicalReference": "example-module!LogTransport:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "transport",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "addTransport"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#debug:member(1)",
+              "docComment": "/**\n * Emit a {@link LogLevel.Debug | debug}-level entry.\n *\n * @param message - The log message\n *\n * @param source - Optional source override (defaults to {@link LoggerOptions.defaultSource})\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "debug(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", source?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "debug"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#error:member(1)",
+              "docComment": "/**\n * Emit an {@link LogLevel.Error | error}-level entry.\n *\n * @param message - The log message\n *\n * @param source - Optional source override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "error(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", source?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "error"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#getTransports:member(1)",
+              "docComment": "/**\n * Return all registered transports.\n *\n * @returns A read-only array of {@link LogTransport} functions\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "getTransports(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "readonly "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogTransport",
+                  "canonicalReference": "example-module!LogTransport:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "getTransports"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#info:member(1)",
+              "docComment": "/**\n * Emit an {@link LogLevel.Info | info}-level entry.\n *\n * @param message - The log message\n *\n * @param source - Optional source override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "info(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", source?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "info"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "example-module!Logger#warn:member(1)",
+              "docComment": "/**\n * Emit a {@link LogLevel.Warn | warn}-level entry.\n *\n * @param message - The log message\n *\n * @param source - Optional source override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "warn(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", source?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "warn"
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!LoggerOptions:interface",
+          "docComment": "/**\n * Configuration options accepted by {@link Logger}.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface LoggerOptions "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LoggerOptions",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LoggerOptions#defaultSource:member",
+              "docComment": "/**\n * Default source tag for entries that do not specify one\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "defaultSource?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "defaultSource",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LoggerOptions#minLevel:member",
+              "docComment": "/**\n * Minimum severity to emit – entries below this level are suppressed\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "minLevel?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogLevel",
+                  "canonicalReference": "example-module!LogLevel:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "minLevel",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Enum",
+          "canonicalReference": "example-module!LogLevel:enum",
+          "docComment": "/**\n * Severity levels for log entries produced by the module.\n *\n * @remarks\n *\n * Levels are ordered from most to least verbose. Consumers can filter log entries by choosing a minimum severity threshold.\n *\n * @example\n * ```typescript\n * import { LogLevel } from \"example-module\";\n *\n * function shouldLog(entry: LogLevel, threshold: LogLevel): boolean {\n *   return entry >= threshold;\n * }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare enum LogLevel "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LogLevel",
+          "preserveMemberOrder": true,
+          "members": [
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!LogLevel.Debug:member",
+              "docComment": "/**\n * Verbose diagnostic output for development\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Debug = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "0"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Debug"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!LogLevel.Info:member",
+              "docComment": "/**\n * Routine operational information\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Info = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "1"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Info"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!LogLevel.Warn:member",
+              "docComment": "/**\n * Potential problems that do not prevent operation\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Warn = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "2"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Warn"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!LogLevel.Error:member",
+              "docComment": "/**\n * Failures that require attention\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Error = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "3"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Error"
+            }
+          ]
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!LogLevelMap:interface",
+          "docComment": "/**\n * A mapping from component names to their {@link LogLevel} thresholds.\n *\n * @remarks\n *\n * Demonstrates an **index signature** inside an interface. Use this to configure per-component log levels in a {@link Logger} transport.\n *\n * @example\n * ```typescript\n * import { type LogLevelMap, LogLevel } from \"example-module\";\n *\n * const levels: LogLevelMap = {\n *   database: LogLevel.Warn,\n *   http: LogLevel.Debug,\n * };\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface LogLevelMap "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LogLevelMap",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "IndexSignature",
+              "canonicalReference": "example-module!LogLevelMap:index(1)",
+              "docComment": "/**\n * {@link LogLevel} threshold for the named component.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "[component: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "]: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogLevel",
+                  "canonicalReference": "example-module!LogLevel:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "component",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ]
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!LogMeta:interface",
+          "docComment": "/**\n * Metadata attached to every {@link LogEntry}.\n *\n * @remarks\n *\n * Timestamps use epoch milliseconds. The optional `tags` field can be used for structured filtering in log aggregation systems.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface LogMeta "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LogMeta",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogMeta#source:member",
+              "docComment": "/**\n * Logical source component that produced the entry\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "source: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "source",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogMeta#tags:member",
+              "docComment": "/**\n * Optional tags for structured filtering\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "tags?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "tags",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!LogMeta#timestamp:member",
+              "docComment": "/**\n * Unix timestamp in milliseconds when the entry was created\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "timestamp: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "timestamp",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "example-module!LogTransport:type",
+          "docComment": "/**\n * A function that receives {@link LogEntry} objects from a {@link Logger}.\n *\n * @remarks\n *\n * Transports are registered via {@link Logger.addTransport}. Multiple transports can be active simultaneously.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type LogTransport = "
+            },
+            {
+              "kind": "Content",
+              "text": "(entry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "LogEntry",
+              "canonicalReference": "example-module!LogEntry:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ") => void"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "LogTransport",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "example-module!pickNumeric:function(1)",
+          "docComment": "/**\n * Pick only the numeric-valued properties from an object.\n *\n * @remarks\n *\n * Uses the {@link KeysOfType} utility type internally.\n *\n * @param obj - The object to extract numeric values from\n *\n * @typeParam T - The source object type\n *\n * @returns A new object containing only the properties of `T` whose values are `number`\n *\n * @example\n * ```typescript\n * import { pickNumeric } from \"example-module\";\n *\n * const stats = { name: \"test\", count: 42, active: true, score: 99 };\n * const nums = pickNumeric(stats);\n * console.log(nums); // { count: 42, score: 99 }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function pickNumeric<T extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>"
+            },
+            {
+              "kind": "Content",
+              "text": ">(obj: "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Pick",
+              "canonicalReference": "!Pick:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T, "
+            },
+            {
+              "kind": "Reference",
+              "text": "KeysOfType",
+              "canonicalReference": "example-module!KeysOfType:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T, number>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 6,
+            "endIndex": 10
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "obj",
+              "parameterTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 5
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "pickNumeric"
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!Result:interface",
+          "docComment": "/**\n * Result of an asynchronous operation that can succeed or fail.\n *\n * @remarks\n *\n * This is used as the return type of {@link AsyncTask.run} and {@link runTask}. When `ok` is `true`, the `value` field is present; when `ok` is `false`, the `error` field is present.\n *\n * @typeParam T - The type of the successful value\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface Result<T> "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "Result",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!Result#error:member",
+              "docComment": "/**\n * The error message – present when `ok` is `false`\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "error?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "error",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!Result#ok:member",
+              "docComment": "/**\n * Whether the operation succeeded\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "ok: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "ok",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!Result#value:member",
+              "docComment": "/**\n * The result value – present when `ok` is `true`\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "value?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "value",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "example-module!runTask:function(1)",
+          "docComment": "/**\n * Run an {@link AsyncTask} in one call and return the {@link Result}.\n *\n * @remarks\n *\n * This is a convenience wrapper around {@link AsyncTask} for cases where you don't need to track the task's {@link TaskStatus} separately.\n *\n * @param options - Task configuration – see {@link TaskOptions}\n *\n * @param logger - Optional {@link Logger} for diagnostics\n *\n * @typeParam T - The type the task produces\n *\n * @returns A {@link Result | Result\\<T\\>}\n *\n * @example\n * ```typescript\n * import { runTask, LogLevel } from \"example-module\";\n *\n * const result = await runTask({\n *   label: \"greet\",\n *   execute: async () => \"Hello, world!\",\n *   logLevel: LogLevel.Info,\n * });\n *\n * if (result.ok) {\n *   console.log(result.value); // \"Hello, world!\"\n * }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function runTask<T>(options: "
+            },
+            {
+              "kind": "Reference",
+              "text": "TaskOptions",
+              "canonicalReference": "example-module!TaskOptions:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>"
+            },
+            {
+              "kind": "Content",
+              "text": ", logger?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Logger",
+              "canonicalReference": "example-module!Logger:class"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Promise",
+              "canonicalReference": "!Promise:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Result",
+              "canonicalReference": "example-module!Result:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 6,
+            "endIndex": 10
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "options",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "logger",
+              "parameterTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 5
+              },
+              "isOptional": true
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "runTask"
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "example-module!StringRecord:type",
+          "docComment": "/**\n * Shorthand for a mapping of string keys to serialisable values.\n *\n * @remarks\n *\n * Useful for attaching arbitrary context to {@link LogMeta.tags} or as a general-purpose record type throughout the module.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type StringRecord = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, string | number | boolean>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "StringRecord",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "example-module!TaskOptions:interface",
+          "docComment": "/**\n * Options for creating an {@link AsyncTask}.\n *\n * @typeParam T - The type the task resolves to\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface TaskOptions<T> "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "TaskOptions",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!TaskOptions#execute:member",
+              "docComment": "/**\n * The async function to execute when the task is run\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "execute: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "() => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "execute",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!TaskOptions#label:member",
+              "docComment": "/**\n * Human-readable label for the task\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "label: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "label",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!TaskOptions#logLevel:member",
+              "docComment": "/**\n * Minimum {@link LogLevel} for internal task logging\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "logLevel?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "LogLevel",
+                  "canonicalReference": "example-module!LogLevel:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "logLevel",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "example-module!TaskOptions#timeoutMs:member",
+              "docComment": "/**\n * Optional timeout in milliseconds – defaults to no timeout\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "timeoutMs?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "timeoutMs",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Enum",
+          "canonicalReference": "example-module!TaskStatus:enum",
+          "docComment": "/**\n * Status of an {@link AsyncTask} during its lifecycle.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare enum TaskStatus "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "TaskStatus",
+          "preserveMemberOrder": true,
+          "members": [
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!TaskStatus.Pending:member",
+              "docComment": "/**\n * The task has been created but not started\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Pending = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"pending\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Pending"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!TaskStatus.Running:member",
+              "docComment": "/**\n * The task is currently executing\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Running = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"running\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Running"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!TaskStatus.Completed:member",
+              "docComment": "/**\n * The task completed successfully\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Completed = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"completed\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Completed"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!TaskStatus.Cancelled:member",
+              "docComment": "/**\n * The task was cancelled before completion\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Cancelled = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"cancelled\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Cancelled"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "example-module!TaskStatus.Failed:member",
+              "docComment": "/**\n * The task failed with an error\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Failed = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"failed\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Failed"
+            }
+          ]
+        },
+        {
+          "kind": "Namespace",
+          "canonicalReference": "example-module!Validators:namespace",
+          "docComment": "/**\n * Validation utilities for checking data shapes and constraints.\n *\n * @remarks\n *\n * Each validator returns a {@link Validators.ValidationResult} indicating success or failure with a descriptive message.\n *\n * Validators integrate with the logging system – pass a {@link Logger} to {@link Validators.validateAll} to log individual results.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare namespace Validators "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "Validators",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Validators.isInRange:function(1)",
+              "docComment": "/**\n * Check that a number falls within a range (inclusive).\n *\n * @param value - The number to check\n *\n * @param min - Minimum allowed value\n *\n * @param max - Maximum allowed value\n *\n * @returns A {@link ValidationResult}\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function isInRange(value: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", min: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", max: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ValidationResult",
+                  "canonicalReference": "example-module!Validators.ValidationResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 8
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "value",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "min",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "max",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 5,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "isInRange"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Validators.isNonEmpty:function(1)",
+              "docComment": "/**\n * Check that a string is non-empty.\n *\n * @param value - The string to check\n *\n * @returns A {@link ValidationResult}\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function isNonEmpty(value: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ValidationResult",
+                  "canonicalReference": "example-module!Validators.ValidationResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "value",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "isNonEmpty"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "example-module!Validators.validateAll:function(1)",
+              "docComment": "/**\n * Run an array of {@link ValidatorFn | validators} against a value and return all results.\n *\n * @param value - The value to validate\n *\n * @param validators - Array of validator functions\n *\n * @param logger - Optional {@link Logger} to record each result\n *\n * @typeParam T - The type of value being validated\n *\n * @returns An array of {@link ValidationResult} objects\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function validateAll<T>(value: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", validators: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ValidatorFn",
+                  "canonicalReference": "example-module!Validators.ValidatorFn:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", logger?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Logger",
+                  "canonicalReference": "example-module!Logger:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ValidationResult",
+                  "canonicalReference": "example-module!Validators.ValidationResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 8,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "value",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "validators",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "logger",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 7
+                  },
+                  "isOptional": true
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "validateAll"
+            },
+            {
+              "kind": "Interface",
+              "canonicalReference": "example-module!Validators.ValidationResult:interface",
+              "docComment": "/**\n * The outcome of a single validation check.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "interface ValidationResult "
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "ValidationResult",
+              "preserveMemberOrder": false,
+              "members": [
+                {
+                  "kind": "PropertySignature",
+                  "canonicalReference": "example-module!Validators.ValidationResult#message:member",
+                  "docComment": "/**\n * Descriptive message explaining the outcome\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "message: "
+                    },
+                    {
+                      "kind": "Content",
+                      "text": "string"
+                    },
+                    {
+                      "kind": "Content",
+                      "text": ";"
+                    }
+                  ],
+                  "isReadonly": false,
+                  "isOptional": false,
+                  "releaseTag": "Public",
+                  "name": "message",
+                  "propertyTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                },
+                {
+                  "kind": "PropertySignature",
+                  "canonicalReference": "example-module!Validators.ValidationResult#valid:member",
+                  "docComment": "/**\n * Whether the check passed\n */\n",
+                  "excerptTokens": [
+                    {
+                      "kind": "Content",
+                      "text": "valid: "
+                    },
+                    {
+                      "kind": "Content",
+                      "text": "boolean"
+                    },
+                    {
+                      "kind": "Content",
+                      "text": ";"
+                    }
+                  ],
+                  "isReadonly": false,
+                  "isOptional": false,
+                  "releaseTag": "Public",
+                  "name": "valid",
+                  "propertyTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                }
+              ],
+              "extendsTokenRanges": []
+            },
+            {
+              "kind": "TypeAlias",
+              "canonicalReference": "example-module!Validators.ValidatorFn:type",
+              "docComment": "/**\n * A function that validates a value and returns a {@link ValidationResult}.\n *\n * @typeParam T - The type of value being validated\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "type ValidatorFn<T> = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(value: T) => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ValidationResult",
+                  "canonicalReference": "example-module!Validators.ValidationResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "ValidatorFn",
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "typeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              }
+            }
+          ]
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "example-module!VERSION:var",
+          "docComment": "/**\n * Current version of the example-module package.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "VERSION: "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "VERSION",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        }
+      ]
+    }
+  ]
+}
