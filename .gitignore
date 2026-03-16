@@ -29,6 +29,11 @@ pnpm-release.json
 !.env.example
 !.env.*.example
 
+# Plugin build artifacts
+docs-site/docs/example-module/
+docs-site/.rspress/
+api-docs-snapshot.db
+
 # Claude AI files
 .claude/settings.local.json
 .claude/plans/

@@ -8,7 +8,13 @@ repository.
 RSPress plugin for generating API documentation from TypeScript API Extractor
 models. This is a **monorepo with three workspaces**.
 
-Design documentation lives in `.claude/design/rspress-plugin-api-extractor/`.
+## Getting Started
+
+```bash
+pnpm install
+pnpm run build            # Build all workspaces (example-module → plugin → docs-site)
+pnpm --filter docs-site run dev   # Start the test site to verify plugin output
+```
 
 ## Workspaces
 
@@ -38,6 +44,38 @@ TypeScript module. Produces dual outputs:
 
 Private minimal RSPress 2.0 site. Depends on `rspress-plugin-api-extractor`
 via `workspace:*`. Outputs static HTML to `dist/`.
+
+## Design Documentation
+
+Design docs live in `.claude/design/rspress-plugin-api-extractor/`. Load the
+relevant doc when working on these areas:
+
+**Build & infrastructure:**
+
+- @./.claude/design/rspress-plugin-api-extractor/build-architecture.md
+- @./.claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md
+
+**Page generation & markdown:**
+
+- @./.claude/design/rspress-plugin-api-extractor/page-generation-system.md
+- @./.claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md
+- @./.claude/design/rspress-plugin-api-extractor/import-generation-system.md
+- @./.claude/design/rspress-plugin-api-extractor/source-mapping-system.md
+
+**Runtime components & SSG:**
+
+- @./.claude/design/rspress-plugin-api-extractor/component-development.md
+- @./.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
+
+**Type loading & VFS:**
+
+- @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
+- @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
+
+**Observability:**
+
+- @./.claude/design/rspress-plugin-api-extractor/performance-observability.md
+- @./.claude/design/rspress-plugin-api-extractor/error-observability.md
 
 ## Build Pipeline
 
