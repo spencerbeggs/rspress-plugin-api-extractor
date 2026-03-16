@@ -1,5 +1,5 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig.json",
 	"files": [],
-	"references": [{ "path": "plugin" }]
+	"references": [{ "path": "plugin" }, { "path": "example-module" }]
 }
