@@ -1,5 +1,7 @@
-import type { LogEvent, VirtualFileSystem, VirtualTypeScriptEnvironment } from "type-registry-effect";
-import { TypeRegistry } from "type-registry-effect";
+import type { VirtualFileSystem } from "type-registry-effect";
+import { PackageSpec } from "type-registry-effect";
+import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
+import { createTypeScriptCache, fetchAndCache, getVFS, resolveVersion } from "type-registry-effect/node";
 import type ts from "typescript";
 import type { DebugLogger } from "./debug-logger.js";
 import type { ExternalPackageSpec, TypeResolutionCompilerOptions } from "./types.js";
@@ -65,162 +67,16 @@ export interface TypeRegistryLoaderResult {
  * Uses type-registry-effect to fetch and cache type definitions from npm packages.
  */
 export class TypeRegistryLoader {
+	/**
+	 * @param _cacheDir - Reserved for future use; the Promise API uses platform defaults.
+	 * @param ttl - Cache TTL in milliseconds passed to fetchAndCache.
+	 * @param logger - Optional debug logger.
+	 */
 	constructor(
-		private readonly cacheDir?: string,
+		readonly _cacheDir?: string,
 		private readonly ttl?: number,
 		private readonly logger?: DebugLogger,
 	) {}
-
-	/**
-	 * Handle log events from TypeRegistry.
-	 * Converts structured events to appropriate logger calls based on log level.
-	 * @private
-	 */
-	private handleLogEvent(event: LogEvent): void {
-		if (!this.logger) {
-			return;
-		}
-
-		if (this.logger.isDebug()) {
-			// In debug mode, emit structured JSON for LLM consumption
-			this.logger.debug(JSON.stringify(event));
-			return;
-		}
-
-		if (!this.logger.isVerbose()) {
-			// In info mode, suppress all TypeRegistry events
-			// (Plugin shows high-level summaries instead)
-			return;
-		}
-
-		// Verbose mode: Human-friendly output
-		switch (event.event) {
-			case "package.version.resolved": {
-				const {
-					package: pkg,
-					requested,
-					resolved,
-				} = event.data as {
-					package: string;
-					requested: string;
-					resolved: string;
-				};
-				if (requested !== resolved) {
-					this.logger.verbose(`   Resolved ${pkg}: ${requested} → ${resolved}`);
-				}
-				break;
-			}
-
-			case "cache.hit": {
-				const {
-					package: pkg,
-					version,
-					ageMinutes,
-				} = event.data as {
-					package: string;
-					version: string;
-					ageMinutes: number;
-				};
-				this.logger.verbose(`   ✓ ${pkg}@${version} (cached, ${ageMinutes}m old)`);
-				break;
-			}
-
-			case "cache.miss": {
-				const { package: pkg, version } = event.data as {
-					package: string;
-					version: string;
-				};
-				this.logger.verbose(`   Fetching ${pkg}@${version}...`);
-				break;
-			}
-
-			case "cache.stale": {
-				const {
-					package: pkg,
-					version,
-					ageMinutes,
-					ttlMinutes,
-				} = event.data as {
-					package: string;
-					version: string;
-					ageMinutes: number;
-					ttlMinutes: number;
-				};
-				this.logger.verbose(`   Cache stale for ${pkg}@${version} (age: ${ageMinutes}m, TTL: ${ttlMinutes}m)`);
-				break;
-			}
-
-			case "package.loaded": {
-				const {
-					package: pkg,
-					version,
-					files,
-					source,
-				} = event.data as {
-					package: string;
-					version: string;
-					files: number;
-					source: string;
-				};
-				const sourceLabel = source === "cache" ? "cached" : "downloaded";
-				this.logger.verbose(`   ✓ Loaded ${pkg}@${version} (${files} files, ${sourceLabel})`);
-				break;
-			}
-
-			case "package.load.failed": {
-				const {
-					package: pkg,
-					version,
-					error,
-				} = event.data as {
-					package: string;
-					version: string;
-					error: string;
-				};
-				this.logger.warn(`   ✗ Failed to load ${pkg}@${version}: ${error}`);
-				break;
-			}
-
-			case "package.fetch.start": {
-				const { package: pkg, version } = event.data as {
-					package: string;
-					version: string;
-				};
-				this.logger.verbose(`   Downloading ${pkg}@${version}...`);
-				break;
-			}
-
-			case "packages.batch.start": {
-				const { total } = event.data as {
-					total: number;
-				};
-				this.logger.verbose(`📦 Loading ${total} external package(s)...`);
-				break;
-			}
-
-			case "packages.batch.complete": {
-				const { loaded, failed, totalFiles, durationMs } = event.data as {
-					loaded: number;
-					failed: number;
-					totalFiles: number;
-					durationMs: number;
-				};
-				const duration = durationMs >= 1000 ? `${(durationMs / 1000).toFixed(2)}s` : `${durationMs.toFixed(0)}ms`;
-				if (failed > 0) {
-					this.logger.verbose(
-						`   Loaded ${loaded}/${loaded + failed} packages (${totalFiles} files, ${duration}) - ${failed} failed`,
-					);
-				} else {
-					this.logger.verbose(`   Loaded ${loaded} packages (${totalFiles} files, ${duration})`);
-				}
-				break;
-			}
-
-			// Ignore unknown events
-			default:
-				break;
-		}
-	}
 
 	/**
 	 * Load external package types.
@@ -268,16 +124,9 @@ export class TypeRegistryLoader {
 		// Handle case where only TypeScript cache is needed (no external packages)
 		// This loads TypeScript lib files (lib.esnext.d.ts, lib.dom.d.ts, etc.)
 		if (!packages || packages.length === 0) {
-			const registry = await TypeRegistry.create({
-				cacheDir: this.cacheDir,
-				ttl: this.ttl,
-				logLevel: "none",
-				onLogEvent: (event: LogEvent) => this.handleLogEvent(event),
-			});
-
 			const compilerOpts = (options?.compilerOptions ?? DEFAULT_COMPILER_OPTIONS) as ts.CompilerOptions;
 			// Create cache with empty packages - this still loads lib files from node_modules
-			const tsCache = await registry.createTypeScriptCache([], compilerOpts);
+			const tsCache = await createTypeScriptCache([], compilerOpts);
 
 			if (this.logger?.isVerbose()) {
 				this.logger.verbose("✅ Created TypeScript environment cache with lib files (no external packages)");
@@ -298,36 +147,27 @@ export class TypeRegistryLoader {
 			this.logger.verbose(`📦 Loading types for ${packages.length} external package(s)...`);
 		}
 
-		// Initialize TypeRegistry with event handler
-		// Note: We set logLevel to "none" for Effect's internal logger since we handle
-		// all logging through our custom event handler (onLogEvent)
-		const registry = await TypeRegistry.create({
-			cacheDir: this.cacheDir,
-			ttl: this.ttl,
-			logLevel: "none", // Suppress Effect's internal logger - we use onLogEvent instead
-			onLogEvent: (event: LogEvent) => this.handleLogEvent(event),
-		});
-
 		const loaded: ExternalPackageSpec[] = [];
 		const failed: Array<{ package: ExternalPackageSpec; error: string }> = [];
-		const combinedVfs = new Map<string, string>();
 
 		// Fetch all packages in parallel using Promise.allSettled
+		const fetchOpts = this.ttl !== undefined ? { ttl: this.ttl } : undefined;
 		const results = await Promise.allSettled(
 			packages.map(async (pkg) => {
 				// Resolve version range to exact version (jsDelivr /flat API requires exact versions)
-				const resolvedVersion = await registry.resolveVersion(pkg.name, pkg.version);
-				const resolvedPkg = { name: pkg.name, version: resolvedVersion };
+				const resolvedVersionStr = await resolveVersion(pkg.name, pkg.version);
+				const resolvedPkg = { name: pkg.name, version: resolvedVersionStr };
+				const pkgSpec = new PackageSpec({ name: pkg.name, version: resolvedVersionStr });
 
 				// Fetch and cache the package with resolved version
-				await registry.fetchAndCache(resolvedPkg);
+				await fetchAndCache(pkgSpec, fetchOpts);
 
-				// Get VFS for this package
-				const packageVfs = await registry.getPackageVFS(resolvedPkg);
-
-				return { resolvedPkg, packageVfs };
+				return { resolvedPkg, pkgSpec };
 			}),
 		);
+
+		// Collect resolved PackageSpec instances for VFS generation
+		const resolvedSpecs: PackageSpec[] = [];
 
 		// Process results
 		for (let i = 0; i < results.length; i++) {
@@ -335,18 +175,13 @@ export class TypeRegistryLoader {
 			const pkg = packages[i];
 
 			if (result.status === "fulfilled") {
-				const { resolvedPkg, packageVfs } = result.value;
-
-				// Merge into combined VFS
-				for (const [path, content] of packageVfs.entries()) {
-					combinedVfs.set(path, content);
-				}
-
+				const { resolvedPkg, pkgSpec } = result.value;
+				resolvedSpecs.push(pkgSpec);
 				loaded.push(resolvedPkg);
 
 				// Log in verbose mode only
 				if (this.logger?.isVerbose()) {
-					this.logger.verbose(`   ✓ ${resolvedPkg.name}@${resolvedPkg.version} (${packageVfs.size} files)`);
+					this.logger.verbose(`   ✓ ${resolvedPkg.name}@${resolvedPkg.version}`);
 				}
 			} else {
 				const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
@@ -357,6 +192,12 @@ export class TypeRegistryLoader {
 					this.logger.warn(`   ✗ ${pkg.name}@${pkg.version}: ${errorMessage}`);
 				}
 			}
+		}
+
+		// Get combined VFS for all successfully loaded packages
+		let combinedVfs: VirtualFileSystem = new Map();
+		if (resolvedSpecs.length > 0) {
+			combinedVfs = await getVFS(resolvedSpecs);
 		}
 
 		// Calculate duration
@@ -379,9 +220,9 @@ export class TypeRegistryLoader {
 		if (options?.createTsCache && loaded.length > 0) {
 			const cacheTimer = this.logger?.startTimer("Creating TypeScript environment cache");
 			// Use provided compiler options or fall back to defaults
-			// Cast to ts.CompilerOptions for compatibility with TypeRegistry's expected type
+			// Cast to ts.CompilerOptions for compatibility with the expected type
 			const compilerOpts = (options.compilerOptions ?? DEFAULT_COMPILER_OPTIONS) as ts.CompilerOptions;
-			tsCache = await registry.createTypeScriptCache(loaded, compilerOpts);
+			tsCache = await createTypeScriptCache(resolvedSpecs, compilerOpts);
 			cacheTimer?.end();
 
 			if (this.logger?.isVerbose()) {

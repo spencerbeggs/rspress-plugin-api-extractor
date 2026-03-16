@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { VirtualPackage } from "type-registry-effect";
+import { VirtualPackage as VirtualPackageNs } from "type-registry-effect";
+
+const VirtualPackageClass = VirtualPackageNs.VirtualPackage;
+
 import { describe, expect, it } from "vitest";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
 
@@ -18,7 +21,7 @@ describe("ApiExtractedPackage", () => {
 		});
 
 		it("should be an instance of VirtualPackage (base class)", () => {
-			expect(apiExtractedPackage).toBeInstanceOf(VirtualPackage);
+			expect(apiExtractedPackage).toBeInstanceOf(VirtualPackageClass);
 		});
 	});
 

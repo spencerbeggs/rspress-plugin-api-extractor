@@ -2,10 +2,25 @@ import type { PathLike } from "node:fs";
 import type { ApiModel } from "@microsoft/api-extractor-model";
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import semver from "semver";
-import type { TypeResolutionCompilerOptions } from "type-registry-effect";
+import type ts from "typescript";
 
-// Re-export for consumers
-export type { TypeResolutionCompilerOptions } from "type-registry-effect";
+/**
+ * Compiler options relevant to type resolution.
+ * Subset of TypeScript's CompilerOptions used by the type registry and Twoslash.
+ */
+export interface TypeResolutionCompilerOptions {
+	target?: ts.ScriptTarget;
+	module?: ts.ModuleKind;
+	moduleResolution?: ts.ModuleResolutionKind;
+	lib?: string[];
+	types?: string[];
+	typeRoots?: string[];
+	strict?: boolean;
+	skipLibCheck?: boolean;
+	esModuleInterop?: boolean;
+	allowSyntheticDefaultImports?: boolean;
+	jsx?: ts.JsxEmit;
+}
 
 /**
  * TypeScript configuration fields for Twoslash and type resolution.

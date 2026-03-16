@@ -23,6 +23,9 @@ import type {
 import { ApiItemKind, ApiModel } from "@microsoft/api-extractor-model";
 import { VirtualPackage } from "type-registry-effect";
 
+// The published package exports VirtualPackage as a namespace containing the class
+const VirtualPackageClass = VirtualPackage.VirtualPackage;
+
 /**
  * Reconstructs TypeScript declaration files from an API Extractor model.
  *
@@ -32,7 +35,7 @@ import { VirtualPackage } from "type-registry-effect";
  *
  * Use the factory methods {@link fromApiModel} or {@link fromPackage} to create instances.
  */
-export class ApiExtractedPackage extends VirtualPackage {
+export class ApiExtractedPackage extends VirtualPackageClass {
 	private constructor(
 		readonly apiPackage: ApiPackage,
 		packageName: string,
@@ -54,15 +57,17 @@ export class ApiExtractedPackage extends VirtualPackage {
 	 * Create an ApiExtractedPackage from an existing ApiPackage instance.
 	 */
 	static fromPackage(apiPackage: ApiPackage, packageName: string): ApiExtractedPackage {
-		// Create instance with empty entries, then populate using instance methods.
-		// Map.set() works even with readonly because the Map object is mutable.
-		const instance = new ApiExtractedPackage(apiPackage, packageName, new Map());
+		// Build entries map first, then pass to constructor.
+		// We use a temporary instance to access generateDeclarations/getEntryPointName,
+		// then create the real instance with the populated entries.
+		const tempEntries = new Map<string, string>();
+		const tempInstance = new ApiExtractedPackage(apiPackage, packageName, tempEntries);
 		for (const ep of apiPackage.entryPoints) {
-			const entryName = instance.getEntryPointName(ep);
+			const entryName = tempInstance.getEntryPointName(ep);
 			const fileName = entryName ? `${entryName}.d.ts` : "index.d.ts";
-			instance.entries.set(fileName, instance.generateDeclarations(ep));
+			tempEntries.set(fileName, tempInstance.generateDeclarations(ep));
 		}
-		return instance;
+		return tempInstance;
 	}
 
 	/**

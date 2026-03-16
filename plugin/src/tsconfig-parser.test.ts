@@ -35,8 +35,8 @@ describe("parseTsConfig", () => {
 		expect(result.module).toBe(99); // ESNext
 		// TypeScript resolves lib names to actual file names
 		expect(result.lib).toBeDefined();
-		expect(result.lib?.some((lib) => lib.includes("esnext"))).toBe(true);
-		expect(result.lib?.some((lib) => lib.includes("dom"))).toBe(true);
+		expect(result.lib?.some((lib: string) => lib.includes("esnext"))).toBe(true);
+		expect(result.lib?.some((lib: string) => lib.includes("dom"))).toBe(true);
 		expect(result.strict).toBe(false);
 	});
 
@@ -134,8 +134,8 @@ describe("parseTsConfig", () => {
 		expect(result.strict).toBe(true); // From base
 		// TypeScript resolves lib names to actual file names
 		expect(result.lib).toBeDefined();
-		expect(result.lib?.some((lib) => lib.includes("esnext"))).toBe(true);
-		expect(result.lib?.some((lib) => lib.includes("dom"))).toBe(true);
+		expect(result.lib?.some((lib: string) => lib.includes("esnext"))).toBe(true);
+		expect(result.lib?.some((lib: string) => lib.includes("dom"))).toBe(true);
 	});
 
 	it("handles deeply nested extends chain", () => {
@@ -308,7 +308,7 @@ describe("parseTsConfigWithMetadata", () => {
 		expect(result.compilerOptions.target).toBe(99);
 		// TypeScript resolves lib names to actual file names
 		expect(result.compilerOptions.lib).toBeDefined();
-		expect(result.compilerOptions.lib?.some((lib) => lib.includes("esnext"))).toBe(true);
+		expect(result.compilerOptions.lib?.some((lib: string) => lib.includes("esnext"))).toBe(true);
 	});
 });
 
