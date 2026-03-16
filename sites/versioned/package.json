@@ -1,0 +1,23 @@
+{
+	"name": "versioned",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "rspress build",
+		"dev": "node lib/scripts/dev.mts",
+		"preview": "node lib/scripts/preview.mts",
+		"types:check": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"rspress-plugin-api-extractor": "workspace:*"
+	},
+	"devDependencies": {
+		"@rspress/core": "^2.0.0",
+		"@types/react": "^19.2.10",
+		"@typescript/native-preview": "7.0.0-dev.20260128.1",
+		"open": "^11.0.0",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	}
+}
