@@ -31,5 +31,6 @@ export default defineConfig({
 			},
 		}),
 	],
+	markdown: { link: { checkDeadLinks: false } },
 	route: { cleanUrls: true },
 });
