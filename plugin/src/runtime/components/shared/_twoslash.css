@@ -358,8 +358,8 @@ html.rp-dark {
 
 .twoslash-popup-docs p {
 	text-wrap: auto;
-    font-size: 0.9rem;
-    line-height: 1.1rem;
+	font-size: 0.9rem;
+	line-height: 1.1rem;
 }
 
 /* Override default paragraph/list margins in hover popup docs */

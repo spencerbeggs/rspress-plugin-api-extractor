@@ -1,10 +1,10 @@
 // Export all runtime components
 
 // Import shared CSS variables for theming
-import "./components/shared/variables.js";
+import "./components/shared/variables.css";
 
 // Import Twoslash styles for hover tooltips, errors, completions
-import "./components/shared/_twoslash.js";
+import "./components/shared/_twoslash.css";
 
 // Components
 export type { ApiExampleProps } from "./components/ApiExample/index.js";
