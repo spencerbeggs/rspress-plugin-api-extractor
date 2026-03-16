@@ -316,17 +316,56 @@ export interface VersionConfig {
 }
 
 /**
- * Single API model configuration (non-versioned)
+ * Configuration for a single-package API documentation site.
+ * Supports RSPress multiVersion and i18n features.
+ *
+ * Use this with the `api` field in `ApiExtractorPluginOptions` when documenting
+ * a single package. The plugin derives `docsDir` and route paths automatically
+ * from `baseRoute` and `apiFolder`.
+ *
+ * @example Basic single-package config
+ * ```ts
+ * api: {
+ *   packageName: "@my-org/my-lib",
+ *   model: "temp/my-lib.api.json",
+ * }
+ * ```
+ *
+ * @example With versioning (RSPress multiVersion)
+ * ```ts
+ * api: {
+ *   packageName: "@my-org/my-lib",
+ *   versions: {
+ *     "1.0.0": "temp/v1/my-lib.api.json",
+ *     "2.0.0": { model: "temp/v2/my-lib.api.json", source: { url: "https://github.com/org/repo", ref: "blob/v2" } },
+ *   },
+ * }
+ * ```
  */
-export interface ApiModelConfig {
-	/** Human-readable name for page titles (e.g., "Claude Binary Plugin SDK"). If omitted, not included in titles. */
-	name?: string;
-
-	/** Package name for display purposes */
+export interface SingleApiConfig {
+	/** Package name for display and identification (e.g., "@my-org/my-lib") */
 	packageName: string;
 
-	/** Path to .api.json file OR async function that returns the model (and optionally source) */
-	model: PathLike | (() => Promise<ApiModel | LoadedModel>);
+	/** Human-readable name for page titles (e.g., "My Library SDK"). If omitted, not included in titles. */
+	name?: string;
+
+	/**
+	 * Base route path for the API documentation (e.g., "/my-lib").
+	 * The plugin derives docsDir and full route from this value plus apiFolder.
+	 */
+	baseRoute?: string;
+
+	/**
+	 * Subfolder name for API documentation (defaults to "api").
+	 * Set to null to output directly to the base route directory.
+	 */
+	apiFolder?: string | null;
+
+	/**
+	 * Path to .api.json file OR async function that returns the model.
+	 * Optional when `versions` is provided; required otherwise.
+	 */
+	model?: PathLike | (() => Promise<ApiModel | LoadedModel>);
 
 	/**
 	 * Path to package.json file OR async function that returns the parsed JSON.
@@ -335,28 +374,11 @@ export interface ApiModelConfig {
 	packageJson?: PathLike | (() => Promise<PackageJson>);
 
 	/**
-	 * Base documentation directory (relative to docs root).
-	 * API docs will be generated in a subfolder determined by apiFolder option.
-	 * Example: "docs/en/claude-binary-plugin"
+	 * Map of version names to model configurations (for RSPress multiVersion support).
+	 * Can be just a path/loader, or a full VersionConfig with categories and source.
+	 * When provided, enables multi-version documentation generation.
 	 */
-	docsDir: string;
-
-	/**
-	 * Subfolder within docsDir for API documentation (defaults to "api").
-	 * Set to null to output directly to docsDir.
-	 * Examples:
-	 * - "api" → docs/en/claude-binary-plugin/api
-	 * - null → docs/en/claude-binary-plugin
-	 */
-	apiFolder?: string | null;
-
-	/**
-	 * Base route path for the package documentation (e.g., "/claude-binary-plugin").
-	 * The full route is calculated by appending the apiFolder:
-	 * - baseRoute: "/claude-binary-plugin", apiFolder: "api" → /claude-binary-plugin/api
-	 * - baseRoute: "/claude-binary-plugin", apiFolder: null → /claude-binary-plugin
-	 */
-	baseRoute: string;
+	versions?: Record<string, PathLike | (() => Promise<ApiModel | LoadedModel>) | VersionConfig>;
 
 	/**
 	 * Shiki theme configuration for syntax highlighting in code blocks.
@@ -372,7 +394,7 @@ export interface ApiModelConfig {
 	/**
 	 * Category configuration for this API (optional).
 	 * Uses plugin defaults if not provided.
-	 * Merged with plugin-level defaults.
+	 * Merged with plugin-level defaultCategories.
 	 */
 	categories?: Record<string, CategoryConfig>;
 
@@ -386,39 +408,14 @@ export interface ApiModelConfig {
 	 * External npm packages to include in Twoslash type system.
 	 * These packages will be fetched and cached using type-registry-effect.
 	 *
-	 * If not specified, automatically detects packages from package.json based on autoDetectDependencies options.
-	 *
-	 * This ensures documentation examples have access to all necessary types.
-	 *
-	 * @example
-	 * ```ts
-	 * // Explicit packages
-	 * externalPackages: [
-	 *   { name: "zod", version: "3.22.4" },
-	 *   { name: "@effect/schema", version: "0.68.0" }
-	 * ]
-	 *
-	 * // Or let it auto-detect from package.json
-	 * externalPackages: undefined
-	 * ```
+	 * If not specified, automatically detects packages from package.json
+	 * based on autoDetectDependencies options.
 	 */
 	externalPackages?: ExternalPackageSpec[];
 
 	/**
-	 * Options for auto-detecting external packages from package.json when externalPackages is not specified.
+	 * Options for auto-detecting external packages from package.json.
 	 * Defaults: { dependencies: false, devDependencies: false, peerDependencies: true, autoDependencies: true }
-	 *
-	 * @example
-	 * ```ts
-	 * // Include only peerDependencies and type utilities (default)
-	 * autoDetectDependencies: { peerDependencies: true, autoDependencies: true }
-	 *
-	 * // Include all dependencies
-	 * autoDetectDependencies: { dependencies: true, devDependencies: true, peerDependencies: true, autoDependencies: true }
-	 *
-	 * // Disable auto-detection completely
-	 * autoDetectDependencies: { peerDependencies: false, autoDependencies: false }
-	 * ```
 	 */
 	autoDetectDependencies?: AutoDetectDependenciesOptions;
 
@@ -428,10 +425,6 @@ export interface ApiModelConfig {
 	 * If omitted, uses the global ogImage setting.
 	 *
 	 * Supports string (URL/path) or detailed metadata object.
-	 * See ApiExtractorPluginOptions.ogImage for format details.
-	 *
-	 * @example "/images/claude-plugin/og-image.png"
-	 * @example { url: "/images/og.png", width: 1200, height: 630 }
 	 */
 	ogImage?: OpenGraphImageConfig;
 
@@ -444,75 +437,62 @@ export interface ApiModelConfig {
 	/**
 	 * Path to tsconfig.json OR async function returning compiler options.
 	 * Overrides global tsconfig.
-	 *
-	 * @example Path string
-	 * ```ts
-	 * tsconfig: "tsconfig.json"
-	 * ```
-	 *
-	 * @example Async function
-	 * ```ts
-	 * tsconfig: async () => ({ target: 99, lib: ["ESNext", "DOM"] })
-	 * ```
 	 */
 	tsconfig?: PathLike | (() => Promise<TypeResolutionCompilerOptions>);
 
 	/**
 	 * Direct compiler options for Twoslash.
 	 * Merged on top of tsconfig if both are provided.
-	 * Overrides global compilerOptions.
-	 *
-	 * @example
-	 * ```ts
-	 * compilerOptions: {
-	 *   target: 99,
-	 *   lib: ["ESNext", "DOM"],
-	 * }
-	 * ```
 	 */
 	compilerOptions?: TypeResolutionCompilerOptions;
 }
 
 /**
- * Versioned API model configuration
+ * Configuration for a single package in a multi-package API documentation portal.
+ * Does not support versioning (each entry is a single version).
+ *
+ * Use this with the `apis` array field in `ApiExtractorPluginOptions` when
+ * documenting multiple packages in a single site. The plugin derives `docsDir`
+ * and route paths automatically from `baseRoute` and `apiFolder`.
+ *
+ * @example Multi-package portal
+ * ```ts
+ * apis: [
+ *   { packageName: "@my-org/core", model: "temp/core.api.json", baseRoute: "/core" },
+ *   { packageName: "@my-org/utils", model: "temp/utils.api.json", baseRoute: "/utils" },
+ * ]
+ * ```
  */
-export interface VersionedApiModelConfig {
-	/** Human-readable name for page titles (e.g., "Claude Binary Plugin SDK"). If omitted, not included in titles. */
-	name?: string;
-
-	/** Package name for display purposes */
+export interface MultiApiConfig {
+	/** Package name for display and identification (e.g., "@my-org/core") */
 	packageName: string;
 
-	/**
-	 * Path to package.json file OR async function that returns the parsed JSON.
-	 * Used to load type packages for the type loader.
-	 * Can be overridden per-version via VersionConfig.packageJson.
-	 */
-	packageJson?: PathLike | (() => Promise<PackageJson>);
+	/** Human-readable name for page titles (e.g., "Core Library"). If omitted, not included in titles. */
+	name?: string;
 
 	/**
-	 * Base documentation directory (relative to docs root).
-	 * Version folders will be created inside with optional API subfolder.
-	 * Example: "docs/en/claude-binary-plugin" → v1/api, v2/api
+	 * Base route path for the package documentation (e.g., "/core").
+	 * The plugin derives docsDir and full route from this value plus apiFolder.
 	 */
-	docsDir: string;
+	baseRoute?: string;
 
 	/**
-	 * Subfolder within each version directory for API documentation (defaults to "api").
-	 * Set to null to output directly to version directory.
-	 * Examples:
-	 * - "api" → docs/en/claude-binary-plugin/v1/api
-	 * - null → docs/en/claude-binary-plugin/v1
+	 * Subfolder name for API documentation (defaults to "api").
+	 * Set to null to output directly to the base route directory.
 	 */
 	apiFolder?: string | null;
 
 	/**
-	 * Base route path for the package documentation (e.g., "/claude-binary-plugin").
-	 * The full route is calculated by appending version and apiFolder:
-	 * - baseRoute: "/claude-binary-plugin", version: "v1", apiFolder: "api" → /claude-binary-plugin/v1/api
-	 * - baseRoute: "/claude-binary-plugin", version: "v2", apiFolder: null → /claude-binary-plugin/v2
+	 * Path to .api.json file OR async function that returns the model.
+	 * Required for multi-package configs (each entry must have its own model).
 	 */
-	baseRoute: string;
+	model: PathLike | (() => Promise<ApiModel | LoadedModel>);
+
+	/**
+	 * Path to package.json file OR async function that returns the parsed JSON.
+	 * Used to load type packages for the type loader.
+	 */
+	packageJson?: PathLike | (() => Promise<PackageJson>);
 
 	/**
 	 * Shiki theme configuration for syntax highlighting in code blocks.
@@ -526,40 +506,30 @@ export interface VersionedApiModelConfig {
 	theme?: string | { light: string; dark: string } | Record<string, unknown>;
 
 	/**
-	 * Map of version names to model configurations.
-	 * Can be just a path/loader, or a full VersionConfig with categories and source.
-	 */
-	versions: Record<string, PathLike | (() => Promise<ApiModel | LoadedModel>) | VersionConfig>;
-
-	/**
-	 * Package-level category configuration shared across versions (optional).
-	 * Individual versions can override via VersionConfig.categories.
-	 * Merged with plugin-level defaults.
+	 * Category configuration for this API (optional).
+	 * Uses plugin defaults if not provided.
+	 * Merged with plugin-level defaultCategories.
 	 */
 	categories?: Record<string, CategoryConfig>;
 
 	/**
-	 * Package-level source config (optional).
-	 * Can be overridden per-version via VersionConfig or loader return value.
+	 * Source code repository configuration.
+	 * If model loader returns source config, loader takes precedence.
 	 */
 	source?: SourceConfig;
 
 	/**
-	 * Package-level external npm packages to include in Twoslash type system.
-	 * Individual versions can override via VersionConfig.externalPackages.
-	 * Example: [{ name: "zod", version: "3.22.4" }, { name: "@effect/schema", version: "0.68.0" }]
+	 * External npm packages to include in Twoslash type system.
+	 * These packages will be fetched and cached using type-registry-effect.
+	 *
+	 * If not specified, automatically detects packages from package.json
+	 * based on autoDetectDependencies options.
 	 */
 	externalPackages?: ExternalPackageSpec[];
 
 	/**
-	 * Package-level options for auto-detecting external packages from package.json.
-	 * Individual versions can override via VersionConfig.autoDetectDependencies.
+	 * Options for auto-detecting external packages from package.json.
 	 * Defaults: { dependencies: false, devDependencies: false, peerDependencies: true, autoDependencies: true }
-	 *
-	 * @example
-	 * ```ts
-	 * autoDetectDependencies: { peerDependencies: true, autoDependencies: true }
-	 * ```
 	 */
 	autoDetectDependencies?: AutoDetectDependenciesOptions;
 
@@ -569,37 +539,24 @@ export interface VersionedApiModelConfig {
 	 * If omitted, uses the global ogImage setting.
 	 *
 	 * Supports string (URL/path) or detailed metadata object.
-	 * See ApiExtractorPluginOptions.ogImage for format details.
-	 *
-	 * @example "/images/claude-plugin/og-image.png"
-	 * @example { url: "/images/og.png", width: 1200, height: 630 }
 	 */
 	ogImage?: OpenGraphImageConfig;
 
 	/**
-	 * LLM plugin integration options for this package.
-	 * Individual versions can override via VersionConfig.llmsPlugin.
+	 * LLM plugin integration options for this API.
 	 * Overrides global llmsPlugin configuration.
 	 */
 	llmsPlugin?: LlmsPluginOptions;
 
 	/**
-	 * Package-level path to tsconfig.json OR async function returning compiler options.
-	 * Individual versions can override via VersionConfig.tsconfig.
+	 * Path to tsconfig.json OR async function returning compiler options.
 	 * Overrides global tsconfig.
-	 *
-	 * @example
-	 * ```ts
-	 * tsconfig: "tsconfig.json"
-	 * ```
 	 */
 	tsconfig?: PathLike | (() => Promise<TypeResolutionCompilerOptions>);
 
 	/**
-	 * Package-level compiler options for Twoslash.
+	 * Direct compiler options for Twoslash.
 	 * Merged on top of tsconfig if both are provided.
-	 * Individual versions can override via VersionConfig.compilerOptions.
-	 * Overrides global compilerOptions.
 	 */
 	compilerOptions?: TypeResolutionCompilerOptions;
 }
@@ -894,14 +851,45 @@ export interface LlmsPluginOptions {
 export type LogLevel = "none" | "info" | "verbose" | "debug";
 
 /**
- * Plugin options
+ * Plugin options for rspress-plugin-api-extractor.
+ *
+ * Uses a discriminated config shape: provide either `api` (single package)
+ * or `apis` (multi-package portal), but not both.
+ *
+ * @example Single-package site
+ * ```ts
+ * apiExtractorPlugin({
+ *   api: {
+ *     packageName: "@my-org/my-lib",
+ *     model: "temp/my-lib.api.json",
+ *   },
+ * })
+ * ```
+ *
+ * @example Multi-package portal
+ * ```ts
+ * apiExtractorPlugin({
+ *   apis: [
+ *     { packageName: "@my-org/core", model: "temp/core.api.json" },
+ *     { packageName: "@my-org/utils", model: "temp/utils.api.json" },
+ *   ],
+ * })
+ * ```
  */
 export interface ApiExtractorPluginOptions {
 	/**
-	 * API model configuration(s).
-	 * Can be a single config object or an array of configs.
+	 * Single-package API configuration.
+	 * Use this for sites documenting one package (supports RSPress multiVersion and i18n).
+	 * Mutually exclusive with `apis`.
 	 */
-	apis: ApiModelConfig | VersionedApiModelConfig | Array<ApiModelConfig | VersionedApiModelConfig>;
+	api?: SingleApiConfig;
+
+	/**
+	 * Multi-package API configurations.
+	 * Use this for portal sites documenting multiple packages (no versioning per package).
+	 * Mutually exclusive with `api`.
+	 */
+	apis?: MultiApiConfig[];
 
 	/**
 	 * Base URL for your website (used for og:url generation).
@@ -945,51 +933,6 @@ export interface ApiExtractorPluginOptions {
 	 * Error handling configuration (optional).
 	 */
 	errors?: ErrorConfig;
-
-	/**
-	 * Global path to tsconfig.json OR async function returning compiler options.
-	 * Can be overridden per-API or per-version.
-	 *
-	 * Provides a priority cascade:
-	 * 1. Parse tsconfig.json if path specified (supports extends chains)
-	 * 2. Call async function if provided
-	 * 3. Merge compilerOptions on top (if both are provided)
-	 * 4. Fall back to sensible defaults for unspecified options
-	 *
-	 * @example Using tsconfig.json path
-	 * ```ts
-	 * tsconfig: "tsconfig.json"
-	 * ```
-	 *
-	 * @example Using async function
-	 * ```ts
-	 * tsconfig: async () => ({ target: 99, lib: ["ESNext", "DOM"] })
-	 * ```
-	 */
-	tsconfig?: PathLike | (() => Promise<TypeResolutionCompilerOptions>);
-
-	/**
-	 * Global compiler options for Twoslash and type resolution.
-	 * Can be overridden per-API or per-version.
-	 * Merged on top of tsconfig if both are provided.
-	 *
-	 * @example Direct compiler options
-	 * ```ts
-	 * compilerOptions: {
-	 *   target: 99,  // ESNext
-	 *   lib: ["ESNext", "DOM"],
-	 * }
-	 * ```
-	 *
-	 * @example Combined with tsconfig
-	 * ```ts
-	 * tsconfig: "tsconfig.json",
-	 * compilerOptions: {
-	 *   strict: false,  // Override for docs
-	 * }
-	 * ```
-	 */
-	compilerOptions?: TypeResolutionCompilerOptions;
 
 	/**
 	 * Global LLM plugin integration options.
@@ -1242,15 +1185,6 @@ export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
 };
 
 /**
- * Type guard to check if config is versioned
- */
-export function isVersionedApiModel(
-	config: ApiModelConfig | VersionedApiModelConfig,
-): config is VersionedApiModelConfig {
-	return "versions" in config;
-}
-
-/**
  * Type guard to check if version value is a full VersionConfig
  */
 export function isVersionConfig(
@@ -1264,15 +1198,6 @@ export function isVersionConfig(
  */
 export function isLoadedModel(result: ApiModel | LoadedModel): result is LoadedModel {
 	return typeof result === "object" && result !== null && "model" in result;
-}
-
-/**
- * Normalize apis to always be an array
- */
-export function normalizeApis(
-	apis: ApiModelConfig | VersionedApiModelConfig | Array<ApiModelConfig | VersionedApiModelConfig>,
-): Array<ApiModelConfig | VersionedApiModelConfig> {
-	return Array.isArray(apis) ? apis : [apis];
 }
 
 /**
