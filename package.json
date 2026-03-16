@@ -16,8 +16,8 @@
 	},
 	"type": "module",
 	"scripts": {
-		"build": "turbo run build --log-order=grouped",
-		"ci:build": "CI=\"true\" turbo run build --log-order=grouped --output-logs=full",
+		"build": "turbo run build --filter=plugin --filter='./modules/*' --log-order=grouped",
+		"ci:build": "CI=\"true\" turbo run build --filter=plugin --filter='./modules/*' --log-order=grouped --output-logs=full",
 		"ci:test": "CI=\"true\" vitest run --coverage",
 		"ci:version": "savvy-changesets version && biome format --write .",
 		"commit:check": "savvy-commit check",
