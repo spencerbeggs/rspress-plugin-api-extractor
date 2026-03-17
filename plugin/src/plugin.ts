@@ -15,6 +15,7 @@ import type {
 } from "@microsoft/api-extractor-model";
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
+import { Layer, ManagedRuntime } from "effect";
 import matter from "gray-matter";
 import type { Highlighter, ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
@@ -27,6 +28,8 @@ import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
 import { FileGenerationStatsCollector } from "./file-generation-stats.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
+import { PluginLoggerLive } from "./layers/ObservabilityLive.js";
+import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
 import {
@@ -1265,6 +1268,12 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	const logLevel = envLogLevel || options.logLevel || "info";
 	const slowCodeBlockThreshold = options.performance?.thresholds?.slowCodeBlock ?? 100;
 
+	// Phase 1: Minimal Effect runtime with available services
+	// LogLevel "none" is not supported by PluginLoggerLive, fall back to "info"
+	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
+	const EffectAppLayer = Layer.mergeAll(PathDerivationServiceLive, PluginLoggerLive(effectLogLevel));
+	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
+
 	// File context map (reset in beforeBuild for each build)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
 
@@ -1942,6 +1951,9 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Mark first build as complete
 				isFirstBuild = false;
 			}
+
+			// Dispose Effect runtime (guaranteed cleanup of all scoped resources)
+			await effectRuntime.dispose();
 
 			// Close debug logger (await to ensure all events are written)
 			await debugLogger.close();
