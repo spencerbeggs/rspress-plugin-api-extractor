@@ -28,7 +28,7 @@ import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
 import { FileGenerationStatsCollector } from "./file-generation-stats.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
-import { PluginLoggerLive } from "./layers/ObservabilityLive.js";
+import { PluginLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
@@ -1269,9 +1269,9 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	const slowCodeBlockThreshold = options.performance?.thresholds?.slowCodeBlock ?? 100;
 
 	// Phase 1: Minimal Effect runtime with available services
-	// LogLevel "none" is not supported by PluginLoggerLive, fall back to "info"
+	// LogLevel "none" is not supported by PluginLoggerLayer, fall back to "info"
 	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
-	const EffectAppLayer = Layer.mergeAll(PathDerivationServiceLive, PluginLoggerLive(effectLogLevel));
+	const EffectAppLayer = Layer.mergeAll(PathDerivationServiceLive, PluginLoggerLayer(effectLogLevel));
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 
 	// File context map (reset in beforeBuild for each build)
