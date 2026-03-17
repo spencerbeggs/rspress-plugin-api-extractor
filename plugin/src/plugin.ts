@@ -170,7 +170,7 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 		},
 
 		// Use afterBuild hook to log statistics
-		async afterBuild(): Promise<void> {
+		async afterBuild(_config: UserConfig, isProd: boolean): Promise<void> {
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
 				// Log build summary via Effect metrics
@@ -180,8 +180,13 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				isFirstBuild = false;
 			}
 
-			// Dispose Effect runtime (guaranteed cleanup of all scoped resources)
-			await effectRuntime.dispose();
+			// Only dispose the runtime in production builds.
+			// In dev mode, the runtime must stay alive for HMR rebuilds —
+			// disposing it would destroy the SnapshotService layer (DB connection)
+			// and subsequent beforeBuild calls would fail.
+			if (isProd) {
+				await effectRuntime.dispose();
+			}
 		},
 
 		// Use config hook to modify RSPress configuration
