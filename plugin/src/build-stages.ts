@@ -27,8 +27,8 @@ import {
 	TypeAliasPageGenerator,
 	VariablePageGenerator,
 } from "./markdown/index.js";
+import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import { SnapshotManager } from "./snapshot-manager.js";
-import type { CategoryConfig, LlmsPluginOptions, SourceConfig } from "./types.js";
 
 export interface WorkItem {
 	readonly item: ApiItem;
@@ -241,7 +241,7 @@ export interface GenerateSinglePageContext {
 	readonly buildTime: string;
 	readonly resolvedOutputDir: string;
 	readonly suppressExampleErrors?: boolean;
-	readonly llmsPlugin?: LlmsPluginOptions;
+	readonly llmsPlugin?: LlmsPlugin;
 }
 
 /**
@@ -1030,7 +1030,7 @@ export interface BuildPipelineInput {
 	readonly pageConcurrency: number;
 	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
 	readonly suppressExampleErrors?: boolean;
-	readonly llmsPlugin?: LlmsPluginOptions;
+	readonly llmsPlugin?: LlmsPlugin;
 	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
 	readonly siteUrl?: string;
 	readonly ogImage?: import("./types.js").OpenGraphImageConfig;

@@ -1,6 +1,6 @@
 import type { ApiDeclaredItem, ApiEnum, ApiEnumMember } from "@microsoft/api-extractor-model";
 import { ApiParser } from "../../loader.js";
-import type { LlmsPluginOptions, SourceConfig } from "../../types.js";
+import type { LlmsPlugin, SourceConfig } from "../../schemas/index.js";
 import { markdownCrossLinker } from "../cross-linker.js";
 import {
 	escapeMdxGenerics,
@@ -52,7 +52,7 @@ export class EnumPageGenerator {
 		apiName?: string,
 		sourceConfig?: SourceConfig,
 		suppressExampleErrors?: boolean,
-		llmsPlugin?: LlmsPluginOptions,
+		llmsPlugin?: LlmsPlugin,
 	): Promise<{ routePath: string; content: string }> {
 		const shouldSuppressErrors = suppressExampleErrors ?? true;
 		const name = apiEnum.displayName;

@@ -1,7 +1,7 @@
 import type { ApiFunction } from "@microsoft/api-extractor-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiParser } from "../../loader.js";
-import type { LlmsPluginOptions, SourceConfig } from "../../types.js";
+import type { LlmsPlugin, SourceConfig } from "../../schemas/index.js";
 import { FunctionPageGenerator } from "./function-page.js";
 
 // Mock dependencies
@@ -145,7 +145,7 @@ describe("FunctionPageGenerator", () => {
 
 		it("should include LLMS plugin section when enabled", async () => {
 			vi.mocked(ApiParser.getSourceLink).mockReturnValue("https://github.com/user/repo/blob/main/src/utils.ts");
-			const llmsPlugin: LlmsPluginOptions = {
+			const llmsPlugin: LlmsPlugin = {
 				enabled: true,
 				showCopyButton: true,
 				showViewOptions: true,
@@ -170,7 +170,7 @@ describe("FunctionPageGenerator", () => {
 
 		it("should not include LLMS plugin section when disabled", async () => {
 			vi.mocked(ApiParser.getSourceLink).mockReturnValue("https://github.com/user/repo/blob/main/src/utils.ts");
-			const llmsPlugin: LlmsPluginOptions = {
+			const llmsPlugin: LlmsPlugin = {
 				enabled: false,
 				showCopyButton: false,
 				showViewOptions: false,

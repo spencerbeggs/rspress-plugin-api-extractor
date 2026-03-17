@@ -1,7 +1,7 @@
 import type { ApiClass, ApiInterface, ApiItem, ApiNamespace, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiDocumentedItem, ApiItemKind, ApiReleaseTagMixin, ReleaseTag } from "@microsoft/api-extractor-model";
 import type { DocNode } from "@microsoft/tsdoc";
-import type { CategoryConfig, SourceConfig } from "./types.js";
+import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
 /**
  * Represents a member of a namespace with its parent namespace context.

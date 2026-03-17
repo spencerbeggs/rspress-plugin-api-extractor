@@ -3,18 +3,17 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiModel as ApiModelClass } from "@microsoft/api-extractor-model";
+import { isLoadedModel, isVersionConfig } from "./config-utils.js";
+import type { LoadedModel, PackageJson } from "./internal-types.js";
 import type {
-	AutoDetectDependenciesOptions,
+	AutoDetectDependencies,
 	CategoryConfig,
 	ExternalPackageSpec,
-	LlmsPluginOptions,
-	LoadedModel,
+	LlmsPlugin,
 	OpenGraphImageConfig,
-	PackageJson,
 	SourceConfig,
 	VersionConfig,
-} from "./types.js";
-import { isLoadedModel, isVersionConfig } from "./types.js";
+} from "./schemas/index.js";
 
 /**
  * Utility class for loading API models from various sources
@@ -132,9 +131,9 @@ export class ApiModelLoader {
 		categories?: Record<string, CategoryConfig>;
 		source?: SourceConfig;
 		externalPackages?: ExternalPackageSpec[];
-		autoDetectDependencies?: AutoDetectDependenciesOptions;
+		autoDetectDependencies?: AutoDetectDependencies;
 		ogImage?: OpenGraphImageConfig;
-		llmsPlugin?: LlmsPluginOptions;
+		llmsPlugin?: LlmsPlugin;
 	}> {
 		if (isVersionConfig(versionValue)) {
 			// Full VersionConfig with model, categories, source, packageJson, externalPackages, autoDetectDependencies, ogImage, and llmsPlugin

@@ -1,9 +1,9 @@
 import os from "node:os";
 import { Effect, Layer } from "effect";
 import { ConfigValidationError } from "../errors.js";
+import type { PluginOptions } from "../schemas/index.js";
 import type { ValidatedPluginConfig } from "../services/ConfigService.js";
 import { ConfigService } from "../services/ConfigService.js";
-import type { ApiExtractorPluginOptions } from "../types.js";
 
 interface RspressMultiVersion {
 	default: string;
@@ -19,7 +19,7 @@ interface RspressConfigSubset {
  * This is the Effect-native counterpart to the sync validatePluginOptions function.
  */
 function validateOptions(
-	options: ApiExtractorPluginOptions,
+	options: PluginOptions,
 	rspressConfig: RspressConfigSubset,
 ): Effect.Effect<void, ConfigValidationError> {
 	return Effect.gen(function* () {
@@ -98,7 +98,7 @@ function validateOptions(
  * This layer is not yet wired into ManagedRuntime — that comes when the build
  * program is expanded.
  */
-export function ConfigServiceLive(options: ApiExtractorPluginOptions): Layer.Layer<ConfigService> {
+export function ConfigServiceLive(options: PluginOptions): Layer.Layer<ConfigService> {
 	return Layer.succeed(ConfigService, {
 		getPluginConfig: Effect.succeed({
 			mode: options.apis ? "multi" : "single",

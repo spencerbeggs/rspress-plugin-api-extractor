@@ -1,5 +1,5 @@
+import type { TypeResolutionCompilerOptions, TypeScriptConfig } from "./internal-types.js";
 import { TsConfigParseError, parseTsConfig } from "./tsconfig-parser.js";
-import type { TypeResolutionCompilerOptions, TypeScriptConfig } from "./types.js";
 
 /**
  * Default TypeScript compiler options for Twoslash and type resolution.

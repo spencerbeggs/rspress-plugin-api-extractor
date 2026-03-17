@@ -2,7 +2,7 @@ import type { ApiClass, ApiInterface, ApiItem } from "@microsoft/api-extractor-m
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import { describe, expect, it } from "vitest";
 import { ApiParser } from "./loader.js";
-import type { SourceConfig } from "./types.js";
+import type { SourceConfig } from "./schemas/index.js";
 
 /**
  * Tests for ApiParser static class

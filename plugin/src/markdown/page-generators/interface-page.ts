@@ -1,8 +1,8 @@
 import type { ApiDeclaredItem, ApiInterface, ApiItem } from "@microsoft/api-extractor-model";
 import { TypeSignatureFormatter } from "../../formatter.js";
 import { ApiParser } from "../../loader.js";
+import type { LlmsPlugin, SourceConfig } from "../../schemas/index.js";
 import { TypeReferenceExtractor } from "../../type-reference-extractor.js";
-import type { LlmsPluginOptions, SourceConfig } from "../../types.js";
 import { markdownCrossLinker } from "../cross-linker.js";
 import {
 	escapeMdxGenerics,
@@ -81,7 +81,7 @@ export class InterfacePageGenerator {
 		apiName?: string,
 		sourceConfig?: SourceConfig,
 		suppressExampleErrors?: boolean,
-		llmsPlugin?: LlmsPluginOptions,
+		llmsPlugin?: LlmsPlugin,
 	): Promise<{ routePath: string; content: string }> {
 		const shouldSuppressErrors = suppressExampleErrors ?? true;
 		const name = apiInterface.displayName;

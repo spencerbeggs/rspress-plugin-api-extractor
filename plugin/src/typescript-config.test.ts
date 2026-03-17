@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TypeResolutionCompilerOptions, TypeScriptConfig } from "./types.js";
+import type { TypeResolutionCompilerOptions, TypeScriptConfig } from "./internal-types.js";
 import {
 	DEFAULT_COMPILER_OPTIONS,
 	hasTypeScriptConfig,

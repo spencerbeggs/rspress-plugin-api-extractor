@@ -7,8 +7,8 @@ import type { ShikiTransformer } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type ts from "typescript";
+import type { TypeResolutionCompilerOptions } from "./internal-types.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
-import type { TypeResolutionCompilerOptions } from "./types.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
 
 /**

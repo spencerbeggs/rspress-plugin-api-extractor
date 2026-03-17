@@ -13,8 +13,15 @@ import { ApiExtractedPackage } from "./api-extracted-package.js";
 import type { CrossLinkData } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { CategoryResolver } from "./category-resolver.js";
+import {
+	extractAutoDetectedPackages,
+	isVersionConfig,
+	mergeLlmsPluginConfig,
+	validateExternalPackages,
+} from "./config-utils.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
+import type { PackageJson, TypeResolutionCompilerOptions } from "./internal-types.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
@@ -26,32 +33,24 @@ import { OpenGraphResolver } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
+import type {
+	CategoryConfig,
+	ExternalPackageSpec,
+	LlmsPlugin,
+	LogLevel,
+	MultiApiConfig,
+	OpenGraphImageConfig,
+	PluginOptions,
+	SingleApiConfig,
+	SourceConfig,
+	VersionConfig,
+} from "./schemas/index.js";
+import { DEFAULT_CATEGORIES } from "./schemas/index.js";
 import { TypeRegistryService } from "./services/TypeRegistryService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import { TypeReferenceExtractor } from "./type-reference-extractor.js";
-import type {
-	ApiExtractorPluginOptions,
-	CategoryConfig,
-	ExternalPackageSpec,
-	LlmsPluginOptions,
-	LogLevel,
-	MultiApiConfig,
-	OpenGraphImageConfig,
-	PackageJson,
-	SingleApiConfig,
-	SourceConfig,
-	TypeResolutionCompilerOptions,
-	VersionConfig,
-} from "./types.js";
-import {
-	DEFAULT_CATEGORIES,
-	extractAutoDetectedPackages,
-	isVersionConfig,
-	mergeLlmsPluginConfig,
-	validateExternalPackages,
-} from "./types.js";
 import { resolveTypeScriptConfig } from "./typescript-config.js";
 
 import { VfsRegistry } from "./vfs-registry.js";
@@ -125,7 +124,7 @@ async function generateApiDocs(
 		source?: SourceConfig;
 		packageJson?: PackageJson;
 		suppressExampleErrors?: boolean;
-		llmsPlugin?: LlmsPluginOptions;
+		llmsPlugin?: LlmsPlugin;
 		siteUrl?: string;
 		ogImage?: OpenGraphImageConfig;
 		docsDir?: string;
@@ -271,7 +270,7 @@ async function generateApiDocs(
 /**
  * RSPress plugin for generating API documentation from API Extractor model files
  */
-export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressPlugin {
+export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 	// Create instances once at plugin initialization and reuse across all builds
 	const shikiCrossLinker = new ShikiCrossLinker();
 	// Use the singleton transformers for signature formatting
@@ -360,7 +359,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				categories: Record<string, CategoryConfig>;
 				source?: SourceConfig;
 				packageJson?: PackageJson;
-				llmsPlugin?: LlmsPluginOptions;
+				llmsPlugin?: LlmsPlugin;
 				siteUrl?: string;
 				ogImage?: OpenGraphImageConfig;
 				docsDir?: string;

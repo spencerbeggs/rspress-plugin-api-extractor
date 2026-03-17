@@ -4,8 +4,9 @@ import path from "node:path";
 import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiModel as ApiModelClass } from "@microsoft/api-extractor-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { LoadedModel, PackageJson } from "./internal-types.js";
 import { ApiModelLoader } from "./model-loader.js";
-import type { LoadedModel, PackageJson, SourceConfig, VersionConfig } from "./types.js";
+import type { SourceConfig, VersionConfig } from "./schemas/index.js";
 
 /**
  * Tests for ApiModelLoader static class
