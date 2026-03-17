@@ -7,8 +7,12 @@ export {
 	LlmsPlugin,
 	LogLevel,
 	ModelInput,
+	MultiApiConfig,
+	PluginOptions,
+	SingleApiConfig,
 	SourceConfig,
 	ThemeConfig,
+	VersionConfig,
 } from "./config.js";
 export {
 	OpenGraphImageConfig,

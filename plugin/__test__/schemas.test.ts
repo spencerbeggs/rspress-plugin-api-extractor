@@ -8,12 +8,16 @@ import {
 	ExternalPackageSpec,
 	LlmsPlugin,
 	LogLevel,
+	MultiApiConfig,
 	OpenGraphImageConfig,
 	OpenGraphImageMetadata,
 	OpenGraphMetadata,
 	PerformanceConfig,
 	PerformanceThresholds,
+	PluginOptions,
+	SingleApiConfig,
 	SourceConfig,
+	VersionConfig,
 } from "../src/schemas/index.js";
 
 describe("OpenGraph schemas", () => {
@@ -217,5 +221,92 @@ describe("Config leaf schemas", () => {
 		expect(DEFAULT_CATEGORIES.enums.folderName).toBe("enum");
 		expect(DEFAULT_CATEGORIES.variables.folderName).toBe("variable");
 		expect(DEFAULT_CATEGORIES.namespaces.folderName).toBe("namespace");
+	});
+});
+
+describe("Config composite schemas", () => {
+	it("decodes VersionConfig", () => {
+		const decode = Schema.decodeUnknownSync(VersionConfig);
+		const result = decode({ model: "temp/v1.api.json" });
+		expect(result.model).toBe("temp/v1.api.json");
+	});
+
+	it("decodes VersionConfig with source", () => {
+		const decode = Schema.decodeUnknownSync(VersionConfig);
+		const result = decode({
+			model: "temp/v1.api.json",
+			source: { url: "https://github.com/org/repo", ref: "blob/v1" },
+		});
+		expect(result.source?.url).toBe("https://github.com/org/repo");
+	});
+
+	it("decodes SingleApiConfig minimal", () => {
+		const decode = Schema.decodeUnknownSync(SingleApiConfig);
+		const result = decode({ packageName: "my-lib", model: "temp/my-lib.api.json" });
+		expect(result.packageName).toBe("my-lib");
+	});
+
+	it("decodes SingleApiConfig with versions", () => {
+		const decode = Schema.decodeUnknownSync(SingleApiConfig);
+		const result = decode({
+			packageName: "my-lib",
+			versions: {
+				v1: "temp/v1.api.json",
+				v2: { model: "temp/v2.api.json" },
+			},
+		});
+		expect(result.versions).toBeDefined();
+		expect(Object.keys(result.versions ?? {})).toHaveLength(2);
+	});
+
+	it("decodes SingleApiConfig with apiFolder null", () => {
+		const decode = Schema.decodeUnknownSync(SingleApiConfig);
+		const result = decode({ packageName: "my-lib", model: "x", apiFolder: null });
+		expect(result.apiFolder).toBeNull();
+	});
+
+	it("decodes MultiApiConfig with required model", () => {
+		const decode = Schema.decodeUnknownSync(MultiApiConfig);
+		const result = decode({ packageName: "my-lib", model: "temp/my-lib.api.json" });
+		expect(result.model).toBe("temp/my-lib.api.json");
+	});
+
+	it("rejects MultiApiConfig without model", () => {
+		const decode = Schema.decodeUnknownSync(MultiApiConfig);
+		expect(() => decode({ packageName: "my-lib" })).toThrow();
+	});
+
+	it("decodes PluginOptions single-api mode", () => {
+		const decode = Schema.decodeUnknownSync(PluginOptions);
+		const result = decode({
+			api: { packageName: "my-lib", model: "temp/my-lib.api.json" },
+		});
+		expect(result.api?.packageName).toBe("my-lib");
+	});
+
+	it("decodes PluginOptions multi-api mode", () => {
+		const decode = Schema.decodeUnknownSync(PluginOptions);
+		const result = decode({
+			apis: [{ packageName: "core", model: "temp/core.api.json" }],
+		});
+		expect(result.apis).toHaveLength(1);
+	});
+
+	it("decodes PluginOptions with llmsPlugin boolean", () => {
+		const decode = Schema.decodeUnknownSync(PluginOptions);
+		const result = decode({
+			api: { packageName: "x", model: "y" },
+			llmsPlugin: true,
+		});
+		expect(result.llmsPlugin).toBe(true);
+	});
+
+	it("decodes PluginOptions with llmsPlugin object", () => {
+		const decode = Schema.decodeUnknownSync(PluginOptions);
+		const result = decode({
+			api: { packageName: "x", model: "y" },
+			llmsPlugin: { enabled: true, showCopyButton: false },
+		});
+		expect(typeof result.llmsPlugin).toBe("object");
 	});
 });

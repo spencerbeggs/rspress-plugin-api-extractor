@@ -1,5 +1,7 @@
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import { Schema } from "effect";
+import { OpenGraphImageConfig } from "./opengraph.js";
+import { PerformanceConfig } from "./performance.js";
 
 /**
  * Opaque input type for config fields that accept a file path string,
@@ -138,3 +140,84 @@ export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
 		overviewHeaders: [2],
 	},
 };
+
+// ---------------------------------------------------------------------------
+// Composite config schemas
+// ---------------------------------------------------------------------------
+
+/** Reusable categories record (internal helper) */
+const CategoriesRecord = Schema.Record({ key: Schema.String, value: CategoryConfig });
+
+export const VersionConfig = Schema.Struct({
+	model: ModelInput,
+	packageJson: Schema.optional(ModelInput),
+	categories: Schema.optional(CategoriesRecord),
+	source: Schema.optional(SourceConfig),
+	externalPackages: Schema.optional(Schema.Array(ExternalPackageSpec)),
+	autoDetectDependencies: Schema.optional(AutoDetectDependencies),
+	ogImage: Schema.optional(OpenGraphImageConfig),
+	llmsPlugin: Schema.optional(LlmsPlugin),
+	tsconfig: Schema.optional(ModelInput),
+	compilerOptions: Schema.optional(Schema.Unknown),
+});
+export type VersionConfig = Schema.Schema.Type<typeof VersionConfig>;
+
+/** Union for the versions record value: can be a path/function OR a full VersionConfig */
+const VersionValue = Schema.Union(ModelInput, VersionConfig);
+
+export const SingleApiConfig = Schema.Struct({
+	packageName: Schema.String,
+	name: Schema.optional(Schema.String),
+	baseRoute: Schema.optional(Schema.String),
+	apiFolder: Schema.optional(Schema.Union(Schema.String, Schema.Null)),
+	model: Schema.optional(ModelInput),
+	packageJson: Schema.optional(ModelInput),
+	versions: Schema.optional(
+		Schema.Record({
+			key: Schema.String,
+			value: VersionValue,
+		}),
+	),
+	theme: Schema.optional(ThemeConfig),
+	categories: Schema.optional(CategoriesRecord),
+	source: Schema.optional(SourceConfig),
+	externalPackages: Schema.optional(Schema.Array(ExternalPackageSpec)),
+	autoDetectDependencies: Schema.optional(AutoDetectDependencies),
+	ogImage: Schema.optional(OpenGraphImageConfig),
+	llmsPlugin: Schema.optional(LlmsPlugin),
+	tsconfig: Schema.optional(ModelInput),
+	compilerOptions: Schema.optional(Schema.Unknown),
+});
+export type SingleApiConfig = Schema.Schema.Type<typeof SingleApiConfig>;
+
+export const MultiApiConfig = Schema.Struct({
+	packageName: Schema.String,
+	name: Schema.optional(Schema.String),
+	baseRoute: Schema.optional(Schema.String),
+	apiFolder: Schema.optional(Schema.Union(Schema.String, Schema.Null)),
+	model: ModelInput,
+	packageJson: Schema.optional(ModelInput),
+	theme: Schema.optional(ThemeConfig),
+	categories: Schema.optional(CategoriesRecord),
+	source: Schema.optional(SourceConfig),
+	externalPackages: Schema.optional(Schema.Array(ExternalPackageSpec)),
+	autoDetectDependencies: Schema.optional(AutoDetectDependencies),
+	ogImage: Schema.optional(OpenGraphImageConfig),
+	llmsPlugin: Schema.optional(LlmsPlugin),
+	tsconfig: Schema.optional(ModelInput),
+	compilerOptions: Schema.optional(Schema.Unknown),
+});
+export type MultiApiConfig = Schema.Schema.Type<typeof MultiApiConfig>;
+
+export const PluginOptions = Schema.Struct({
+	api: Schema.optional(SingleApiConfig),
+	apis: Schema.optional(Schema.Array(MultiApiConfig)),
+	siteUrl: Schema.optional(Schema.String),
+	ogImage: Schema.optional(OpenGraphImageConfig),
+	defaultCategories: Schema.optional(CategoriesRecord),
+	errors: Schema.optional(ErrorConfig),
+	llmsPlugin: Schema.optional(Schema.Union(Schema.Boolean, LlmsPlugin)),
+	logLevel: Schema.optional(LogLevel),
+	performance: Schema.optional(PerformanceConfig),
+});
+export type PluginOptions = Schema.Schema.Type<typeof PluginOptions>;
