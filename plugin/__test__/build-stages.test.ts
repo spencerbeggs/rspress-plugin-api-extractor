@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
 import { cleanupAndCommit, generatePages, prepareWorkItems, writeFiles, writeMetadata } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
+import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
 import { ApiModelLoader } from "../src/model-loader.js";
 import { SnapshotManager } from "../src/snapshot-manager.js";
 import type { CategoryConfig } from "../src/types.js";
@@ -498,6 +499,44 @@ describe("writeMetadata", () => {
 
 		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});
+
+describe("MarkdownCrossLinker accumulation", () => {
+	const categories = { classes: { folderName: "class" } };
+
+	it("addRoutes accumulates routes across multiple calls", () => {
+		const linker = new MarkdownCrossLinker();
+
+		linker.addRoutes({ classes: [{ displayName: "Foo", kind: "Class", members: [] }] }, "/api1", categories);
+		linker.addRoutes({ classes: [{ displayName: "Bar", kind: "Class", members: [] }] }, "/api2", categories);
+
+		// Both routes should be present
+		const result = linker.addCrossLinks("Returns a Foo or Bar instance");
+		expect(result).toContain("[Foo](/api1/class/foo)");
+		expect(result).toContain("[Bar](/api2/class/bar)");
+	});
+
+	it("clear removes all accumulated routes", () => {
+		const linker = new MarkdownCrossLinker();
+		linker.addRoutes({ classes: [{ displayName: "Foo", kind: "Class", members: [] }] }, "/api1", categories);
+
+		linker.clear();
+
+		const result = linker.addCrossLinks("Returns a Foo instance");
+		expect(result).toBe("Returns a Foo instance");
+	});
+
+	it("initialize clears then adds (backward compat)", () => {
+		const linker = new MarkdownCrossLinker();
+		linker.addRoutes({ classes: [{ displayName: "Foo", kind: "Class", members: [] }] }, "/api1", categories);
+
+		// initialize should clear Foo and add Bar
+		linker.initialize({ classes: [{ displayName: "Bar", kind: "Class", members: [] }] }, "/api2", categories);
+
+		const result = linker.addCrossLinks("Returns a Foo or Bar instance");
+		expect(result).not.toContain("[Foo]");
+		expect(result).toContain("[Bar](/api2/class/bar)");
 	});
 });
 

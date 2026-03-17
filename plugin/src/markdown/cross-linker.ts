@@ -1,4 +1,12 @@
-import type { ApiClass, ApiInterface, ApiItem } from "@microsoft/api-extractor-model";
+/**
+ * Minimal shape of an API item needed for cross-linking.
+ * Structural subtype of ApiItem — only the properties actually accessed.
+ */
+export interface CrossLinkableItem {
+	readonly displayName: string;
+	readonly kind: string;
+	readonly members?: readonly CrossLinkableItem[];
+}
 
 /**
  * A cross-linking utility for markdown API documentation.
@@ -51,15 +59,22 @@ export class MarkdownCrossLinker {
 	private readonly apiItemRoutes: Map<string, string> = new Map();
 
 	/**
-	 * Initialize the cross-link map with all API items
+	 * Clear all accumulated routes. Call at the start of each build.
+	 */
+	public clear(): void {
+		this.apiItemRoutes.clear();
+	}
+
+	/**
+	 * Add routes for API items. Accumulates across multiple calls.
+	 * Call clear() first if starting a fresh build.
 	 * @returns Object with routes map and kinds map for semantic highlighting
 	 */
-	public initialize(
-		items: Record<string, ApiItem[]>,
+	public addRoutes(
+		items: Record<string, CrossLinkableItem[]>,
 		baseRoute: string,
 		categories: Record<string, { folderName: string }>,
 	): { routes: Map<string, string>; kinds: Map<string, string> } {
-		this.apiItemRoutes.clear();
 		const apiItemKinds = new Map<string, string>();
 
 		// Iterate through each category and add routes for all items
@@ -71,9 +86,8 @@ export class MarkdownCrossLinker {
 				apiItemKinds.set(item.displayName, item.kind);
 
 				// For classes and interfaces, also add routes for their members
-				if (item.kind === "Class" || item.kind === "Interface") {
-					const itemWithMembers = item as ApiClass | ApiInterface;
-					for (const member of itemWithMembers.members) {
+				if ((item.kind === "Class" || item.kind === "Interface") && item.members) {
+					for (const member of item.members) {
 						const memberName = member.displayName;
 						const memberId = this.sanitizeId(memberName);
 						const fullMemberName = `${item.displayName}.${memberName}`;
@@ -86,6 +100,20 @@ export class MarkdownCrossLinker {
 		}
 
 		return { routes: this.apiItemRoutes, kinds: apiItemKinds };
+	}
+
+	/**
+	 * Initialize the cross-link map with all API items.
+	 * @deprecated Use clear() + addRoutes() instead.
+	 * @returns Object with routes map and kinds map for semantic highlighting
+	 */
+	public initialize(
+		items: Record<string, CrossLinkableItem[]>,
+		baseRoute: string,
+		categories: Record<string, { folderName: string }>,
+	): { routes: Map<string, string>; kinds: Map<string, string> } {
+		this.clear();
+		return this.addRoutes(items, baseRoute, categories);
 	}
 
 	/**
