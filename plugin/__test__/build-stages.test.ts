@@ -3,9 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
-import { generatePages, prepareWorkItems, writeFiles } from "../src/build-stages.js";
+import { generatePages, prepareWorkItems, writeFiles, writeMetadata } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
 import { ApiModelLoader } from "../src/model-loader.js";
+import { SnapshotManager } from "../src/snapshot-manager.js";
+import type { CategoryConfig } from "../src/types.js";
 import { DEFAULT_CATEGORIES } from "../src/types.js";
 
 describe("build-stages types", () => {
@@ -249,6 +251,252 @@ describe("writeFiles", () => {
 			.catch(() => false);
 		expect(exists).toBe(true);
 
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});
+
+describe("writeMetadata", () => {
+	it("writes _meta.json files for categories with items", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-test-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotManager = new SnapshotManager(dbPath);
+		const generatedFiles = new Set<string>();
+
+		const categories: Record<string, CategoryConfig> = {
+			classes: {
+				folderName: "class",
+				displayName: "Classes",
+				singularName: "Class",
+				collapsible: true,
+				collapsed: true,
+				overviewHeaders: [2],
+			},
+		};
+
+		const results: FileWriteResult[] = [
+			{
+				relativePathWithExt: "class/foo.mdx",
+				absolutePath: path.join(tmpDir, "class/foo.mdx"),
+				status: "new",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/foo.mdx",
+					publishedTime: "",
+					modifiedTime: "",
+					contentHash: "a",
+					frontmatterHash: "b",
+					buildTime: "",
+				},
+				categoryKey: "classes",
+				label: "Foo",
+				routePath: "/api/class/foo",
+			},
+			{
+				relativePathWithExt: "class/bar.mdx",
+				absolutePath: path.join(tmpDir, "class/bar.mdx"),
+				status: "new",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/bar.mdx",
+					publishedTime: "",
+					modifiedTime: "",
+					contentHash: "c",
+					frontmatterHash: "d",
+					buildTime: "",
+				},
+				categoryKey: "classes",
+				label: "Bar",
+				routePath: "/api/class/bar",
+			},
+		];
+
+		await writeMetadata({
+			fileResults: results,
+			categories,
+			resolvedOutputDir: tmpDir,
+			snapshotManager,
+			existingSnapshots: new Map(),
+			buildTime: new Date().toISOString(),
+			baseRoute: "/api",
+			packageName: "test-package",
+			generatedFiles,
+		});
+
+		// Category _meta.json should exist with sorted entries
+		const metaPath = path.join(tmpDir, "class/_meta.json");
+		const metaContent = JSON.parse(await fs.promises.readFile(metaPath, "utf-8"));
+		expect(metaContent).toHaveLength(2);
+		expect(metaContent[0].label).toBe("Bar");
+		expect(metaContent[1].label).toBe("Foo");
+
+		// Root _meta.json should exist with category dir entry
+		const rootMetaPath = path.join(tmpDir, "_meta.json");
+		const rootMeta = JSON.parse(await fs.promises.readFile(rootMetaPath, "utf-8"));
+		expect(rootMeta).toHaveLength(1);
+		expect(rootMeta[0].type).toBe("dir");
+		expect(rootMeta[0].name).toBe("class");
+		expect(rootMeta[0].label).toBe("Classes");
+
+		// generatedFiles should track all metadata files
+		expect(generatedFiles.has("_meta.json")).toBe(true);
+		expect(generatedFiles.has("class/_meta.json")).toBe(true);
+		expect(generatedFiles.has("index.mdx")).toBe(true);
+
+		// index.mdx should have been written
+		const indexPath = path.join(tmpDir, "index.mdx");
+		const indexExists = await fs.promises
+			.access(indexPath)
+			.then(() => true)
+			.catch(() => false);
+		expect(indexExists).toBe(true);
+
+		snapshotManager.close();
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+
+	it("skips writing _meta.json when content is unchanged (snapshot match)", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-unchanged-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotManager = new SnapshotManager(dbPath);
+
+		const categories: Record<string, CategoryConfig> = {
+			classes: {
+				folderName: "class",
+				displayName: "Classes",
+				singularName: "Class",
+				collapsible: true,
+				collapsed: true,
+				overviewHeaders: [2],
+			},
+		};
+
+		const results: FileWriteResult[] = [
+			{
+				relativePathWithExt: "class/foo.mdx",
+				absolutePath: path.join(tmpDir, "class/foo.mdx"),
+				status: "unchanged",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/foo.mdx",
+					publishedTime: "2024-01-01T00:00:00.000Z",
+					modifiedTime: "2024-01-01T00:00:00.000Z",
+					contentHash: "a",
+					frontmatterHash: "b",
+					buildTime: "2024-01-01T00:00:00.000Z",
+				},
+				categoryKey: "classes",
+				label: "Foo",
+				routePath: "/api/class/foo",
+			},
+		];
+
+		// First write — creates the files
+		const generatedFiles1 = new Set<string>();
+		await writeMetadata({
+			fileResults: results,
+			categories,
+			resolvedOutputDir: tmpDir,
+			snapshotManager,
+			existingSnapshots: new Map(),
+			buildTime: new Date().toISOString(),
+			baseRoute: "/api",
+			packageName: "test-package",
+			generatedFiles: generatedFiles1,
+		});
+
+		const metaPath = path.join(tmpDir, "class/_meta.json");
+		const statBefore = await fs.promises.stat(metaPath);
+
+		// Build the existingSnapshots from the snapshot manager for the second run
+		const allSnapshots = snapshotManager.getSnapshotsForOutputDir(tmpDir);
+		const existingSnapshots = new Map(allSnapshots.map((s) => [s.filePath, s]));
+
+		// Second write — should be unchanged, file mtime should not change
+		const generatedFiles2 = new Set<string>();
+		await writeMetadata({
+			fileResults: results,
+			categories,
+			resolvedOutputDir: tmpDir,
+			snapshotManager,
+			existingSnapshots,
+			buildTime: new Date().toISOString(),
+			baseRoute: "/api",
+			packageName: "test-package",
+			generatedFiles: generatedFiles2,
+		});
+
+		const statAfter = await fs.promises.stat(metaPath);
+		// File should not have been rewritten (mtime unchanged)
+		expect(statAfter.mtimeMs).toBe(statBefore.mtimeMs);
+
+		snapshotManager.close();
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+
+	it("excludes categories with no items from root _meta.json", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-empty-cat-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotManager = new SnapshotManager(dbPath);
+		const generatedFiles = new Set<string>();
+
+		const categories: Record<string, CategoryConfig> = {
+			classes: {
+				folderName: "class",
+				displayName: "Classes",
+				singularName: "Class",
+				collapsible: true,
+				collapsed: true,
+				overviewHeaders: [2],
+			},
+			interfaces: {
+				folderName: "interface",
+				displayName: "Interfaces",
+				singularName: "Interface",
+				collapsible: true,
+				collapsed: true,
+				overviewHeaders: [2],
+			},
+		};
+
+		// Only classes have results — interfaces category is empty
+		const results: FileWriteResult[] = [
+			{
+				relativePathWithExt: "class/foo.mdx",
+				absolutePath: path.join(tmpDir, "class/foo.mdx"),
+				status: "new",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/foo.mdx",
+					publishedTime: "",
+					modifiedTime: "",
+					contentHash: "a",
+					frontmatterHash: "b",
+					buildTime: "",
+				},
+				categoryKey: "classes",
+				label: "Foo",
+				routePath: "/api/class/foo",
+			},
+		];
+
+		await writeMetadata({
+			fileResults: results,
+			categories,
+			resolvedOutputDir: tmpDir,
+			snapshotManager,
+			existingSnapshots: new Map(),
+			buildTime: new Date().toISOString(),
+			baseRoute: "/api",
+			packageName: "test-package",
+			generatedFiles,
+		});
+
+		const rootMeta = JSON.parse(await fs.promises.readFile(path.join(tmpDir, "_meta.json"), "utf-8"));
+		// Only "class" should appear — "interface" has no items
+		expect(rootMeta).toHaveLength(1);
+		expect(rootMeta[0].name).toBe("class");
+
+		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
