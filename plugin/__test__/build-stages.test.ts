@@ -3,11 +3,18 @@ import os from "node:os";
 import path from "node:path";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import type { BuildPipelineInput, FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
+import type {
+	BuildPipelineInput,
+	FileWriteResult,
+	GenerateSinglePageContext,
+	GeneratedPageResult,
+	WorkItem,
+} from "../src/build-stages.js";
 import {
 	buildPipelineForApi,
 	cleanupAndCommit,
 	generatePages,
+	generateSinglePage,
 	prepareWorkItems,
 	writeFiles,
 	writeMetadata,
@@ -632,6 +639,109 @@ describe("cleanupAndCommit", () => {
 
 		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});
+
+describe("generateSinglePage", () => {
+	it("generates a page result with valid hashes", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+		});
+
+		const ctx: GenerateSinglePageContext = {
+			existingSnapshots: new Map(),
+			baseRoute: "/example-module",
+			packageName: "example-module",
+			apiScope: "example-module",
+			buildTime: new Date().toISOString(),
+			resolvedOutputDir: "/tmp/nonexistent-dir",
+		};
+
+		const result = await generateSinglePage(workItems[0], ctx);
+		expect(result).not.toBeNull();
+		if (!result) return;
+		expect(result.contentHash).toMatch(/^[a-f0-9]{64}$/);
+		expect(result.frontmatterHash).toMatch(/^[a-f0-9]{64}$/);
+		expect(result.relativePathWithExt).toMatch(/\.mdx$/);
+		expect(result.bodyContent.length).toBeGreaterThan(0);
+	});
+
+	it("returns null for unsupported item kinds", async () => {
+		const fakeItem = { displayName: "Test", kind: 999 } as WorkItem["item"];
+		const workItem: WorkItem = {
+			item: fakeItem,
+			categoryKey: "classes",
+			categoryConfig: {
+				folderName: "class",
+				displayName: "Classes",
+				singularName: "Class",
+			} as WorkItem["categoryConfig"],
+		};
+
+		const ctx: GenerateSinglePageContext = {
+			existingSnapshots: new Map(),
+			baseRoute: "/test",
+			packageName: "test",
+			apiScope: "test",
+			buildTime: new Date().toISOString(),
+			resolvedOutputDir: "/tmp/nonexistent-dir",
+		};
+
+		const result = await generateSinglePage(workItem, ctx);
+		expect(result).toBeNull();
+	});
+
+	it("marks unchanged when snapshot hashes match", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+		});
+
+		const buildTime = new Date().toISOString();
+		const ctx: GenerateSinglePageContext = {
+			existingSnapshots: new Map(),
+			baseRoute: "/example-module",
+			packageName: "example-module",
+			apiScope: "example-module",
+			buildTime,
+			resolvedOutputDir: "/tmp/nonexistent-dir",
+		};
+
+		const first = await generateSinglePage(workItems[0], ctx);
+		if (!first) throw new Error("Expected result");
+
+		const snapshots = new Map();
+		snapshots.set(first.relativePathWithExt, {
+			outputDir: "/tmp/nonexistent-dir",
+			filePath: first.relativePathWithExt,
+			publishedTime: "2025-01-01T00:00:00.000Z",
+			modifiedTime: "2025-01-01T00:00:00.000Z",
+			contentHash: first.contentHash,
+			frontmatterHash: first.frontmatterHash,
+			buildTime,
+		});
+
+		const second = await generateSinglePage(workItems[0], {
+			...ctx,
+			existingSnapshots: snapshots,
+		});
+		expect(second).not.toBeNull();
+		if (!second) throw new Error("Expected second result to be non-null");
+		expect(second.isUnchanged).toBe(true);
+		expect(second.publishedTime).toBe("2025-01-01T00:00:00.000Z");
 	});
 });
 

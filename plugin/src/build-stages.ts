@@ -228,6 +228,284 @@ export function normalizeMarkdownSpacing(content: string): string {
 	);
 }
 
+/**
+ * Shared context for generateSinglePage — fields that are the same
+ * for every item in a single API build.
+ */
+export interface GenerateSinglePageContext {
+	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly baseRoute: string;
+	readonly packageName: string;
+	readonly apiScope: string;
+	readonly apiName?: string;
+	readonly source?: SourceConfig;
+	readonly buildTime: string;
+	readonly resolvedOutputDir: string;
+	readonly suppressExampleErrors?: boolean;
+	readonly llmsPlugin?: LlmsPluginOptions;
+}
+
+/**
+ * Generate a single page from a work item. Returns null for unsupported kinds.
+ */
+export async function generateSinglePage(
+	workItem: WorkItem,
+	ctx: GenerateSinglePageContext,
+): Promise<GeneratedPageResult | null> {
+	const {
+		existingSnapshots,
+		baseRoute,
+		packageName,
+		apiScope,
+		apiName,
+		source,
+		buildTime,
+		resolvedOutputDir,
+		suppressExampleErrors,
+		llmsPlugin,
+	} = ctx;
+	const { item, categoryConfig, namespaceMember } = workItem;
+	let page: { routePath: string; content: string } | null = null;
+
+	// Generate appropriate page based on item kind
+	switch (item.kind) {
+		case ApiItemKind.Class: {
+			const generator = new ClassPageGenerator();
+			page = await generator.generate(
+				item as ApiClass,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/class/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.Interface: {
+			const generator = new InterfacePageGenerator();
+			page = await generator.generate(
+				item as ApiInterface,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/interface/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.Function: {
+			const generator = new FunctionPageGenerator();
+			page = await generator.generate(
+				item as ApiFunction,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/function/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.TypeAlias: {
+			const generator = new TypeAliasPageGenerator();
+			page = await generator.generate(
+				item as ApiTypeAlias,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/type/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.Enum: {
+			const generator = new EnumPageGenerator();
+			page = await generator.generate(
+				item as ApiEnum,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/enum/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.Variable: {
+			const generator = new VariablePageGenerator();
+			page = await generator.generate(
+				item as ApiVariable,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/variable/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		case ApiItemKind.Namespace: {
+			const generator = new NamespacePageGenerator();
+			page = await generator.generate(
+				item as ApiNamespace,
+				baseRoute,
+				packageName,
+				categoryConfig.singularName,
+				apiScope,
+				apiName,
+				source,
+				suppressExampleErrors,
+				llmsPlugin,
+			);
+			page = {
+				routePath: page.routePath.replace("/namespace/", `/${categoryConfig.folderName}/`),
+				content: page.content,
+			};
+			break;
+		}
+		default: {
+			console.warn(
+				`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
+			);
+			return null;
+		}
+	}
+
+	if (!page) {
+		return null;
+	}
+
+	// For namespace members, transform the route path to use qualified name
+	if (namespaceMember) {
+		const simpleName = item.displayName.toLowerCase();
+		const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
+		page = {
+			routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
+			content: page.content,
+		};
+	}
+
+	// Track page generation
+	Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
+
+	// Parse the generated content to extract frontmatter and body
+	const parsed = matter(page.content);
+	// Normalize markdown spacing to remove excessive blank lines
+	const bodyContent = normalizeMarkdownSpacing(parsed.content);
+	const frontmatterData = parsed.data;
+
+	// Compute relative path from outputDir
+	const relativePath = page.routePath.replace(baseRoute, "").replace(/^\//, "");
+	const relativePathWithExt = `${relativePath}.mdx`;
+
+	// Hash the content and frontmatter
+	const contentHash = SnapshotManager.hashContent(bodyContent);
+	const frontmatterHash = SnapshotManager.hashFrontmatter(frontmatterData);
+
+	// Determine timestamps based on previous snapshot
+	let publishedTime: string;
+	let modifiedTime: string;
+	let isUnchanged = false;
+
+	const oldSnapshot = existingSnapshots.get(relativePathWithExt);
+
+	if (!oldSnapshot) {
+		// No snapshot exists - check if file exists on disk as fallback
+		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
+		const fileExists = await fs.promises
+			.access(absolutePath)
+			.then(() => true)
+			.catch(() => false);
+
+		if (fileExists) {
+			// File exists on disk - compare against it to preserve timestamps
+			const existingContent = await fs.promises.readFile(absolutePath, "utf-8");
+			const { data: existingFrontmatter, content: existingBody } = matter(existingContent);
+			// Apply same normalization as generated content for accurate comparison
+			const normalizedExistingBody = normalizeMarkdownSpacing(existingBody);
+			const existingContentHash = SnapshotManager.hashContent(normalizedExistingBody);
+			const existingFrontmatterHash = SnapshotManager.hashFrontmatter(existingFrontmatter);
+
+			if (existingContentHash === contentHash && existingFrontmatterHash === frontmatterHash) {
+				// File exists and matches - preserve timestamps, skip write
+				publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
+				modifiedTime = (existingFrontmatter["article:modified_time"] as string | undefined) || buildTime;
+				isUnchanged = true;
+			} else {
+				// File exists but content changed - preserve published, update modified
+				publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
+				modifiedTime = buildTime;
+			}
+		} else {
+			// File doesn't exist - truly new
+			publishedTime = buildTime;
+			modifiedTime = buildTime;
+		}
+	} else if (oldSnapshot.contentHash === contentHash && oldSnapshot.frontmatterHash === frontmatterHash) {
+		// NO CHANGES: Preserve both existing timestamps, skip file write
+		publishedTime = oldSnapshot.publishedTime;
+		modifiedTime = oldSnapshot.modifiedTime;
+		isUnchanged = true;
+	} else {
+		// CHANGED: Preserve published time, update modified time
+		publishedTime = oldSnapshot.publishedTime;
+		modifiedTime = buildTime;
+	}
+
+	return {
+		workItem,
+		content: page.content,
+		bodyContent,
+		frontmatter: frontmatterData,
+		contentHash,
+		frontmatterHash,
+		routePath: page.routePath,
+		relativePathWithExt,
+		publishedTime,
+		modifiedTime,
+		isUnchanged,
+	};
+}
+
 export interface GeneratePagesInput {
 	readonly workItems: readonly WorkItem[];
 	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
@@ -259,6 +537,7 @@ export interface GeneratePagesInput {
 export async function generatePages(input: GeneratePagesInput): Promise<(GeneratedPageResult | null)[]> {
 	const {
 		workItems,
+		pageConcurrency,
 		existingSnapshots,
 		baseRoute,
 		packageName,
@@ -267,257 +546,22 @@ export async function generatePages(input: GeneratePagesInput): Promise<(Generat
 		source,
 		buildTime,
 		resolvedOutputDir,
-		pageConcurrency,
 		suppressExampleErrors,
 		llmsPlugin,
 	} = input;
-
-	return parallelLimit(
-		workItems as WorkItem[],
-		pageConcurrency,
-		async (workItem: WorkItem): Promise<GeneratedPageResult | null> => {
-			const { item, categoryConfig, namespaceMember } = workItem;
-			let page: { routePath: string; content: string } | null = null;
-
-			// Generate appropriate page based on item kind
-			switch (item.kind) {
-				case ApiItemKind.Class: {
-					const generator = new ClassPageGenerator();
-					page = await generator.generate(
-						item as ApiClass,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/class/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Interface: {
-					const generator = new InterfacePageGenerator();
-					page = await generator.generate(
-						item as ApiInterface,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/interface/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Function: {
-					const generator = new FunctionPageGenerator();
-					page = await generator.generate(
-						item as ApiFunction,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/function/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.TypeAlias: {
-					const generator = new TypeAliasPageGenerator();
-					page = await generator.generate(
-						item as ApiTypeAlias,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/type/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Enum: {
-					const generator = new EnumPageGenerator();
-					page = await generator.generate(
-						item as ApiEnum,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/enum/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Variable: {
-					const generator = new VariablePageGenerator();
-					page = await generator.generate(
-						item as ApiVariable,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/variable/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Namespace: {
-					const generator = new NamespacePageGenerator();
-					page = await generator.generate(
-						item as ApiNamespace,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/namespace/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				default: {
-					console.warn(
-						`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
-					);
-					return null;
-				}
-			}
-
-			if (!page) {
-				return null;
-			}
-
-			// For namespace members, transform the route path to use qualified name
-			if (namespaceMember) {
-				const simpleName = item.displayName.toLowerCase();
-				const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
-				page = {
-					routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
-					content: page.content,
-				};
-			}
-
-			// Track page generation
-			Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
-
-			// Parse the generated content to extract frontmatter and body
-			const parsed = matter(page.content);
-			// Normalize markdown spacing to remove excessive blank lines
-			const bodyContent = normalizeMarkdownSpacing(parsed.content);
-			const frontmatterData = parsed.data;
-
-			// Compute relative path from outputDir
-			const relativePath = page.routePath.replace(baseRoute, "").replace(/^\//, "");
-			const relativePathWithExt = `${relativePath}.mdx`;
-
-			// Hash the content and frontmatter
-			const contentHash = SnapshotManager.hashContent(bodyContent);
-			const frontmatterHash = SnapshotManager.hashFrontmatter(frontmatterData);
-
-			// Determine timestamps based on previous snapshot
-			let publishedTime: string;
-			let modifiedTime: string;
-			let isUnchanged = false;
-
-			const oldSnapshot = existingSnapshots.get(relativePathWithExt);
-
-			if (!oldSnapshot) {
-				// No snapshot exists - check if file exists on disk as fallback
-				const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
-				const fileExists = await fs.promises
-					.access(absolutePath)
-					.then(() => true)
-					.catch(() => false);
-
-				if (fileExists) {
-					// File exists on disk - compare against it to preserve timestamps
-					const existingContent = await fs.promises.readFile(absolutePath, "utf-8");
-					const { data: existingFrontmatter, content: existingBody } = matter(existingContent);
-					// Apply same normalization as generated content for accurate comparison
-					const normalizedExistingBody = normalizeMarkdownSpacing(existingBody);
-					const existingContentHash = SnapshotManager.hashContent(normalizedExistingBody);
-					const existingFrontmatterHash = SnapshotManager.hashFrontmatter(existingFrontmatter);
-
-					if (existingContentHash === contentHash && existingFrontmatterHash === frontmatterHash) {
-						// File exists and matches - preserve timestamps, skip write
-						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
-						modifiedTime = (existingFrontmatter["article:modified_time"] as string | undefined) || buildTime;
-						isUnchanged = true;
-					} else {
-						// File exists but content changed - preserve published, update modified
-						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
-						modifiedTime = buildTime;
-					}
-				} else {
-					// File doesn't exist - truly new
-					publishedTime = buildTime;
-					modifiedTime = buildTime;
-				}
-			} else if (oldSnapshot.contentHash === contentHash && oldSnapshot.frontmatterHash === frontmatterHash) {
-				// NO CHANGES: Preserve both existing timestamps, skip file write
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = oldSnapshot.modifiedTime;
-				isUnchanged = true;
-			} else {
-				// CHANGED: Preserve published time, update modified time
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = buildTime;
-			}
-
-			return {
-				workItem,
-				content: page.content,
-				bodyContent,
-				frontmatter: frontmatterData,
-				contentHash,
-				frontmatterHash,
-				routePath: page.routePath,
-				relativePathWithExt,
-				publishedTime,
-				modifiedTime,
-				isUnchanged,
-			};
-		},
-	);
+	const ctx: GenerateSinglePageContext = {
+		existingSnapshots,
+		baseRoute,
+		packageName,
+		apiScope,
+		apiName,
+		source,
+		buildTime,
+		resolvedOutputDir,
+		suppressExampleErrors,
+		llmsPlugin,
+	};
+	return parallelLimit(workItems as WorkItem[], pageConcurrency, (workItem) => generateSinglePage(workItem, ctx));
 }
 
 export interface WriteFilesInput {
