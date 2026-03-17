@@ -1,7 +1,34 @@
-import type { ApiClass, ApiInterface, ApiItem, ApiPackage } from "@microsoft/api-extractor-model";
+import fs from "node:fs";
+import path from "node:path";
+import type {
+	ApiClass,
+	ApiEnum,
+	ApiFunction,
+	ApiInterface,
+	ApiItem,
+	ApiNamespace,
+	ApiPackage,
+	ApiTypeAlias,
+	ApiVariable,
+} from "@microsoft/api-extractor-model";
+import { ApiItemKind } from "@microsoft/api-extractor-model";
+import { Effect, Metric } from "effect";
+import matter from "gray-matter";
+import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
-import type { CategoryConfig } from "./types.js";
+import {
+	ClassPageGenerator,
+	EnumPageGenerator,
+	FunctionPageGenerator,
+	InterfacePageGenerator,
+	NamespacePageGenerator,
+	TypeAliasPageGenerator,
+	VariablePageGenerator,
+} from "./markdown/index.js";
+import { SnapshotManager } from "./snapshot-manager.js";
+import type { CategoryConfig, LlmsPluginOptions, SourceConfig } from "./types.js";
+import { parallelLimit } from "./utils.js";
 
 export interface WorkItem {
 	readonly item: ApiItem;
@@ -181,4 +208,313 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 		workItems,
 		crossLinkData: { routes, kinds },
 	};
+}
+
+/**
+ * Normalize markdown spacing by removing excessive blank lines.
+ * - Remove extra blank lines between headings and code blocks
+ * - Ensure single blank line between sections
+ */
+export function normalizeMarkdownSpacing(content: string): string {
+	return (
+		content
+			// Remove multiple consecutive blank lines (3+ blank lines -> 1 blank line)
+			.replace(/\n\n\n+/g, "\n\n")
+			// Remove blank lines between headings and code fences (3 or 4 backticks)
+			.replace(/^(#{1,6}\s+.+?)\n+(?=````)/gm, "$1\n")
+			// Remove blank lines after ## headings before content
+			.replace(/^(#{2}\s+.+?)\n\n+/gm, "$1\n\n")
+	);
+}
+
+export interface GeneratePagesInput {
+	readonly workItems: readonly WorkItem[];
+	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly baseRoute: string;
+	readonly packageName: string;
+	readonly apiScope: string;
+	readonly apiName?: string;
+	readonly source?: SourceConfig;
+	readonly buildTime: string;
+	readonly resolvedOutputDir: string;
+	readonly pageConcurrency: number;
+	readonly suppressExampleErrors?: boolean;
+	readonly llmsPlugin?: LlmsPluginOptions;
+}
+
+/**
+ * Generate page content for each work item, parse frontmatter, hash content,
+ * and resolve timestamps from existing snapshots.
+ *
+ * For each WorkItem:
+ * 1. Creates the appropriate page generator and calls `.generate()` based on `item.kind`
+ * 2. For namespace members, transforms the route path to use the qualified name
+ * 3. Increments BuildMetrics.pagesGenerated
+ * 4. Parses the generated content via matter() (gray-matter)
+ * 5. Normalizes markdown spacing
+ * 6. Hashes content and frontmatter via SnapshotManager static methods
+ * 7. Resolves timestamps from existing snapshots or disk fallback
+ */
+export async function generatePages(input: GeneratePagesInput): Promise<(GeneratedPageResult | null)[]> {
+	const {
+		workItems,
+		existingSnapshots,
+		baseRoute,
+		packageName,
+		apiScope,
+		apiName,
+		source,
+		buildTime,
+		resolvedOutputDir,
+		pageConcurrency,
+		suppressExampleErrors,
+		llmsPlugin,
+	} = input;
+
+	return parallelLimit(
+		workItems as WorkItem[],
+		pageConcurrency,
+		async (workItem: WorkItem): Promise<GeneratedPageResult | null> => {
+			const { item, categoryConfig, namespaceMember } = workItem;
+			let page: { routePath: string; content: string } | null = null;
+
+			// Generate appropriate page based on item kind
+			switch (item.kind) {
+				case ApiItemKind.Class: {
+					const generator = new ClassPageGenerator();
+					page = await generator.generate(
+						item as ApiClass,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/class/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.Interface: {
+					const generator = new InterfacePageGenerator();
+					page = await generator.generate(
+						item as ApiInterface,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/interface/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.Function: {
+					const generator = new FunctionPageGenerator();
+					page = await generator.generate(
+						item as ApiFunction,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/function/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.TypeAlias: {
+					const generator = new TypeAliasPageGenerator();
+					page = await generator.generate(
+						item as ApiTypeAlias,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/type/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.Enum: {
+					const generator = new EnumPageGenerator();
+					page = await generator.generate(
+						item as ApiEnum,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/enum/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.Variable: {
+					const generator = new VariablePageGenerator();
+					page = await generator.generate(
+						item as ApiVariable,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/variable/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				case ApiItemKind.Namespace: {
+					const generator = new NamespacePageGenerator();
+					page = await generator.generate(
+						item as ApiNamespace,
+						baseRoute,
+						packageName,
+						categoryConfig.singularName,
+						apiScope,
+						apiName,
+						source,
+						suppressExampleErrors,
+						llmsPlugin,
+					);
+					page = {
+						routePath: page.routePath.replace("/namespace/", `/${categoryConfig.folderName}/`),
+						content: page.content,
+					};
+					break;
+				}
+				default: {
+					console.warn(
+						`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
+					);
+					return null;
+				}
+			}
+
+			if (!page) {
+				return null;
+			}
+
+			// For namespace members, transform the route path to use qualified name
+			if (namespaceMember) {
+				const simpleName = item.displayName.toLowerCase();
+				const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
+				page = {
+					routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
+					content: page.content,
+				};
+			}
+
+			// Track page generation
+			Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
+
+			// Parse the generated content to extract frontmatter and body
+			const parsed = matter(page.content);
+			// Normalize markdown spacing to remove excessive blank lines
+			const bodyContent = normalizeMarkdownSpacing(parsed.content);
+			const frontmatterData = parsed.data;
+
+			// Compute relative path from outputDir
+			const relativePath = page.routePath.replace(baseRoute, "").replace(/^\//, "");
+			const relativePathWithExt = `${relativePath}.mdx`;
+
+			// Hash the content and frontmatter
+			const contentHash = SnapshotManager.hashContent(bodyContent);
+			const frontmatterHash = SnapshotManager.hashFrontmatter(frontmatterData);
+
+			// Determine timestamps based on previous snapshot
+			let publishedTime: string;
+			let modifiedTime: string;
+			let isUnchanged = false;
+
+			const oldSnapshot = existingSnapshots.get(relativePathWithExt);
+
+			if (!oldSnapshot) {
+				// No snapshot exists - check if file exists on disk as fallback
+				const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
+				const fileExists = await fs.promises
+					.access(absolutePath)
+					.then(() => true)
+					.catch(() => false);
+
+				if (fileExists) {
+					// File exists on disk - compare against it to preserve timestamps
+					const existingContent = await fs.promises.readFile(absolutePath, "utf-8");
+					const { data: existingFrontmatter, content: existingBody } = matter(existingContent);
+					// Apply same normalization as generated content for accurate comparison
+					const normalizedExistingBody = normalizeMarkdownSpacing(existingBody);
+					const existingContentHash = SnapshotManager.hashContent(normalizedExistingBody);
+					const existingFrontmatterHash = SnapshotManager.hashFrontmatter(existingFrontmatter);
+
+					if (existingContentHash === contentHash && existingFrontmatterHash === frontmatterHash) {
+						// File exists and matches - preserve timestamps, skip write
+						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
+						modifiedTime = (existingFrontmatter["article:modified_time"] as string | undefined) || buildTime;
+						isUnchanged = true;
+					} else {
+						// File exists but content changed - preserve published, update modified
+						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
+						modifiedTime = buildTime;
+					}
+				} else {
+					// File doesn't exist - truly new
+					publishedTime = buildTime;
+					modifiedTime = buildTime;
+				}
+			} else if (oldSnapshot.contentHash === contentHash && oldSnapshot.frontmatterHash === frontmatterHash) {
+				// NO CHANGES: Preserve both existing timestamps, skip file write
+				publishedTime = oldSnapshot.publishedTime;
+				modifiedTime = oldSnapshot.modifiedTime;
+				isUnchanged = true;
+			} else {
+				// CHANGED: Preserve published time, update modified time
+				publishedTime = oldSnapshot.publishedTime;
+				modifiedTime = buildTime;
+			}
+
+			return {
+				workItem,
+				content: page.content,
+				bodyContent,
+				frontmatter: frontmatterData,
+				contentHash,
+				frontmatterHash,
+				routePath: page.routePath,
+				relativePathWithExt,
+				publishedTime,
+				modifiedTime,
+				isUnchanged,
+			};
+		},
+	);
 }
