@@ -1,12 +1,11 @@
 import type { PathLike } from "node:fs";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ApiEntryPoint, ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Metric, Schema } from "effect";
-import type { Highlighter, ShikiTransformer } from "shiki";
+import type { Highlighter } from "shiki";
 import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
@@ -45,6 +44,7 @@ import type {
 	VersionConfig,
 } from "./schemas/index.js";
 import { DEFAULT_CATEGORIES, PluginOptions } from "./schemas/index.js";
+import type { ResolvedApiConfig, ResolvedBuildContext } from "./services/ConfigService.js";
 import { TypeRegistryService } from "./services/TypeRegistryService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
@@ -114,31 +114,9 @@ function normalizeThemeConfig(
  * across multiple APIs.
  */
 async function generateApiDocs(
-	config: {
-		apiPackage: ApiPackage;
-		packageName: string;
-		apiName?: string;
-		outputDir: string;
-		baseRoute: string;
-		categories: Record<string, CategoryConfig>;
-		source?: SourceConfig;
-		packageJson?: PackageJson;
-		suppressExampleErrors?: boolean;
-		llmsPlugin?: LlmsPlugin;
-		siteUrl?: string;
-		ogImage?: OpenGraphImageConfig;
-		docsDir?: string;
-		docsRoot?: string;
-		theme?: ShikiThemeConfig;
-	},
-	shikiCrossLinker: ShikiCrossLinker,
-	snapshotManager: SnapshotManager,
-	ogResolver: OpenGraphResolver | null,
+	apiConfig: ResolvedApiConfig & { suppressExampleErrors?: boolean },
+	buildContext: ResolvedBuildContext,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-	highlighter?: Highlighter,
-	hideCutTransformer?: ShikiTransformer,
-	hideCutLinesTransformer?: ShikiTransformer,
-	twoslashTransformer?: ShikiTransformer,
 ): Promise<CrossLinkData> {
 	const {
 		apiPackage,
@@ -149,11 +127,22 @@ async function generateApiDocs(
 		categories,
 		source,
 		packageJson,
-		suppressExampleErrors = true,
 		llmsPlugin,
 		siteUrl,
 		ogImage,
-	} = config;
+	} = apiConfig;
+	const suppressExampleErrors = apiConfig.suppressExampleErrors ?? true;
+
+	const {
+		snapshotManager,
+		shikiCrossLinker,
+		highlighter,
+		hideCutTransformer,
+		hideCutLinesTransformer,
+		twoslashTransformer,
+		ogResolver,
+		pageConcurrency,
+	} = buildContext;
 
 	const resolvedOutputDir = path.resolve(process.cwd(), outputDir);
 	const buildTime = new Date().toISOString();
@@ -196,13 +185,9 @@ async function generateApiDocs(
 		if (twoslashTransformer != null) vfsConfig.twoslashTransformer = twoslashTransformer;
 		if (hideCutTransformer != null) vfsConfig.hideCutTransformer = hideCutTransformer;
 		if (hideCutLinesTransformer != null) vfsConfig.hideCutLinesTransformer = hideCutLinesTransformer;
-		if (config.theme != null) vfsConfig.theme = config.theme;
+		if (apiConfig.theme != null) vfsConfig.theme = apiConfig.theme;
 		VfsRegistry.register(apiScope, vfsConfig);
 	}
-
-	// Calculate concurrency
-	const cpuCores = os.cpus().length;
-	const pageConcurrency = Math.max(cpuCores > 4 ? cpuCores - 1 : cpuCores, 2);
 
 	// Phase 2+3: Generate pages and write files via Stream pipeline
 	console.log(
@@ -801,6 +786,26 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				// Use bounded parallelism (limit 2) to avoid SQLite contention while improving performance
 				console.log("📝 Generating API documentation...");
 				const pageGenStart = performance.now();
+				const cpuCores = (await import("node:os")).cpus().length;
+				if (!combinedVfs || !shikiHighlighter || !tsEnvCache) {
+					throw new Error("Build context not fully initialized: missing VFS, highlighter, or tsEnvCache");
+				}
+				const buildContext: ResolvedBuildContext = {
+					apiConfigs: apiConfigs as ReadonlyArray<ResolvedApiConfig>,
+					combinedVfs,
+					highlighter: shikiHighlighter,
+					tsEnvCache,
+					resolvedCompilerOptions,
+					ogResolver,
+					snapshotManager,
+					shikiCrossLinker,
+					hideCutTransformer,
+					hideCutLinesTransformer,
+					twoslashTransformer: TwoslashManager.getInstance().getTransformer() ?? undefined,
+					pageConcurrency: Math.max(cpuCores > 4 ? cpuCores - 1 : cpuCores, 2),
+					logLevel: logLevel as LogLevel,
+					suppressExampleErrors: options.errors?.example !== "show",
+				};
 				await Effect.runPromise(
 					Effect.forEach(
 						apiConfigs,
@@ -809,18 +814,9 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 								const configStart = performance.now();
 
 								await generateApiDocs(
-									{
-										...config,
-										suppressExampleErrors: options.errors?.example !== "show",
-									},
-									shikiCrossLinker,
-									snapshotManager,
-									ogResolver,
+									{ ...config, suppressExampleErrors: buildContext.suppressExampleErrors },
+									buildContext,
 									fileContextMap,
-									shikiHighlighter,
-									hideCutTransformer,
-									hideCutLinesTransformer,
-									TwoslashManager.getInstance().getTransformer() ?? undefined,
 								);
 
 								if (isVerbose) {

@@ -194,12 +194,14 @@ export function ConfigServiceLive(
 
 						// --- 1. Validate options ---
 						yield* validateOptions(options, {
-							multiVersion: rspressConfig.multiVersion
+							...(rspressConfig.multiVersion
 								? {
-										default: rspressConfig.multiVersion.default,
-										versions: [...rspressConfig.multiVersion.versions],
+										multiVersion: {
+											default: rspressConfig.multiVersion.default,
+											versions: [...rspressConfig.multiVersion.versions],
+										},
 									}
-								: undefined,
+								: {}),
 						});
 
 						// --- 2. Derive RSPress context ---

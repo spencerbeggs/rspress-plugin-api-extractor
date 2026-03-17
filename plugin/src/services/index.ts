@@ -1,4 +1,4 @@
-export type { ValidatedApiConfig, ValidatedPluginConfig } from "./ConfigService.js";
+export type { ResolvedApiConfig, ResolvedBuildContext, RspressConfigSubset } from "./ConfigService.js";
 export { ConfigService } from "./ConfigService.js";
 export type { CrossLinkData } from "./CrossLinkerService.js";
 export { CrossLinkerService } from "./CrossLinkerService.js";
