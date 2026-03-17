@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { NodeFileSystem } from "@effect/platform-node";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
@@ -495,7 +496,9 @@ describe("generateSinglePage", () => {
 			resolvedOutputDir: "/tmp/nonexistent-dir",
 		};
 
-		const result = await generateSinglePage(workItems[0], ctx);
+		const result = await Effect.runPromise(
+			generateSinglePage(workItems[0], ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 		expect(result).not.toBeNull();
 		if (!result) return;
 		expect(result.contentHash).toMatch(/^[a-f0-9]{64}$/);
@@ -525,7 +528,9 @@ describe("generateSinglePage", () => {
 			resolvedOutputDir: "/tmp/nonexistent-dir",
 		};
 
-		const result = await generateSinglePage(workItem, ctx);
+		const result = await Effect.runPromise(
+			generateSinglePage(workItem, ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 		expect(result).toBeNull();
 	});
 
@@ -551,7 +556,9 @@ describe("generateSinglePage", () => {
 			resolvedOutputDir: "/tmp/nonexistent-dir",
 		};
 
-		const first = await generateSinglePage(workItems[0], ctx);
+		const first = await Effect.runPromise(
+			generateSinglePage(workItems[0], ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 		if (!first) throw new Error("Expected result");
 
 		const snapshots = new Map();
@@ -565,10 +572,12 @@ describe("generateSinglePage", () => {
 			buildTime,
 		});
 
-		const second = await generateSinglePage(workItems[0], {
-			...ctx,
-			existingSnapshots: snapshots,
-		});
+		const second = await Effect.runPromise(
+			generateSinglePage(workItems[0], {
+				...ctx,
+				existingSnapshots: snapshots,
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 		expect(second).not.toBeNull();
 		if (!second) throw new Error("Expected second result to be non-null");
 		expect(second.isUnchanged).toBe(true);
@@ -693,7 +702,7 @@ describe("Stream pipeline (native)", () => {
 			existingSnapshots: new Map(),
 		});
 
-		const results = await Effect.runPromise(program);
+		const results = await Effect.runPromise(program.pipe(Effect.provide(NodeFileSystem.layer)));
 
 		expect(results.length).toBe(workItems.length);
 		const written = results.filter((r) => r.status !== "unchanged");
@@ -736,7 +745,7 @@ describe("Stream pipeline (native)", () => {
 				resolvedOutputDir: tmpDir,
 				pageConcurrency: 2,
 				existingSnapshots: new Map(),
-			}),
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
 		);
 
 		// Build snapshot map
@@ -756,7 +765,7 @@ describe("Stream pipeline (native)", () => {
 				resolvedOutputDir: tmpDir,
 				pageConcurrency: 2,
 				existingSnapshots: snapshots,
-			}),
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
 		);
 
 		// ALL items must still appear (not filtered)

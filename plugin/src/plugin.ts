@@ -170,7 +170,7 @@ async function generateApiDocs(
 			...(ogResolver !== undefined ? { ogResolver } : {}),
 			...(siteUrl != null ? { siteUrl } : {}),
 			...(ogImage != null ? { ogImage } : {}),
-		}),
+		}).pipe(Effect.provide(NodeFileSystem.layer)),
 	);
 	console.log(`✅ Generated ${fileResults.filter((r) => r.status !== "unchanged").length} pages`);
 
