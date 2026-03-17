@@ -29,7 +29,6 @@ import {
 } from "./markdown/index.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 import type { CategoryConfig, LlmsPluginOptions, SourceConfig } from "./types.js";
-import { parallelLimit } from "./utils.js";
 
 export interface WorkItem {
 	readonly item: ApiItem;
@@ -506,77 +505,6 @@ export async function generateSinglePage(
 	};
 }
 
-export interface GeneratePagesInput {
-	readonly workItems: readonly WorkItem[];
-	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
-	readonly baseRoute: string;
-	readonly packageName: string;
-	readonly apiScope: string;
-	readonly apiName?: string;
-	readonly source?: SourceConfig;
-	readonly buildTime: string;
-	readonly resolvedOutputDir: string;
-	readonly pageConcurrency: number;
-	readonly suppressExampleErrors?: boolean;
-	readonly llmsPlugin?: LlmsPluginOptions;
-}
-
-/**
- * Generate page content for each work item, parse frontmatter, hash content,
- * and resolve timestamps from existing snapshots.
- *
- * For each WorkItem:
- * 1. Creates the appropriate page generator and calls `.generate()` based on `item.kind`
- * 2. For namespace members, transforms the route path to use the qualified name
- * 3. Increments BuildMetrics.pagesGenerated
- * 4. Parses the generated content via matter() (gray-matter)
- * 5. Normalizes markdown spacing
- * 6. Hashes content and frontmatter via SnapshotManager static methods
- * 7. Resolves timestamps from existing snapshots or disk fallback
- */
-export async function generatePages(input: GeneratePagesInput): Promise<(GeneratedPageResult | null)[]> {
-	const {
-		workItems,
-		pageConcurrency,
-		existingSnapshots,
-		baseRoute,
-		packageName,
-		apiScope,
-		apiName,
-		source,
-		buildTime,
-		resolvedOutputDir,
-		suppressExampleErrors,
-		llmsPlugin,
-	} = input;
-	const ctx: GenerateSinglePageContext = {
-		existingSnapshots,
-		baseRoute,
-		packageName,
-		apiScope,
-		apiName,
-		source,
-		buildTime,
-		resolvedOutputDir,
-		suppressExampleErrors,
-		llmsPlugin,
-	};
-	return parallelLimit(workItems as WorkItem[], pageConcurrency, (workItem) => generateSinglePage(workItem, ctx));
-}
-
-export interface WriteFilesInput {
-	readonly pages: readonly (GeneratedPageResult | null)[];
-	readonly resolvedOutputDir: string;
-	readonly baseRoute: string;
-	readonly buildTime: string;
-	readonly pageConcurrency: number;
-	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
-	readonly siteUrl?: string;
-	readonly ogImage?: import("./types.js").OpenGraphImageConfig;
-	readonly packageName?: string;
-	readonly apiName?: string;
-}
-
 /**
  * Shared context for writeSingleFile — fields that are the same
  * for every item in a single API build.
@@ -707,37 +635,6 @@ export async function writeSingleFile(
 		label,
 		routePath,
 	};
-}
-
-/**
- * Write changed files to disk, resolving OG metadata where configured,
- * and return FileWriteResult[] for metadata/snapshot tracking.
- *
- * For each GeneratedPageResult:
- * - If unchanged: skip write, increment metrics, return status "unchanged"
- * - If changed:
- *   1. Optionally resolve OG metadata and regenerate frontmatter
- *   2. Write the file to disk (creating directories as needed)
- *   3. Determine status: "new" if file didn't exist, "modified" if it did
- *   4. Increment appropriate metrics
- */
-export async function writeFiles(input: WriteFilesInput): Promise<FileWriteResult[]> {
-	const { pages, resolvedOutputDir, buildTime, pageConcurrency, ogResolver, siteUrl, ogImage, packageName, apiName } =
-		input;
-
-	// Filter out null results
-	const validPages = pages.filter((p): p is GeneratedPageResult => p !== null);
-
-	const ctx: WriteSingleFileContext = {
-		resolvedOutputDir,
-		buildTime,
-		ogResolver,
-		siteUrl,
-		ogImage,
-		packageName,
-		apiName,
-	};
-	return parallelLimit(validPages, pageConcurrency, (page) => writeSingleFile(page, ctx));
 }
 
 export interface WriteMetadataInput {

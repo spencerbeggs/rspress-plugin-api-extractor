@@ -4,7 +4,6 @@ import path from "node:path";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
-	BuildPipelineInput,
 	FileWriteResult,
 	GenerateSinglePageContext,
 	GeneratedPageResult,
@@ -14,10 +13,8 @@ import type {
 import {
 	buildPipelineForApi,
 	cleanupAndCommit,
-	generatePages,
 	generateSinglePage,
 	prepareWorkItems,
-	writeFiles,
 	writeMetadata,
 	writeSingleFile,
 } from "../src/build-stages.js";
@@ -102,174 +99,6 @@ describe("prepareWorkItems", () => {
 		});
 		expect(result.workItems).toHaveLength(0);
 		expect(result.crossLinkData.routes.size).toBe(0);
-	});
-});
-
-describe("generatePages", () => {
-	it("generates page results with valid hashes for fixture model", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
-		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
-		const resolver = new CategoryResolver();
-		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
-		const { workItems } = prepareWorkItems({
-			apiPackage,
-			categories,
-			baseRoute: "/example-module",
-			packageName: "example-module",
-		});
-
-		const subset = workItems.slice(0, 3);
-		const results = await generatePages({
-			workItems: subset,
-			existingSnapshots: new Map(),
-			baseRoute: "/example-module",
-			packageName: "example-module",
-			apiScope: "example-module",
-			buildTime: new Date().toISOString(),
-			resolvedOutputDir: "/tmp/test-output-nonexistent",
-			pageConcurrency: 2,
-		});
-
-		expect(results.length).toBe(subset.length);
-		for (const r of results) {
-			if (r === null) continue;
-			expect(r.contentHash).toMatch(/^[a-f0-9]{64}$/);
-			expect(r.frontmatterHash).toMatch(/^[a-f0-9]{64}$/);
-			expect(r.relativePathWithExt).toMatch(/\.mdx$/);
-			expect(r.bodyContent.length).toBeGreaterThan(0);
-		}
-	});
-
-	it("marks unchanged pages when snapshot hashes match", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
-		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
-		const resolver = new CategoryResolver();
-		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
-		const { workItems } = prepareWorkItems({
-			apiPackage,
-			categories,
-			baseRoute: "/example-module",
-			packageName: "example-module",
-		});
-
-		const buildTime = new Date().toISOString();
-		const subset = workItems.slice(0, 1);
-
-		const firstResults = await generatePages({
-			workItems: subset,
-			existingSnapshots: new Map(),
-			baseRoute: "/example-module",
-			packageName: "example-module",
-			apiScope: "example-module",
-			buildTime,
-			resolvedOutputDir: "/tmp/test-output-nonexistent",
-			pageConcurrency: 1,
-		});
-
-		const firstResult = firstResults[0];
-		if (!firstResult) throw new Error("Expected result");
-
-		const snapshots = new Map();
-		snapshots.set(firstResult.relativePathWithExt, {
-			outputDir: "/tmp/test-output-nonexistent",
-			filePath: firstResult.relativePathWithExt,
-			publishedTime: "2025-01-01T00:00:00.000Z",
-			modifiedTime: "2025-01-01T00:00:00.000Z",
-			contentHash: firstResult.contentHash,
-			frontmatterHash: firstResult.frontmatterHash,
-			buildTime,
-		});
-
-		const secondResults = await generatePages({
-			workItems: subset,
-			existingSnapshots: snapshots,
-			baseRoute: "/example-module",
-			packageName: "example-module",
-			apiScope: "example-module",
-			buildTime,
-			resolvedOutputDir: "/tmp/test-output-nonexistent",
-			pageConcurrency: 1,
-		});
-
-		const secondResult = secondResults[0];
-		if (!secondResult) throw new Error("Expected second result to be non-null");
-		expect(secondResult.isUnchanged).toBe(true);
-		expect(secondResult.publishedTime).toBe("2025-01-01T00:00:00.000Z");
-	});
-});
-
-describe("writeFiles", () => {
-	it("writes changed files and skips unchanged files", async () => {
-		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "build-stages-"));
-
-		const changedPage: GeneratedPageResult = {
-			workItem: {
-				item: { displayName: "Foo" } as GeneratedPageResult["workItem"]["item"],
-				categoryKey: "classes",
-				categoryConfig: {
-					folderName: "class",
-					displayName: "Classes",
-					singularName: "Class",
-				} as GeneratedPageResult["workItem"]["categoryConfig"],
-			},
-			content: "---\ntitle: Foo\n---\n# Foo\n",
-			bodyContent: "# Foo\n",
-			frontmatter: { title: "Foo" },
-			contentHash: "abc123",
-			frontmatterHash: "def456",
-			routePath: "/example-module/class/foo",
-			relativePathWithExt: "class/foo.mdx",
-			publishedTime: "2025-01-01T00:00:00.000Z",
-			modifiedTime: "2025-01-01T00:00:00.000Z",
-			isUnchanged: false,
-		};
-
-		const unchangedPage: GeneratedPageResult = {
-			workItem: {
-				item: { displayName: "Bar" } as GeneratedPageResult["workItem"]["item"],
-				categoryKey: "classes",
-				categoryConfig: {
-					folderName: "class",
-					displayName: "Classes",
-					singularName: "Class",
-				} as GeneratedPageResult["workItem"]["categoryConfig"],
-			},
-			content: "---\ntitle: Bar\n---\n# Bar\n",
-			bodyContent: "# Bar\n",
-			frontmatter: { title: "Bar" },
-			contentHash: "abc123",
-			frontmatterHash: "def456",
-			routePath: "/example-module/class/bar",
-			relativePathWithExt: "class/bar.mdx",
-			publishedTime: "2025-01-01T00:00:00.000Z",
-			modifiedTime: "2025-01-01T00:00:00.000Z",
-			isUnchanged: true,
-		};
-
-		const results = await writeFiles({
-			pages: [changedPage, unchangedPage],
-			resolvedOutputDir: tmpDir,
-			baseRoute: "/example-module",
-			buildTime: new Date().toISOString(),
-			pageConcurrency: 2,
-		});
-
-		expect(results).toHaveLength(2);
-
-		const changedResult = results.find((r: FileWriteResult) => r.relativePathWithExt === "class/foo.mdx");
-		expect(changedResult?.status).toBe("new");
-
-		const unchangedResult = results.find((r: FileWriteResult) => r.relativePathWithExt === "class/bar.mdx");
-		expect(unchangedResult?.status).toBe("unchanged");
-
-		const filePath = path.join(tmpDir, "class/foo.mdx");
-		const exists = await fs.promises
-			.access(filePath)
-			.then(() => true)
-			.catch(() => false);
-		expect(exists).toBe(true);
-
-		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
 
@@ -833,54 +662,6 @@ describe("writeSingleFile", () => {
 			.then(() => true)
 			.catch(() => false);
 		expect(exists).toBe(false);
-
-		await fs.promises.rm(tmpDir, { recursive: true });
-	});
-});
-
-describe("Stream pipeline", () => {
-	it("processes work items through generation → write → fold", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
-		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
-		const resolver = new CategoryResolver();
-		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
-		const { workItems } = prepareWorkItems({
-			apiPackage,
-			categories,
-			baseRoute: "/example-module",
-			packageName: "example-module",
-		});
-
-		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "stream-test-"));
-
-		const input: BuildPipelineInput = {
-			workItems,
-			baseRoute: "/example-module",
-			packageName: "example-module",
-			apiScope: "example-module",
-			buildTime: new Date().toISOString(),
-			resolvedOutputDir: tmpDir,
-			pageConcurrency: 2,
-			existingSnapshots: new Map(),
-		};
-
-		const program = buildPipelineForApi(input);
-		const results = await Effect.runPromise(program);
-
-		expect(results.length).toBeGreaterThan(0);
-
-		// All files should be written on first run (all new)
-		const written = results.filter((r) => r.status !== "unchanged");
-		expect(written.length).toBeGreaterThan(0);
-
-		// Verify files exist on disk
-		for (const r of written) {
-			const exists = await fs.promises
-				.access(r.absolutePath)
-				.then(() => true)
-				.catch(() => false);
-			expect(exists).toBe(true);
-		}
 
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
