@@ -1,4 +1,5 @@
 import { Effect, Layer, Option, Ref } from "effect";
+import { hashContent } from "../../src/content-hash.js";
 import { deriveOutputPaths, normalizeBaseRoute } from "../../src/path-derivation.js";
 import { CrossLinkerService } from "../../src/services/CrossLinkerService.js";
 import { PathDerivationService } from "../../src/services/PathDerivationService.js";
@@ -15,6 +16,7 @@ export const MockSnapshotServiceLayer = Layer.effect(
 	Effect.gen(function* () {
 		const store = yield* Ref.make(new Map<string, FileSnapshot>());
 		return {
+			hashContent,
 			getSnapshot: (outputDir: string, filePath: string) =>
 				Ref.get(store).pipe(Effect.map((m) => Option.fromNullable(m.get(`${outputDir}::${filePath}`)))),
 			getAllForDirectory: (outputDir: string) =>

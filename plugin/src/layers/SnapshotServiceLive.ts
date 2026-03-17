@@ -3,6 +3,7 @@ import { Migrator } from "@effect/sql";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-node";
 import { Effect, Layer, Option } from "effect";
+import { hashContent } from "../content-hash.js";
 import { SnapshotDbError } from "../errors.js";
 import migration001 from "../migrations/001_create_snapshots.js";
 import type { FileSnapshot } from "../services/SnapshotService.js";
@@ -46,6 +47,8 @@ export const SnapshotServiceLive = (dbPath: string) => {
 			yield* Effect.addFinalizer(() => sql`PRAGMA wal_checkpoint(TRUNCATE)`.pipe(Effect.ignore));
 
 			return {
+				hashContent,
+
 				getSnapshot: (outputDir, filePath) =>
 					sql`SELECT * FROM file_snapshots WHERE output_dir = ${outputDir} AND file_path = ${filePath}`.pipe(
 						Effect.map((rows) => (rows.length > 0 ? Option.some(toFileSnapshot(rows[0])) : Option.none())),

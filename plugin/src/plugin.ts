@@ -7,6 +7,7 @@ import { generateApiDocs } from "./build-program.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
+import { SnapshotServiceLive } from "./layers/SnapshotServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
@@ -70,11 +71,13 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	// Phase 1: Minimal Effect runtime with available services
 	// LogLevel "none" is not supported by PluginLoggerLayer, fall back to "info"
 	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
+	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
 		PluginLoggerLayer(effectLogLevel),
 		TypeRegistryServiceLive,
 		NodeFileSystem.layer,
+		SnapshotServiceLive(dbPath),
 	);
 	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);

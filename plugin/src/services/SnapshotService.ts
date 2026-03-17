@@ -13,6 +13,8 @@ export interface FileSnapshot {
 }
 
 export interface SnapshotServiceShape {
+	readonly hashContent: (content: string) => string;
+
 	readonly getSnapshot: (
 		outputDir: string,
 		filePath: string,
