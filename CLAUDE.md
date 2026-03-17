@@ -66,34 +66,52 @@ configurations. Each site depends on `rspress-plugin-api-extractor` via
 
 **multi** — Multi-API portal combining multiple module API models.
 
+## Effect-TS Architecture
+
+The plugin uses Effect-TS for all build orchestration. Key patterns:
+
+- **Services** in the Layer stack: `ConfigService`, `SnapshotService`,
+  `TypeRegistryService`, `PathDerivationService`
+- **Stream pipeline** for concurrent page generation (`build-stages.ts`)
+- **Effect Schema** for config validation (`src/schemas/`)
+- **`@effect/platform`** FileSystem for cross-platform I/O
+- **`@effect/sql-sqlite-node`** for snapshot tracking DB
+
+See `plugin/CLAUDE.md` for detailed service layer documentation.
+
 ## Design Documentation
 
 Design docs live in `.claude/design/rspress-plugin-api-extractor/`. Load the
 relevant doc when working on these areas:
 
-**Build & infrastructure:**
+**Build & infrastructure** — load when modifying Effect services, layers,
+plugin lifecycle, or ManagedRuntime:
 
 - @./.claude/design/rspress-plugin-api-extractor/build-architecture.md
 - @./.claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md
 
-**Page generation & markdown:**
+**Page generation & markdown** — load when modifying the Stream pipeline,
+page generators, Shiki transformers, or cross-linking:
 
 - @./.claude/design/rspress-plugin-api-extractor/page-generation-system.md
 - @./.claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md
 - @./.claude/design/rspress-plugin-api-extractor/import-generation-system.md
 - @./.claude/design/rspress-plugin-api-extractor/source-mapping-system.md
 
-**Runtime components & SSG:**
+**Runtime components & SSG** — load when modifying React components or
+SSG-MD dual-mode rendering:
 
 - @./.claude/design/rspress-plugin-api-extractor/component-development.md
 - @./.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
 
-**Type loading & VFS:**
+**Type loading & VFS** — load when modifying Twoslash, external package
+types, or virtual file system generation:
 
 - @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
 - @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
 
-**Observability:**
+**Observability** — load when modifying Effect Metrics, logging, or
+error tracking:
 
 - @./.claude/design/rspress-plugin-api-extractor/performance-observability.md
 - @./.claude/design/rspress-plugin-api-extractor/error-observability.md
