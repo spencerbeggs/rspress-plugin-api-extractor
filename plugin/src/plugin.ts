@@ -127,40 +127,34 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 					...(docsRoot != null ? { root: docsRoot } : {}),
 				};
 
-				// Resolve full build context via ConfigService
-				const buildContext = await effectRuntime.runPromise(
-					Effect.gen(function* () {
-						const configSvc = yield* ConfigService;
-						return yield* configSvc.resolve(rspressConfigSubset);
-					}),
-					// Note: NOT using Effect.scoped — the SnapshotManager's acquireRelease
-					// scope must span the entire build (resolve + generateApiDocs). The
-					// ManagedRuntime scope (disposed in afterBuild) manages the lifetime.
-				);
-
-				// Generate API documentation
-				console.log("📝 Generating API documentation...");
-				const pageGenStart = performance.now();
-
+				// Run the entire build (resolve + generate) in a single scoped Effect.
+				// The Scope spans both operations so acquireRelease resources (SnapshotManager)
+				// stay open during doc generation and are cleaned up when the scope closes.
 				await effectRuntime.runPromise(
-					Effect.forEach(
-						buildContext.apiConfigs,
-						(apiConfig) =>
-							generateApiDocs(
-								{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
-								buildContext,
-								fileContextMap,
-							).pipe(
-								Effect.tap(() =>
-									isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
-								),
-							),
-						{ concurrency: 2 },
-					),
-				);
+					Effect.gen(function* () {
+						// Resolve full build context
+						const configSvc = yield* ConfigService;
+						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
 
-				const pageGenMs = performance.now() - pageGenStart;
-				console.log(`📝 Page generation completed in ${pageGenMs.toFixed(0)}ms`);
+						// Generate API documentation
+						yield* Effect.logInfo("Generating API documentation...");
+
+						yield* Effect.forEach(
+							buildContext.apiConfigs,
+							(apiConfig) =>
+								generateApiDocs(
+									{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
+									buildContext,
+									fileContextMap,
+								).pipe(
+									Effect.tap(() =>
+										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
+									),
+								),
+							{ concurrency: 2 },
+						);
+					}).pipe(Effect.scoped),
+				);
 
 				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
 				console.log(`✅ API documentation complete (${totalTime}s)`);
