@@ -12,7 +12,7 @@ import type {
 	ApiVariable,
 } from "@microsoft/api-extractor-model";
 import { ApiItemKind } from "@microsoft/api-extractor-model";
-import { Effect, Metric } from "effect";
+import { Effect, Metric, Stream } from "effect";
 import matter from "gray-matter";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { NamespaceMember } from "./loader.js";
@@ -1043,4 +1043,76 @@ export async function cleanupAndCommit(input: CleanupAndCommitInput): Promise<vo
 	} catch {
 		// readdir failed (outputDir doesn't exist), ignore
 	}
+}
+
+export interface BuildPipelineInput {
+	readonly workItems: readonly WorkItem[];
+	readonly baseRoute: string;
+	readonly packageName: string;
+	readonly apiScope: string;
+	readonly apiName?: string;
+	readonly source?: SourceConfig;
+	readonly buildTime: string;
+	readonly resolvedOutputDir: string;
+	readonly pageConcurrency: number;
+	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly suppressExampleErrors?: boolean;
+	readonly llmsPlugin?: LlmsPluginOptions;
+	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
+	readonly siteUrl?: string;
+	readonly ogImage?: import("./types.js").OpenGraphImageConfig;
+}
+
+/**
+ * Effect Stream pipeline: workItems → generate → write (no-op for unchanged) → fold
+ *
+ * Unchanged files are NOT filtered out. They flow through the write stage as
+ * no-ops and appear in the fold output with status: "unchanged". This is
+ * required because ALL generated files must be tracked for:
+ * - generatedFiles set (stale/orphan cleanup)
+ * - fileContextMap (remark plugin Twoslash error attribution)
+ * - _meta.json navigation entries
+ *
+ * Currently wraps the existing `generatePages` and `writeFiles` functions in
+ * `Effect.promise`. The true per-item Stream conversion is deferred to a
+ * future enhancement. This gives us the `Effect.Effect` return type needed
+ * for `Effect.forEach` in the caller while preserving all existing behavior.
+ */
+export function buildPipelineForApi(input: BuildPipelineInput): Effect.Effect<FileWriteResult[]> {
+	// Stream import documents intent for future per-item pipeline conversion
+	void Stream;
+
+	return Effect.promise(async () => {
+		// Stage 1: Generate pages (uses parallelLimit internally)
+		const pageResults = await generatePages({
+			workItems: input.workItems,
+			existingSnapshots: input.existingSnapshots,
+			baseRoute: input.baseRoute,
+			packageName: input.packageName,
+			apiScope: input.apiScope,
+			apiName: input.apiName,
+			source: input.source,
+			buildTime: input.buildTime,
+			resolvedOutputDir: input.resolvedOutputDir,
+			pageConcurrency: input.pageConcurrency,
+			suppressExampleErrors: input.suppressExampleErrors,
+			llmsPlugin: input.llmsPlugin,
+		});
+
+		// Stage 2: Write files (uses parallelLimit internally, no-op for unchanged)
+		const fileResults = await writeFiles({
+			pages: pageResults,
+			resolvedOutputDir: input.resolvedOutputDir,
+			baseRoute: input.baseRoute,
+			buildTime: input.buildTime,
+			pageConcurrency: input.pageConcurrency,
+			ogResolver: input.ogResolver,
+			siteUrl: input.siteUrl,
+			ogImage: input.ogImage,
+			packageName: input.packageName,
+			apiName: input.apiName,
+		});
+
+		return fileResults;
+	});
 }

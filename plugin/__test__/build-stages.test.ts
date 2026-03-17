@@ -1,9 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import type { FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
-import { cleanupAndCommit, generatePages, prepareWorkItems, writeFiles, writeMetadata } from "../src/build-stages.js";
+import type { BuildPipelineInput, FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
+import {
+	buildPipelineForApi,
+	cleanupAndCommit,
+	generatePages,
+	prepareWorkItems,
+	writeFiles,
+	writeMetadata,
+} from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
 import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
 import { ApiModelLoader } from "../src/model-loader.js";
@@ -623,6 +631,54 @@ describe("cleanupAndCommit", () => {
 		expect(exists).toBe(false);
 
 		snapshotManager.close();
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});
+
+describe("Stream pipeline", () => {
+	it("processes work items through generation → write → fold", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+		});
+
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "stream-test-"));
+
+		const input: BuildPipelineInput = {
+			workItems,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+			apiScope: "example-module",
+			buildTime: new Date().toISOString(),
+			resolvedOutputDir: tmpDir,
+			pageConcurrency: 2,
+			existingSnapshots: new Map(),
+		};
+
+		const program = buildPipelineForApi(input);
+		const results = await Effect.runPromise(program);
+
+		expect(results.length).toBeGreaterThan(0);
+
+		// All files should be written on first run (all new)
+		const written = results.filter((r) => r.status !== "unchanged");
+		expect(written.length).toBeGreaterThan(0);
+
+		// Verify files exist on disk
+		for (const r of written) {
+			const exists = await fs.promises
+				.access(r.absolutePath)
+				.then(() => true)
+				.catch(() => false);
+			expect(exists).toBe(true);
+		}
+
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
