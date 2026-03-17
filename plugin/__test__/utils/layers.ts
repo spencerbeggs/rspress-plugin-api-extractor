@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { Effect, Layer, Option, Ref } from "effect";
 import { deriveOutputPaths, normalizeBaseRoute } from "../../src/path-derivation.js";
 import { CrossLinkerService } from "../../src/services/CrossLinkerService.js";
@@ -18,37 +17,34 @@ export const MockSnapshotServiceLayer = Layer.effect(
 		return {
 			getSnapshot: (outputDir: string, filePath: string) =>
 				Ref.get(store).pipe(Effect.map((m) => Option.fromNullable(m.get(`${outputDir}::${filePath}`)))),
+			getAllForDirectory: (outputDir: string) =>
+				Ref.get(store).pipe(Effect.map((m) => [...m.values()].filter((s) => s.outputDir === outputDir))),
+			getFilePaths: (outputDir: string) =>
+				Ref.get(store).pipe(
+					Effect.map((m) => [...m.values()].filter((s) => s.outputDir === outputDir).map((s) => s.filePath)),
+				),
 			upsert: (snapshot: FileSnapshot) =>
 				Ref.update(store, (m) => {
 					const next = new Map(m);
 					next.set(`${snapshot.outputDir}::${snapshot.filePath}`, snapshot);
 					return next;
 				}).pipe(Effect.as(true)),
-			getAllForDirectory: (outputDir: string) =>
-				Ref.get(store).pipe(Effect.map((m) => [...m.values()].filter((s) => s.outputDir === outputDir))),
+			batchUpsert: (snapshots: ReadonlyArray<FileSnapshot>) =>
+				Ref.update(store, (m) => {
+					const next = new Map(m);
+					for (const snapshot of snapshots) {
+						next.set(`${snapshot.outputDir}::${snapshot.filePath}`, snapshot);
+					}
+					return next;
+				}).pipe(Effect.as(snapshots.length)),
+			deleteSnapshot: (outputDir: string, filePath: string) =>
+				Ref.update(store, (m) => {
+					const next = new Map(m);
+					next.delete(`${outputDir}::${filePath}`);
+					return next;
+				}),
 			cleanupStale: (_outputDir: string, _currentFiles: ReadonlySet<string>) =>
 				Effect.succeed([] as ReadonlyArray<string>),
-			hashContent: (content: string) => createHash("sha256").update(content).digest("hex"),
-			hashFrontmatter: (frontmatter: Record<string, unknown>) => {
-				const filtered: Record<string, unknown> = {};
-				for (const [key, value] of Object.entries(frontmatter)) {
-					if (key !== "head" && key !== "publishedTime" && key !== "modifiedTime") {
-						filtered[key] = value;
-					}
-				}
-				const sorted = JSON.stringify(
-					Object.keys(filtered)
-						.sort()
-						.reduce(
-							(acc, key) => {
-								acc[key] = filtered[key];
-								return acc;
-							},
-							{} as Record<string, unknown>,
-						),
-				);
-				return createHash("sha256").update(sorted).digest("hex");
-			},
 		};
 	}),
 );

@@ -18,18 +18,20 @@ export interface SnapshotServiceShape {
 		filePath: string,
 	) => Effect.Effect<Option.Option<FileSnapshot>, SnapshotDbError>;
 
+	readonly getAllForDirectory: (outputDir: string) => Effect.Effect<ReadonlyArray<FileSnapshot>, SnapshotDbError>;
+
+	readonly getFilePaths: (outputDir: string) => Effect.Effect<ReadonlyArray<string>, SnapshotDbError>;
+
 	readonly upsert: (snapshot: FileSnapshot) => Effect.Effect<boolean, SnapshotDbError>;
 
-	readonly getAllForDirectory: (outputDir: string) => Effect.Effect<ReadonlyArray<FileSnapshot>, SnapshotDbError>;
+	readonly batchUpsert: (snapshots: ReadonlyArray<FileSnapshot>) => Effect.Effect<number, SnapshotDbError>;
+
+	readonly deleteSnapshot: (outputDir: string, filePath: string) => Effect.Effect<void, SnapshotDbError>;
 
 	readonly cleanupStale: (
 		outputDir: string,
 		currentFiles: ReadonlySet<string>,
 	) => Effect.Effect<ReadonlyArray<string>, SnapshotDbError>;
-
-	readonly hashContent: (content: string) => string;
-
-	readonly hashFrontmatter: (frontmatter: Record<string, unknown>) => string;
 }
 
 export class SnapshotService extends Context.Tag("rspress-plugin-api-extractor/SnapshotService")<
