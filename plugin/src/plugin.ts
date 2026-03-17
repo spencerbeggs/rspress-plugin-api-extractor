@@ -1653,17 +1653,28 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					}
 				} else if (options.apis) {
 					// === Multi-API mode ===
+					// Deterministically select tsconfig: first API with tsconfig wins
+					// Warn if multiple APIs specify different tsconfigs
+					const apisWithTsconfig = options.apis.filter((a) => a.tsconfig);
+					if (apisWithTsconfig.length > 0) {
+						firstApiTsconfig = apisWithTsconfig[0].tsconfig;
+						const uniqueTsconfigs = new Set(apisWithTsconfig.map((a) => String(a.tsconfig)));
+						if (uniqueTsconfigs.size > 1) {
+							debugLogger.warn(
+								`⚠️  Multiple APIs specify different tsconfig values: ${[...uniqueTsconfigs].join(", ")}. ` +
+									`Using '${String(firstApiTsconfig)}' for TypeScript resolution. ` +
+									`Per-API tsconfig resolution will be supported in a future release.`,
+							);
+						}
+					}
+					const apisWithCompilerOptions = options.apis.filter((a) => a.compilerOptions);
+					if (apisWithCompilerOptions.length > 0) {
+						firstApiCompilerOptions = apisWithCompilerOptions[0].compilerOptions;
+					}
+
 					const multiResults = await Promise.all(
 						options.apis.map(async (api) => {
 							const baseRoute = normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`);
-
-							// Capture tsconfig from first API if not yet set
-							if (!firstApiTsconfig && api.tsconfig) {
-								firstApiTsconfig = api.tsconfig;
-							}
-							if (!firstApiCompilerOptions && api.compilerOptions) {
-								firstApiCompilerOptions = api.compilerOptions;
-							}
 
 							const derivedPaths = deriveOutputPaths({
 								mode: "multi",
