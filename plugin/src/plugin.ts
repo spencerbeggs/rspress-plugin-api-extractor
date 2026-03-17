@@ -53,7 +53,7 @@ import {
 	validateExternalPackages,
 } from "./types.js";
 import { resolveTypeScriptConfig } from "./typescript-config.js";
-import { parallelLimit } from "./utils.js";
+
 import { VfsRegistry } from "./vfs-registry.js";
 
 const __filename: string = fileURLToPath(import.meta.url);
@@ -792,30 +792,37 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Use bounded parallelism (limit 2) to avoid SQLite contention while improving performance
 				console.log("📝 Generating API documentation...");
 				const pageGenStart = performance.now();
-				await parallelLimit(apiConfigs, 2, async (config) => {
-					const configStart = performance.now();
+				await Effect.runPromise(
+					Effect.forEach(
+						apiConfigs,
+						(config) =>
+							Effect.promise(async () => {
+								const configStart = performance.now();
 
-					await generateApiDocs(
-						{
-							...config,
-							suppressExampleErrors: options.errors?.example !== "show",
-						},
-						shikiCrossLinker,
-						snapshotManager,
-						ogResolver,
-						fileContextMap,
-						shikiHighlighter,
-						hideCutTransformer,
-						hideCutLinesTransformer,
-						TwoslashManager.getInstance().getTransformer() ?? undefined,
-					);
+								await generateApiDocs(
+									{
+										...config,
+										suppressExampleErrors: options.errors?.example !== "show",
+									},
+									shikiCrossLinker,
+									snapshotManager,
+									ogResolver,
+									fileContextMap,
+									shikiHighlighter,
+									hideCutTransformer,
+									hideCutLinesTransformer,
+									TwoslashManager.getInstance().getTransformer() ?? undefined,
+								);
 
-					if (isVerbose) {
-						console.log(
-							`⏱  Generating docs for ${config.packageName}: ${(performance.now() - configStart).toFixed(0)}ms`,
-						);
-					}
-				});
+								if (isVerbose) {
+									console.log(
+										`⏱  Generating docs for ${config.packageName}: ${(performance.now() - configStart).toFixed(0)}ms`,
+									);
+								}
+							}),
+						{ concurrency: 2 },
+					),
+				);
 				const pageGenMs = performance.now() - pageGenStart;
 				console.log(`📝 Page generation completed in ${pageGenMs.toFixed(0)}ms`);
 
