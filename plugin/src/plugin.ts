@@ -131,7 +131,7 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				};
 
 				// Run the entire build (resolve + generate) in a single scoped Effect.
-				// The Scope spans both operations so acquireRelease resources (SnapshotManager)
+				// The Scope spans both operations so acquireRelease resources (SnapshotService DB)
 				// stay open during doc generation and are cleaned up when the scope closes.
 				await effectRuntime.runPromise(
 					Effect.gen(function* () {
