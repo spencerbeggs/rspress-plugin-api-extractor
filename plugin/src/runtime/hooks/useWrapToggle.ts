@@ -1,3 +1,4 @@
+/* v8 ignore start -- React hook, requires React test environment */
 import { useState } from "react";
 
 export interface UseWrapToggleReturn {

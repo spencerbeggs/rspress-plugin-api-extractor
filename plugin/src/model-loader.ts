@@ -3,18 +3,17 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiModel as ApiModelClass } from "@microsoft/api-extractor-model";
+import { isLoadedModel, isVersionConfig } from "./config-utils.js";
+import type { LoadedModel, PackageJson } from "./internal-types.js";
 import type {
-	AutoDetectDependenciesOptions,
+	AutoDetectDependencies,
 	CategoryConfig,
 	ExternalPackageSpec,
-	LlmsPluginOptions,
-	LoadedModel,
+	LlmsPlugin,
 	OpenGraphImageConfig,
-	PackageJson,
 	SourceConfig,
 	VersionConfig,
-} from "./types.js";
-import { isLoadedModel, isVersionConfig } from "./types.js";
+} from "./schemas/index.js";
 
 /**
  * Utility class for loading API models from various sources
@@ -97,10 +96,13 @@ export class ApiModelLoader {
 					if (packages.length === 0) {
 						throw new Error("API model returned by function contains no packages");
 					}
-					return {
+					const loadedResult: { apiPackage: ApiPackage; source?: SourceConfig } = {
 						apiPackage: packages[0],
-						source: result.source,
 					};
+					if (result.source != null) {
+						loadedResult.source = result.source;
+					}
+					return loadedResult;
 				}
 				throw new Error("API model loader function must return an ApiModel");
 			}
@@ -132,31 +134,44 @@ export class ApiModelLoader {
 		categories?: Record<string, CategoryConfig>;
 		source?: SourceConfig;
 		externalPackages?: ExternalPackageSpec[];
-		autoDetectDependencies?: AutoDetectDependenciesOptions;
+		autoDetectDependencies?: AutoDetectDependencies;
 		ogImage?: OpenGraphImageConfig;
-		llmsPlugin?: LlmsPluginOptions;
+		llmsPlugin?: LlmsPlugin;
 	}> {
 		if (isVersionConfig(versionValue)) {
 			// Full VersionConfig with model, categories, source, packageJson, externalPackages, autoDetectDependencies, ogImage, and llmsPlugin
-			const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(versionValue.model);
+			const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(
+				versionValue.model as PathLike | (() => Promise<ApiModel | LoadedModel>),
+			);
 			const packageJson = versionValue.packageJson
-				? await ApiModelLoader.loadPackageJson(versionValue.packageJson)
+				? await ApiModelLoader.loadPackageJson(versionValue.packageJson as PathLike | (() => Promise<PackageJson>))
 				: undefined;
-			return {
-				apiPackage,
-				packageJson,
-				categories: versionValue.categories,
-				// Loader source takes precedence over config source
-				source: loaderSource || versionValue.source,
-				externalPackages: versionValue.externalPackages,
-				autoDetectDependencies: versionValue.autoDetectDependencies,
-				ogImage: versionValue.ogImage,
-				llmsPlugin: versionValue.llmsPlugin,
-			};
+			const versionResult: {
+				apiPackage: ApiPackage;
+				packageJson?: PackageJson;
+				categories?: Record<string, CategoryConfig>;
+				source?: SourceConfig;
+				externalPackages?: ExternalPackageSpec[];
+				autoDetectDependencies?: AutoDetectDependencies;
+				ogImage?: OpenGraphImageConfig;
+				llmsPlugin?: LlmsPlugin;
+			} = { apiPackage };
+			if (packageJson != null) versionResult.packageJson = packageJson;
+			if (versionValue.categories != null) versionResult.categories = versionValue.categories;
+			const resolvedSource = loaderSource || versionValue.source;
+			if (resolvedSource != null) versionResult.source = resolvedSource;
+			if (versionValue.externalPackages != null) versionResult.externalPackages = versionValue.externalPackages;
+			if (versionValue.autoDetectDependencies != null)
+				versionResult.autoDetectDependencies = versionValue.autoDetectDependencies;
+			if (versionValue.ogImage != null) versionResult.ogImage = versionValue.ogImage;
+			if (versionValue.llmsPlugin != null) versionResult.llmsPlugin = versionValue.llmsPlugin;
+			return versionResult;
 		}
 
 		// Simple path or function
 		const { apiPackage, source } = await ApiModelLoader.loadApiModel(versionValue);
-		return { apiPackage, source };
+		const simpleResult: { apiPackage: ApiPackage; source?: SourceConfig } = { apiPackage };
+		if (source != null) simpleResult.source = source;
+		return simpleResult;
 	}
 }

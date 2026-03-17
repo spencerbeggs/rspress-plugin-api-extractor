@@ -1,20 +1,17 @@
-import * as path from "node:path";
+/* v8 ignore start -- remark plugin, requires MDX compilation context */
+import { Effect, Metric } from "effect";
 import type { Code, Parent, Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import type { ShikiTransformer } from "shiki";
 import { codeToHast, hastToHtml } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import type { CodeBlockStatsCollector } from "./code-block-stats.js";
-import type { DebugLogger } from "./debug-logger.js";
+import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
-import type { PerformanceManager } from "./performance-manager.js";
-import type { PrettierErrorStatsCollector } from "./prettier-error-stats.js";
 import { formatCode } from "./prettier-formatter.js";
 import type { ShikiCrossLinker } from "./shiki-transformer.js";
-import type { TwoslashErrorStatsCollector } from "./twoslash-error-stats.js";
 
 /**
  * Supported languages for with-api code blocks
@@ -50,11 +47,6 @@ interface RemarkWithApiOptions {
 	shikiCrossLinker: ShikiCrossLinker;
 	/** Getter for the shared Twoslash transformer from TwoslashManager */
 	getTransformer: () => ShikiTransformer | null;
-	logger?: DebugLogger;
-	statsCollector?: CodeBlockStatsCollector;
-	twoslashErrorStats?: TwoslashErrorStatsCollector;
-	prettierErrorStats?: PrettierErrorStatsCollector;
-	perfManager?: PerformanceManager;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
 }
@@ -76,16 +68,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const {
-		shikiCrossLinker,
-		getTransformer,
-		logger,
-		statsCollector,
-		twoslashErrorStats,
-		prettierErrorStats,
-		perfManager,
-		theme,
-	} = options;
+	const { shikiCrossLinker, getTransformer, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -127,43 +110,11 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 			const promise = (async () => {
 				const blockStart = performance.now();
 
-				// Track code block processing start
-				const blockId = `with-api.${blockCount}`;
-				perfManager?.mark(`code.block.${blockId}.start`);
-
 				const rawCode = node.value;
 
-				// Set context for error collectors
-				if (currentFilePath) {
-					const relativePath = path.basename(currentFilePath);
-					const apiScope = inferApiScope(currentFilePath);
-
-					if (twoslashErrorStats) {
-						twoslashErrorStats.setContext({
-							file: relativePath,
-							api: apiScope,
-							blockType: "with-api",
-						});
-					}
-
-					if (prettierErrorStats) {
-						prettierErrorStats.setContext({
-							file: relativePath,
-							api: apiScope,
-							blockType: "with-api",
-						});
-					}
-				}
-
 				// Format code with Prettier for consistent styling
-				const formatResult = await formatCode(rawCode, lang, prettierErrorStats, logger);
+				const formatResult = await formatCode(rawCode, lang);
 				const code = formatResult.code;
-
-				if (formatResult.success && formatResult.formatTime > 0) {
-					logger?.debug(
-						`✨ [remark-with-api] Formatted ${rawCode.length} chars in ${formatResult.formatTime.toFixed(1)}ms`,
-					);
-				}
 
 				// Build transformers array - twoslash only, cross-linker runs post-process
 				// Note: hideCutTransformer is intentionally NOT used here - it's only for member
@@ -197,22 +148,14 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				const shikiTime = performance.now() - shikiStart;
 				const totalBlockTime = performance.now() - blockStart;
 
-				// Track code block processing end
-				perfManager?.mark(`code.block.${blockId}.end`);
-				perfManager?.measure("code.block.render", `code.block.${blockId}.start`, `code.block.${blockId}.end`);
-				perfManager?.increment("code.blocks.processed");
-				perfManager?.increment("code.blocks.with-api");
-
-				// Log slow blocks at debug level
-				if (perfManager?.isSlow("code.block", totalBlockTime) && logger) {
-					logger.debug(
-						`⏱️  [remark-with-api] Slow block: ${totalBlockTime.toFixed(0)}ms (shiki: ${shikiTime.toFixed(0)}ms, ${code.length} chars)`,
-					);
+				// Track block stats via Effect Metrics
+				Effect.runSync(Metric.increment(BuildMetrics.codeblockTotal));
+				Effect.runSync(Metric.update(BuildMetrics.codeblockDuration, totalBlockTime));
+				if (shikiTime > 0) {
+					Effect.runSync(Metric.update(BuildMetrics.codeblockShikiDuration, shikiTime));
 				}
-
-				// Track block stats if collector is provided
-				if (statsCollector) {
-					statsCollector.recordBlock(totalBlockTime, shikiTime, code.length, { blockType: "with-api" });
+				if (totalBlockTime > 100) {
+					Effect.runSync(Metric.increment(BuildMetrics.codeblockSlow));
 				}
 
 				// Replace the code block with appropriate output based on build target
@@ -261,14 +204,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 						parent.children[index] = mdxNode;
 						needsApiExampleImport = true;
 					}
-				}
-
-				// Clear error contexts after processing this block
-				if (twoslashErrorStats) {
-					twoslashErrorStats.clearContext();
-				}
-				if (prettierErrorStats) {
-					prettierErrorStats.clearContext();
 				}
 			})();
 
@@ -327,8 +262,8 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 		}
 
 		const fileTime = performance.now() - fileStart;
-		if (blockCount > 0 && logger) {
-			logger.verbose(
+		if (blockCount > 0) {
+			console.log(
 				`⏱️  [remark-with-api] Processed ${blockCount} blocks in ${fileTime.toFixed(0)}ms (avg: ${(fileTime / blockCount).toFixed(0)}ms per block)`,
 			);
 		}

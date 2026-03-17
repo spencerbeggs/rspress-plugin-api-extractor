@@ -1,75 +1,235 @@
 ---
-status: draft
+status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-01-23
-last-synced: 2026-01-23
-completeness: 40
-related: []
+updated: 2026-03-17
+last-synced: 2026-03-17
+completeness: 80
+related:
+  - rspress-plugin-api-extractor/build-architecture.md
+  - rspress-plugin-api-extractor/snapshot-tracking-system.md
+  - rspress-plugin-api-extractor/cross-linking-architecture.md
+  - rspress-plugin-api-extractor/component-development.md
 dependencies: []
 ---
 
 # Page Generation System
 
-**Status:** Stub - Needs Implementation
+**Status:** Production-ready (Effect Stream pipeline)
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Stream Pipeline Architecture](#stream-pipeline-architecture)
+- [Build Stages](#build-stages)
+- [Page Generators](#page-generators)
+- [Metadata Generation](#metadata-generation)
+- [Integration Points](#integration-points)
 
 ## Overview
 
 The page generation system transforms Microsoft API Extractor models
-into markdown/MDX files for RSPress. It provides specialized generators
-for each API item category (classes, interfaces, functions, types,
-enums, variables).
+into markdown/MDX files for RSPress. It uses a Stream-based pipeline
+in `build-stages.ts` composed of Effect programs, with specialized
+class-based generators for each API item category.
 
 **Key Features:**
 
-- **Class-based generators** for each API category
-- **Markdown/MDX output** with frontmatter
-- **Component integration** for interactive features
-- **Cross-linking** via MarkdownCrossLinker
-- **Snapshot tracking** for incremental builds
-- **Metadata generation** for RSPress navigation
+- **Effect Stream pipeline** for concurrent page generation and writing
+- **5-stage build process** orchestrated by `build-program.ts`
+- **Class-based generators** for each API category (class, interface,
+  function, type alias, enum, variable, namespace)
+- **Snapshot-tracked writes** for incremental builds
+- **Cross-linking** via ShikiCrossLinker and MarkdownCrossLinker
+- **Effect Metrics** for build statistics
 
-## Architecture
+## Stream Pipeline Architecture
 
-### Generator Class Hierarchy
+### Pipeline Definition (build-stages.ts)
 
-```text
-PageGenerator (abstract base - if exists)
-  ├─ ClassPageGenerator
-  ├─ InterfacePageGenerator
-  ├─ FunctionPageGenerator
-  ├─ TypeAliasPageGenerator
-  ├─ EnumPageGenerator
-  └─ VariablePageGenerator
+The core pipeline is defined in `buildPipelineForApi`:
+
+```typescript
+return Stream.fromIterable(input.workItems).pipe(
+  // Stage 1: Generate page content + hashes + timestamps
+  Stream.mapEffect(
+    (workItem) => generateSinglePage(workItem, generateCtx),
+    { concurrency: input.pageConcurrency },
+  ),
+  // Filter nulls (unsupported item kinds)
+  Stream.filter(
+    (result): result is GeneratedPageResult => result !== null,
+  ),
+  // Stage 2: Write file to disk (no-op for unchanged)
+  Stream.mapEffect(
+    (result) => writeSingleFile(result, writeCtx),
+    { concurrency: input.pageConcurrency },
+  ),
+  // Fold: accumulate all results
+  Stream.runFold(
+    [] as FileWriteResult[],
+    (acc, result) => [...acc, result],
+  ),
+);
 ```
 
-> TODO: Verify if abstract base class exists or if generators are
-> independent
+**Concurrency:** Controlled by `pageConcurrency` (from
+`PerformanceConfig`, defaults vary by environment).
 
-### Generator Responsibilities
+### Data Types
 
-Each generator is responsible for:
+```typescript
+interface WorkItem {
+  item: ApiItem;
+  categoryKey: string;
+  categoryConfig: CategoryConfig;
+  namespaceMember?: NamespaceMember;
+}
 
-1. **Frontmatter generation** - title, description, Open Graph tags
-2. **Content generation** - structured markdown/MDX
-3. **Member processing** - methods, properties, parameters
-4. **Code block generation** - signature blocks with Twoslash
-5. **Cross-linking** - type references to other pages
-6. **Component usage** - SignatureBlock, ParametersTable, etc.
+interface GeneratedPageResult {
+  workItem: WorkItem;
+  content: string;
+  bodyContent: string;
+  frontmatter: Record<string, unknown>;
+  contentHash: string;
+  frontmatterHash: string;
+  routePath: string;
+  relativePathWithExt: string;
+  publishedTime: string;
+  modifiedTime: string;
+  isUnchanged: boolean;
+}
 
-## Page Structure
+interface FileWriteResult {
+  relativePathWithExt: string;
+  absolutePath: string;
+  status: "new" | "modified" | "unchanged";
+  snapshot: FileSnapshot;
+  categoryKey: string;
+  label: string;
+  routePath: string;
+}
+```
 
-### Standard Page Layout
+## Build Stages
+
+### Stage 0: prepareWorkItems (sync, pure)
+
+**Location:** `build-stages.ts` `prepareWorkItems()`
+
+Runs before the Stream pipeline. Produces:
+
+1. **Categorized items** -- API items grouped by category key
+2. **Cross-link routes** -- Map of type name to route path
+3. **Cross-link kinds** -- Map of type name to API item kind
+4. **Namespace member extraction** with collision detection
+5. **Flat WorkItem array** for the pipeline
+
+### Stage 1: generateSinglePage (Effect)
+
+**Location:** `build-stages.ts` `generateSinglePage()`
+
+For each WorkItem:
+
+1. Dispatch to the appropriate page generator based on `item.kind`
+2. Parse generated content with `gray-matter`
+3. Normalize markdown spacing
+4. Hash content and frontmatter via `content-hash.ts`
+5. Compare hashes against pre-loaded snapshot map
+6. If no snapshot exists, fall back to disk comparison
+7. Determine timestamps (new/modified/unchanged)
+8. Return `GeneratedPageResult`
+
+### Stage 2: writeSingleFile (Effect)
+
+**Location:** `build-stages.ts` `writeSingleFile()`
+
+For each GeneratedPageResult:
+
+1. If unchanged, increment metrics and return immediately (no disk write)
+2. Resolve Open Graph metadata (if `ogResolver` configured)
+3. Regenerate frontmatter with OG metadata
+4. Create directory if needed (`FileSystem.makeDirectory`)
+5. Write file (`FileSystem.writeFileString`)
+6. Increment file metrics (new/modified)
+7. Return `FileWriteResult` with snapshot data
+
+### Stage 3: writeMetadata (Effect)
+
+**Location:** `build-stages.ts` `writeMetadata()`
+
+Writes three groups of metadata after the Stream pipeline:
+
+1. **Root `_meta.json`** -- Category folder entries with
+   collapsible/collapsed settings
+2. **Main index page** (`index.mdx`) -- API landing page (skipped if
+   already exists)
+3. **Category `_meta.json` files** -- Sorted navigation entries per
+   category folder
+
+All writes use snapshot tracking for incremental builds.
+
+### Stage 4: cleanupAndCommit (Effect)
+
+**Location:** `build-stages.ts` `cleanupAndCommit()`
+
+1. **Batch upsert** -- All changed snapshots in a single transaction
+2. **Stale cleanup** -- Delete DB rows and disk files for items no
+   longer in the API model
+3. **Orphan cleanup** -- Delete disk files not tracked in
+   `generatedFiles` set
+
+## Page Generators
+
+### Generator Classes
+
+Each generator produces `{ routePath: string; content: string }`:
+
+| Generator | Location | Handles |
+| --- | --- | --- |
+| `ClassPageGenerator` | `markdown/class-page.ts` | `ApiClass` |
+| `InterfacePageGenerator` | `markdown/interface-page.ts` | `ApiInterface` |
+| `FunctionPageGenerator` | `markdown/function-page.ts` | `ApiFunction` |
+| `TypeAliasPageGenerator` | `markdown/type-alias-page.ts` | `ApiTypeAlias` |
+| `EnumPageGenerator` | `markdown/enum-page.ts` | `ApiEnum` |
+| `VariablePageGenerator` | `markdown/variable-page.ts` | `ApiVariable` |
+| `NamespacePageGenerator` | `markdown/namespace-page.ts` | `ApiNamespace` |
+| `MainIndexPageGenerator` | `markdown/main-index-page.ts` | Index page |
+
+### Generator Interface
+
+All generators follow the same pattern:
+
+```typescript
+class XxxPageGenerator {
+  async generate(
+    item: ApiXxx,
+    baseRoute: string,
+    packageName: string,
+    singularName: string,
+    apiScope: string,
+    apiName?: string,
+    source?: SourceConfig,
+    suppressExampleErrors?: boolean,
+    llmsPlugin?: LlmsPlugin,
+  ): Promise<{ routePath: string; content: string }>
+}
+```
+
+The generators are called via `Effect.promise()` in `generateSinglePage`
+since they use async operations (Shiki highlighting, Prettier formatting)
+that are not yet Effect-native.
+
+### Page Structure
+
+Generated MDX files follow this structure:
 
 ```markdown
 ---
 title: "ItemName | Category | API | PackageName"
-description: "Brief summary of the item"
+description: "Brief summary"
 head:
-  - - meta
-    - property: "og:title"
-      content: "ItemName"
   - - meta
     - property: "article:published_time"
       content: "2026-01-15T12:00:00.000Z"
@@ -78,12 +238,12 @@ head:
       content: "2026-01-17T10:30:00.000Z"
 ---
 
-import { SignatureBlock, ParametersTable } from
-"rspress-plugin-api-extractor/runtime";
+import { SignatureBlock, ParametersTable }
+  from "rspress-plugin-api-extractor/runtime";
 
 # ItemName
 
-Summary text describing the item.
+Summary text.
 
 ## Signature
 
@@ -91,587 +251,119 @@ Summary text describing the item.
 ...signature code block...
 </SignatureBlock>
 
-## Description
-
-Detailed description from TSDoc comments.
-
-## Parameters
-
-<ParametersTable parameters={...} />
-
-## Related
-
-Links to related types, inheritance, implementations.
+## Members / Parameters / Values
+...
 ```
 
-> TODO: Document variations for each category
+### Helper Functions
 
-## Generator Implementations
+**Location:** `markdown/helpers.ts`
 
-### 1. ClassPageGenerator
+- `generateFrontmatter()` -- YAML frontmatter with OG tags
+- `prepareExampleCode()` -- Adds imports and `// @noErrors` for Twoslash
+- `stripTwoslashDirectives()` -- Removes directives for copy button
+- `sanitizeId()` -- URL-safe HTML IDs
+- `escapeYamlString()` -- YAML special character escaping
+- `escapeMdxGenerics()` -- Wraps `<T>` in backticks for MDX
 
-**Location:** `src/markdown/page-generators/class-page.ts`
+### MemberFormatTransformer
 
-**Responsibilities:**
+**Location:** `hide-cut-transformer.ts`
 
-- Generate class signature with generics
-- Process constructors, methods, properties
-- Handle inheritance hierarchy
-- Display implemented interfaces
-- Group members by visibility (public, protected, private)
+Formats member signature blocks by hiding the class/interface wrapper:
 
-**Key Methods:**
+```typescript
+// Input (3-line structure):
+class Foo {
+  memberSignature(): void;
+}
 
-> TODO: Document public API methods
+// Output (after transformer):
+memberSignature(): void;
+```
 
-**Generated Sections:**
+Hides line 0 (class opening) and last line (closing brace), removes
+left padding from line 1.
 
-- Signature
-- Description
-- Constructors
-- Properties
-- Methods
-- Inherited Members
-- Type Parameters
+## Metadata Generation
 
-> TODO: Add example output
+### _meta.json Structure
 
-### 2. InterfacePageGenerator
+**Root `_meta.json`:**
 
-**Location:** `src/markdown/page-generators/interface-page.ts`
+```json
+[
+  {
+    "type": "dir",
+    "name": "class",
+    "label": "Classes",
+    "collapsible": true,
+    "collapsed": true,
+    "overviewHeaders": [2]
+  }
+]
+```
 
-**Responsibilities:**
+**Category `_meta.json`:**
 
-- Generate interface signature with generics
-- Process properties and methods
-- Handle extended interfaces
-- Display type parameters
+```json
+[
+  { "type": "file", "name": "myclass", "label": "MyClass" },
+  { "type": "file", "name": "otherclass", "label": "OtherClass" }
+]
+```
 
-**Key Methods:**
-
-> TODO: Document public API methods
-
-**Generated Sections:**
-
-- Signature
-- Description
-- Properties
-- Methods
-- Extended Interfaces
-- Type Parameters
-
-> TODO: Add example output
-
-### 3. FunctionPageGenerator
-
-**Location:** `src/markdown/page-generators/function-page.ts`
-
-**Responsibilities:**
-
-- Generate function signature
-- Process parameters and return type
-- Handle overloads
-- Display type parameters
-
-**Generated Sections:**
-
-- Signature
-- Description
-- Parameters
-- Returns
-- Examples
-- Overloads
-
-> TODO: Add example output
-
-### 4. TypeAliasPageGenerator
-
-**Location:** `src/markdown/page-generators/type-alias-page.ts`
-
-**Responsibilities:**
-
-- Generate type alias signature
-- Process type parameters
-- Display expanded type definition
-
-**Generated Sections:**
-
-- Signature
-- Description
-- Type Parameters
-- References
-
-> TODO: Add example output
-
-### 5. EnumPageGenerator
-
-**Location:** `src/markdown/page-generators/enum-page.ts`
-
-**Responsibilities:**
-
-- Generate enum signature
-- List all members with values
-- Process member descriptions
-
-**Generated Sections:**
-
-- Signature
-- Description
-- Members
-- Usage Examples
-
-> TODO: Add example output
-
-### 6. VariablePageGenerator
-
-**Location:** `src/markdown/page-generators/variable-page.ts`
-
-**Responsibilities:**
-
-- Generate variable/constant signature
-- Display type annotation
-- Show initial value if available
-
-**Generated Sections:**
-
-- Signature
-- Description
-- Type
-- Usage Examples
-
-> TODO: Add example output
+Entries are sorted alphabetically by label.
 
 ## Integration Points
 
-### 1. API Extractor Model
+### Cross-Linking
 
-**Input:** `.api.json` files from Microsoft API Extractor
-
-**Parsing:**
-
-> TODO: Document model parsing logic
-
-**Item Types:**
-
-- `ApiClass`
-- `ApiInterface`
-- `ApiFunction`
-- `ApiTypeAlias`
-- `ApiEnum`
-- `ApiVariable`
-
-### 2. Helper Functions
-
-**Location:** `src/markdown/helpers.ts`
-
-The helpers module provides shared utilities for page generators:
-
-**`generateFrontmatter()`** - Creates YAML frontmatter:
-
-- Generate structured page title (`{entityName} | {singularName} | API | {apiName}`)
-- Escape YAML special characters in title and description
-- Build Open Graph meta tags array for social sharing
-- Set published/modified timestamps from snapshot tracking
-
-**`prepareExampleCode()`** - Prepares code for Twoslash:
-
-- Adds import statements for the documented API
-- Injects `// @noErrors` directive for error suppression
-- Detects language (TypeScript/JavaScript)
-
-**`stripTwoslashDirectives()`** - Cleans code for display/copy:
-
-Removes Twoslash directive comments from code so users see clean output
-and don't accidentally copy directives when using the copy button:
+Cross-linkers are initialized in `build-program.ts` with data from
+`prepareWorkItems`:
 
 ```typescript
-export function stripTwoslashDirectives(code: string): string {
-  return code
-    .split("\n")
-    .filter((line) => {
-      const trimmed = line.trim();
-      // Remove lines that are only Twoslash directives
-      if (
-        trimmed.startsWith("// @") ||      // @noErrors, @errors, @filename, etc.
-        trimmed.startsWith("// ^?") ||     // Type annotation markers
-        trimmed === "// ---cut---"         // Cut markers
-      ) {
-        return false;
-      }
-      return true;
-    })
-    .join("\n")
-    .trim();
-}
+markdownCrossLinker.initialize(categorizedItems, baseRoute, categories);
+shikiCrossLinker.reinitialize(routes, kinds, apiScope);
+TwoslashManager.addTypeRoutes(routes);
 ```
 
-**Directives stripped:**
+### VFS Registry
 
-- `// @noErrors` - Error suppression
-- `// @errors: 2304` - Specific error expectations
-- `// @filename: example.ts` - Virtual file markers
-- `// ^?` - Type annotation query markers
-- `// ---cut---` - Code section cut markers
-
-**Usage in page generators:**
-
-All page generators pass example code through `stripTwoslashDirectives()`
-before passing it to `ExampleBlockWrapper` for the copy button:
+Each API registers its VFS config for the remark plugin:
 
 ```typescript
-const displayCode = stripTwoslashDirectives(prepared.code);
-content += `<ExampleBlockWrapper code={\`${displayCode}\`} html={...} />\n`;
-```
-
-**Other helpers:**
-
-- `sanitizeId()` - Create URL-safe HTML IDs from display names
-- `escapeYamlString()` - Escape YAML special characters
-- `escapeMdxGenerics()` - Wrap `<T>` in backticks to avoid MDX interpretation
-- `formatExampleCode()` - Format code with Prettier
-
-### 3. Signature Block Generation
-
-**Workflow:**
-
-```text
-Generator:
-  ├─> Extract signature from API model
-  ├─> Format with TypeScript syntax
-  ├─> Add type parameters, parameters, return type
-  ├─> Generate Shiki HTML with Twoslash processing
-  ├─> Pass HTML to SignatureBlock/ExampleBlock component
-  └─> Component renders with interactive Twoslash tooltips
-```
-
-**Twoslash Processing:**
-
-When generating Shiki HTML for code blocks, the `generateShikiHtml()` function
-accepts a `meta` parameter that triggers Twoslash processing. This is important
-when `explicitTrigger: true` is configured in the Twoslash options:
-
-```typescript
-// Generate HTML with Twoslash processing enabled
-const html = await generateShikiHtml(code, "typescript", {
-  meta: { __raw: "twoslash" }  // Triggers Twoslash when explicitTrigger is true
+VfsRegistry.register(apiScope, {
+  vfs: new Map(),
+  highlighter,
+  crossLinker: shikiCrossLinker,
+  packageName,
+  apiScope,
+  twoslashTransformer,
+  hideCutTransformer,
+  hideCutLinesTransformer,
+  theme,
 });
 ```
 
-**The `meta: { __raw: "twoslash" }` pattern:**
+### Remark Plugins
 
-- RSPress/Shiki checks for the `twoslash` keyword in code fence metadata
-- When `explicitTrigger: true`, only code blocks with `twoslash` in meta
-  are processed (e.g., ` ```ts twoslash`)
-- The `__raw` property simulates the code fence meta string
-- Without this, Twoslash types, hover information, and error highlighting
-  are not generated
+Two remark plugins process code blocks in the RSPress build phase:
 
-**Applied to:**
+- `remarkWithApi` -- User-authored `with-api` code blocks
+- `remarkApiCodeblocks` -- Generated API doc code blocks
 
-- Signature blocks (class, function, interface signatures)
-- Example blocks from TSDoc `@example` tags
-
-**Note on with-api blocks:**
-
-The `remarkWithApi` plugin processes user-authored `with-api` code blocks in
-MDX files. Unlike generated API docs, it does NOT use `MemberFormatTransformer`
-since these are standalone code blocks, not member signatures wrapped in
-class/interface context.
-
-### 4. MemberFormatTransformer
-
-**Location:** `src/hide-cut-transformer.ts`
-
-**Purpose:** Formats member signature blocks for display by hiding the
-class/interface wrapper lines.
-
-Member signatures in generated API docs are wrapped in a 3-line structure:
-
-```typescript
-class Foo {
-  memberSignature(): void;  // This is the actual member
-}
-```
-
-The transformer:
-
-1. **Hides line 0** - The class/interface opening (`class Foo {`)
-2. **Removes left padding** from line 1 (the member signature)
-3. **Hides last line** - The closing brace (`}`)
-
-**Implementation:**
-
-```typescript
-// Singleton pattern - no factory function needed
-export const MemberFormatTransformer: ShikiTransformer = {
-  name: "member-format",
-  code(node: Element): void {
-    const lines = node.children.filter(
-      (child): child is Element =>
-        child.type === "element" && child.tagName === "span",
-    );
-
-    // Only applies to 3+ line blocks (member signature structure)
-    if (lines.length >= 3) {
-      lines[0].properties.style = "display: none;";
-      lines[1].properties.style = "padding-left: 0;";
-      lines[lines.length - 1].properties.style = "display: none;";
-    }
-  },
-};
-```
-
-**Usage in page generators:**
-
-All page generators (ClassPageGenerator, InterfacePageGenerator, etc.)
-receive `MemberFormatTransformer` as a parameter and apply it to member
-signature code blocks:
-
-```typescript
-const transformers: ShikiTransformer[] = [];
-if (twoslashTransformer) transformers.push(twoslashTransformer);
-if (apiDocsTransformer) transformers.push(apiDocsTransformer);
-if (hideCutTransformer) transformers.push(hideCutTransformer);
-
-const html = await codeToHtml(signatureCode, {
-  lang: "typescript",
-  transformers,
-  // ...
-});
-```
-
-**Important:** This transformer is ONLY for generated API docs member
-signatures. It is NOT used by:
-
-- `remarkWithApi` plugin (user-authored code blocks)
-- Top-level signatures (functions, classes, interfaces themselves)
-- Example blocks from TSDoc `@example` tags
-
-### 5. Cross-Linking Integration
-
-**Usage:**
-
-```typescript
-const linkedText = markdownCrossLinker.generateInlineCodeLinks(
-  description
-);
-```
-
-**Applies to:**
-
-- Item descriptions
-- Parameter descriptions
-- Return type descriptions
-- Member summaries
-
-> TODO: Document cross-linking patterns
-
-### 5. Snapshot Tracking
-
-**Workflow:**
-
-```text
-Generator:
-  ├─> Generate markdown content
-  ├─> Calculate content hash
-  ├─> Check snapshot database
-  ├─> If unchanged, skip write
-  ├─> If changed, write file and update snapshot
-  └─> Track timestamps for Open Graph
-```
-
-> TODO: Document snapshot integration
-
-## Member Processing
-
-### Method Signatures
-
-> TODO: Document how methods are processed
-
-### Property Signatures
-
-> TODO: Document how properties are processed
-
-### Parameter Documentation
-
-**Component:** `ParametersTable`
-
-**Data Structure:**
-
-```typescript
-interface Parameter {
-  name: string;
-  type: string;
-  description: string;
-  optional: boolean;
-  defaultValue?: string;
-}
-```
-
-> TODO: Document parameter extraction logic
-
-### Type Parameters
-
-> TODO: Document generic type parameter handling
-
-## Code Generation Patterns
-
-### 1. Signature Blocks
-
-**Pattern:**
-
-```typescript
-content += '## Signature\n\n';
-content += '<SignatureBlock>\n\n';
-content += '```typescript twoslash\n';
-content += signatureCode;
-content += '\n```\n\n';
-content += '</SignatureBlock>\n\n';
-```
-
-> TODO: Document all code block patterns
-
-### 2. Component Usage
-
-**Imported Components:**
-
-```typescript
-import { SignatureBlock, ParametersTable, MemberSignature }
-from "rspress-plugin-api-extractor/runtime";
-```
-
-> TODO: Document when each component is used
-
-### 3. Metadata Structures
-
-**Navigation (_meta.json):**
-
-> TODO: Document _meta.json generation
-
-**Category Organization:**
-
-```text
-api/
-├── class/
-│   └── _meta.json
-├── interface/
-│   └── _meta.json
-├── function/
-│   └── _meta.json
-├── type/
-│   └── _meta.json
-├── enum/
-│   └── _meta.json
-└── variable/
-    └── _meta.json
-```
-
-## Testing
-
-### Unit Tests
-
-**Test Files:**
-
-- `class-page.test.ts`
-- `interface-page.test.ts`
-- `function-page.test.ts`
-- `type-alias-page.test.ts`
-- `enum-page.test.ts`
-- `variable-page.test.ts`
-
-> TODO: Document testing patterns
-
-### Test Coverage
-
-> TODO: Document current coverage and target
-
-## Performance Considerations
-
-### Generation Speed
-
-> TODO: Benchmark page generation times
-
-### Memory Usage
-
-> TODO: Document memory usage patterns
-
-### Optimization Strategies
-
-> TODO: Document optimization techniques
-
-## Error Handling
-
-### Missing Data
-
-> TODO: Document how generators handle incomplete models
-
-### Invalid Syntax
-
-> TODO: Document validation and error recovery
-
-### Edge Cases
-
-> TODO: Document known edge cases and handling
-
-## Future Enhancements
-
-### Phase 1: Enhanced Member Display
-
-- Collapsible member sections
-- Member search/filter
-- Syntax highlighting improvements
-- Better inherited member display
-
-### Phase 2: Interactive Features
-
-- Live code examples
-- Try-it-now playground
-- Type inference visualization
-- Interactive parameter editing
-
-### Phase 3: Documentation Quality
-
-- JSDoc tag support expansion
-- Example code validation
-- Documentation completeness scoring
-- AI-generated examples
-
-### Phase 4: Performance
-
-- Parallel page generation
-- Lazy content loading
-- Incremental regeneration
-- Build cache optimization
+Both use the VfsRegistry to access the highlighter and transformers.
 
 ## Related Documentation
 
-- **Cross-Linking Architecture:**
-  `.claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md` -
-  Type reference linking in generated pages
-- **SSG Compatible Components:**
-  `.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md` -
-  Runtime components used in generated pages
+- **Build Architecture:**
+  `build-architecture.md` -- Plugin structure and service layer
 - **Snapshot Tracking System:**
-  `.claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md` -
-  Incremental build optimization for pages
-- **Performance Observability:**
-  `.claude/design/rspress-plugin-api-extractor/performance-observability.md` -
-  Page generation performance tracking
-- **Main Plugin README:** `plugin/README.md`
-- **Package CLAUDE.md:** `plugin/CLAUDE.md`
-
-### External Resources
-
-- Microsoft API Extractor: <https://api-extractor.com/>
-- API Extractor Model: <https://api-extractor.com/pages/overview/model/>
-- RSPress: <https://rspress.dev/>
-- TSDoc: <https://tsdoc.org/>
-
----
-
-**Document Status:** Stub - outlines structure but needs detailed
-implementation documentation.
-
-**Next Steps:** Document each generator implementation, add code examples,
-create architecture diagrams, add performance benchmarks, document testing
-patterns.
+  `snapshot-tracking-system.md` -- Incremental build tracking
+- **Cross-Linking Architecture:**
+  `cross-linking-architecture.md` -- Type reference linking
+- **Component Development:**
+  `component-development.md` -- Runtime components used in generated pages
+- **SSG-Compatible Components:**
+  `ssg-compatible-components.md` -- Dual-mode components

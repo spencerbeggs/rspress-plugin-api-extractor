@@ -61,13 +61,20 @@ export function ApiMember({ code, memberName, summary, id, hast, hasParameters }
 	// Browser mode: Use MemberSignature with pre-rendered Shiki HAST
 	if (parsedHast) {
 		const { MemberSignature } = RuntimeComponents;
-		return createElement(MemberSignature, {
+		const memberProps: {
+			hast: typeof parsedHast;
+			memberName: string;
+			hasParameters: boolean;
+			summary?: string;
+			id?: string;
+		} = {
 			hast: parsedHast,
 			memberName,
-			summary,
-			id,
 			hasParameters: hasParamsBoolean,
-		});
+		};
+		if (summary != null) memberProps.summary = summary;
+		if (id != null) memberProps.id = id;
+		return createElement(MemberSignature, memberProps);
 	}
 
 	// Fallback: plain code (no HAST available)

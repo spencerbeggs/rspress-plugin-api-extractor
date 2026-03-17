@@ -3,7 +3,7 @@ import path from "node:path";
 import { imageSizeFromFile } from "image-size/fromFile";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenGraphResolver } from "./og-resolver.js";
-import type { OpenGraphImageMetadata } from "./types.js";
+import type { OpenGraphImageMetadata } from "./schemas/index.js";
 
 // Mock dependencies
 vi.mock("node:fs");

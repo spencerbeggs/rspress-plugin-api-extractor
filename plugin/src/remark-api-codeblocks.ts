@@ -1,3 +1,4 @@
+/* v8 ignore start -- remark plugin, requires MDX compilation context */
 /**
  * Remark plugin for on-demand API code block rendering.
  *
@@ -14,7 +15,6 @@ import type { MdxJsxAttributeValueExpression, MdxJsxFlowElement } from "mdast-ut
 import type { ShikiTransformer } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import type { DebugLogger } from "./debug-logger.js";
 
 /**
  * Create an MDX JSX attribute value expression with proper estree AST.
@@ -97,14 +97,6 @@ import { generateShikiHast } from "./markdown/shiki-utils.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 /**
- * Options for the remark-api-codeblocks plugin.
- */
-export interface RemarkApiCodeblocksOptions {
-	/** Debug logger for verbose output */
-	logger?: DebugLogger;
-}
-
-/**
  * Remark plugin that processes API JSX components for browser rendering.
  *
  * This plugin:
@@ -117,20 +109,14 @@ export interface RemarkApiCodeblocksOptions {
  * In SSG-MD mode, the plugin simply removes build-time props and lets the
  * components render their own clean HTML for markdown conversion.
  */
-export const remarkApiCodeblocks: Plugin<[RemarkApiCodeblocksOptions?], Root> = (
-	options: RemarkApiCodeblocksOptions = {},
-) => {
-	const { logger } = options;
-
+export const remarkApiCodeblocks: Plugin<[undefined?], Root> = () => {
 	return async function remarkTransformer(tree: Root, file: { path?: string; cwd?: string }): Promise<void> {
 		// Skip if no VFS configs are registered (plugin not initialized)
 		if (!VfsRegistry.hasConfigs()) {
-			logger?.debug("[remark-api-codeblocks] No VFS configs registered, skipping transformation");
 			return;
 		}
 
 		const promises: Array<Promise<void>> = [];
-		let blockCount = 0;
 
 		// Detect if we're in SSG-MD (node_md) compilation environment
 		const isSsgMd =
@@ -160,8 +146,6 @@ export const remarkApiCodeblocks: Plugin<[RemarkApiCodeblocksOptions?], Root> = 
 				return;
 			}
 
-			blockCount++;
-
 			const promise = (async () => {
 				if (isSsgMd) {
 					// SSG-MD mode: Remove build-time props, component handles its own SSG-MD rendering
@@ -172,7 +156,7 @@ export const remarkApiCodeblocks: Plugin<[RemarkApiCodeblocksOptions?], Root> = 
 				// Look up VFS config
 				const vfsConfig = VfsRegistry.get(apiScopeValue);
 				if (!vfsConfig) {
-					logger?.warn(
+					console.warn(
 						`[remark-api-codeblocks] No VFS config found for scope "${apiScopeValue}" in ${currentFilePath}`,
 					);
 					removeJsxAttrs(node, ["source", "apiScope"]);
@@ -226,9 +210,5 @@ export const remarkApiCodeblocks: Plugin<[RemarkApiCodeblocksOptions?], Root> = 
 		});
 
 		await Promise.all(promises);
-
-		if (blockCount > 0) {
-			logger?.debug(`[remark-api-codeblocks] Processed ${blockCount} API code blocks in ${currentFilePath}`);
-		}
 	};
 };

@@ -1,7 +1,7 @@
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import { describe, expect, it } from "vitest";
 import { CategoryResolver } from "./category-resolver.js";
-import type { CategoryConfig, SourceConfig } from "./types.js";
+import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
 describe("CategoryResolver", () => {
 	const resolver = new CategoryResolver();

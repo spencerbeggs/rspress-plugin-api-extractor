@@ -62,10 +62,10 @@ export function MemberSignature({
 			<SignatureToolbar
 				heading={{
 					text: memberName,
-					id,
+					...(id != null ? { id } : {}),
 					level: "h3",
 				}}
-				summary={summary}
+				{...(summary != null ? { summary } : {})}
 				buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
 			/>
 			<SignatureCode hast={hast} wrapped={wrapped} />

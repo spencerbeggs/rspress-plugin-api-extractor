@@ -33,15 +33,15 @@ export function SignatureBlock({
 	return (
 		<div className={clsx(styles.block, hasParameters && styles.hasParameters)}>
 			<SignatureToolbar
-				heading={
-					heading && id
-						? {
+				{...(heading && id
+					? {
+							heading: {
 								text: heading,
 								id,
-								level: "h2",
-							}
-						: undefined
-				}
+								level: "h2" as const,
+							},
+						}
+					: {})}
 				buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
 			/>
 			<SignatureCode hast={hast} wrapped={wrapped} />

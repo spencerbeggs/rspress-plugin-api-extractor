@@ -1,7 +1,7 @@
 import type { ApiClass, ApiInterface, ApiItem, ApiNamespace, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiDocumentedItem, ApiItemKind, ApiReleaseTagMixin, ReleaseTag } from "@microsoft/api-extractor-model";
 import type { DocNode } from "@microsoft/tsdoc";
-import type { CategoryConfig, SourceConfig } from "./types.js";
+import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
 /**
  * Represents a member of a namespace with its parent namespace context.
@@ -259,9 +259,10 @@ export class ApiParser {
 					const paramName = paramAny.parameterName || "";
 					const description = ApiParser.extractPlainText(paramAny.content);
 
+					const paramType = paramTypes.get(paramName);
 					paramList.push({
 						name: paramName,
-						type: paramTypes.get(paramName),
+						...(paramType != null ? { type: paramType } : {}),
 						description: description.replace(/\s+/g, " ").trim(),
 					});
 				}

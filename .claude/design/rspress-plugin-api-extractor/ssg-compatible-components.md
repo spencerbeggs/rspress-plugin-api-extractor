@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-01-23
-last-synced: 2026-01-23
+updated: 2026-03-17
+last-synced: 2026-03-17
 completeness: 90
 related: []
 dependencies: []

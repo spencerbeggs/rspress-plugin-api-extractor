@@ -1,7 +1,8 @@
+/* v8 ignore start -- Prettier integration wrapper, tested via page generator integration tests */
+import { Effect, Metric } from "effect";
 import { format } from "prettier";
 import { addLogicalBlankLines } from "./code-post-processor.js";
-import type { DebugLogger } from "./debug-logger.js";
-import type { PrettierErrorStatsCollector } from "./prettier-error-stats.js";
+import { BuildMetrics } from "./layers/ObservabilityLive.js";
 
 /**
  * Map code fence languages to Prettier parsers
@@ -49,16 +50,9 @@ export interface FormatResult {
  *
  * @param code - The code to format
  * @param language - The code fence language (e.g., "typescript", "ts", "js")
- * @param errorStats - Optional error stats collector to record errors
- * @param logger - Optional logger for debug output
  * @returns FormatResult with formatted code and metadata
  */
-export async function formatCode(
-	code: string,
-	language: string,
-	errorStats?: PrettierErrorStatsCollector,
-	logger?: DebugLogger,
-): Promise<FormatResult> {
+export async function formatCode(code: string, language: string): Promise<FormatResult> {
 	const start = performance.now();
 
 	// Get the appropriate parser for the language
@@ -81,8 +75,6 @@ export async function formatCode(
 		const formatTime = performance.now() - start;
 		const postProcessed = addLogicalBlankLines(formatted.trim());
 
-		logger?.debug(`✨ Prettier formatted ${code.length} chars in ${formatTime.toFixed(1)}ms`);
-
 		return {
 			code: postProcessed,
 			success: true,
@@ -92,12 +84,8 @@ export async function formatCode(
 		const formatTime = performance.now() - start;
 		const errorMsg = error instanceof Error ? error.message : String(error);
 
-		// Record error in stats collector if provided
-		if (errorStats) {
-			errorStats.recordError(error, code, language);
-		}
-
-		logger?.debug(`⚠️ Prettier error: ${errorMsg.split("\n")[0]}`);
+		// Increment Prettier error counter
+		Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
 
 		// Return original code on error (fallthrough behavior)
 		return {

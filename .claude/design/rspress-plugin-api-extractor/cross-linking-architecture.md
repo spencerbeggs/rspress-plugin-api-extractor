@@ -3,10 +3,12 @@ status: draft
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-01-23
-last-synced: 2026-01-23
+updated: 2026-03-17
+last-synced: 2026-03-17
 completeness: 25
-related: []
+related:
+  - rspress-plugin-api-extractor/page-generation-system.md
+  - rspress-plugin-api-extractor/build-architecture.md
 dependencies: []
 ---
 
@@ -154,15 +156,29 @@ Examples:
 
 ## Integration Points
 
-### 1. Plugin Initialization
+### 1. Build Program Initialization
 
-**Location:** `src/plugin.ts`
+**Location:** `src/build-program.ts`
 
-- Initialize cross-linkers
-- Register all API items from model
-- Set base URL configuration
+Cross-linkers are initialized in `generateApiDocs` using data from
+`prepareWorkItems`:
 
-> TODO: Document detailed flow
+```typescript
+markdownCrossLinker.initialize(
+  ApiParser.categorizeApiItems(apiPackage, categories),
+  baseRoute,
+  categories,
+);
+shikiCrossLinker.reinitialize(
+  crossLinkData.routes,
+  crossLinkData.kinds,
+  apiScope,
+);
+TwoslashManager.addTypeRoutes(crossLinkData.routes);
+```
+
+The `prepareWorkItems` function in `build-stages.ts` builds the route
+and kind maps by iterating over all API items and their members.
 
 ### 2. Page Generation
 

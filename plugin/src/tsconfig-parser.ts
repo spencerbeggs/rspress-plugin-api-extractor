@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import ts from "typescript";
-import type { TypeResolutionCompilerOptions } from "./types.js";
+import type { TypeResolutionCompilerOptions } from "./internal-types.js";
 
 /**
  * Error thrown when tsconfig.json parsing fails.
