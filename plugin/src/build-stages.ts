@@ -942,3 +942,105 @@ export async function writeMetadata(input: WriteMetadataInput): Promise<void> {
 		snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate);
 	}
 }
+
+export interface CleanupAndCommitInput {
+	readonly fileResults: readonly FileWriteResult[];
+	readonly snapshotManager: import("./snapshot-manager.js").SnapshotManager;
+	readonly resolvedOutputDir: string;
+	readonly generatedFiles: ReadonlySet<string>;
+}
+
+/**
+ * Batch-upsert snapshots for written files, then delete stale and orphaned files
+ * from disk and the snapshot database. Finally, remove any empty subdirectories.
+ *
+ * Steps:
+ * 1. Filter fileResults to written files (status !== "unchanged"), extract snapshots,
+ *    and batch-upsert them into the snapshot DB.
+ * 2. Call snapshotManager.cleanupStaleFiles() to find files tracked in DB but not
+ *    generated in this build, then delete them from disk.
+ * 3. Read the output directory recursively; for each .mdx or _meta.json file not in
+ *    generatedFiles, delete it from disk and remove its snapshot.
+ * 4. After deleting orphans, remove empty subdirectories deepest-first.
+ */
+export async function cleanupAndCommit(input: CleanupAndCommitInput): Promise<void> {
+	const { fileResults, snapshotManager, resolvedOutputDir, generatedFiles } = input;
+
+	// 1. Batch-upsert snapshots for written (non-unchanged) files only
+	const snapshotsToUpdate = fileResults.filter((r) => r.status !== "unchanged").map((r) => r.snapshot);
+
+	if (snapshotsToUpdate.length > 0) {
+		snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
+	}
+
+	// 2. Stale file cleanup: files in DB but not generated in this build
+	const staleFiles: string[] = snapshotManager.cleanupStaleFiles(resolvedOutputDir, generatedFiles as Set<string>);
+	await Promise.all(
+		staleFiles.map(async (staleFile) => {
+			const fullPath = path.join(resolvedOutputDir, staleFile);
+			try {
+				await fs.promises.unlink(fullPath);
+				console.log(`🗑️  DELETED STALE: ${staleFile}`);
+			} catch {
+				// File already doesn't exist, ignore
+			}
+		}),
+	);
+
+	// 3. Orphan file cleanup: files on disk not tracked in generatedFiles
+	try {
+		const allFiles = await fs.promises.readdir(resolvedOutputDir, { recursive: true });
+		const orphanedFiles: string[] = [];
+		for (const entry of allFiles) {
+			const relPath = typeof entry === "string" ? entry : String(entry);
+			// Only consider .mdx and _meta.json files
+			if (!relPath.endsWith(".mdx") && !relPath.endsWith("_meta.json")) continue;
+			// Normalize path separators to forward slashes for comparison
+			const normalizedRelPath = relPath.replace(/\\/g, "/");
+			if (!generatedFiles.has(normalizedRelPath)) {
+				orphanedFiles.push(normalizedRelPath);
+			}
+		}
+
+		// Delete orphaned files from disk and snapshot DB
+		await Promise.all(
+			orphanedFiles.map(async (orphan) => {
+				const fullPath = path.join(resolvedOutputDir, orphan);
+				try {
+					await fs.promises.unlink(fullPath);
+					snapshotManager.deleteSnapshot(resolvedOutputDir, orphan);
+					console.log(`🗑️  DELETED ORPHAN: ${orphan}`);
+				} catch {
+					// File already doesn't exist, ignore
+				}
+			}),
+		);
+
+		// 4. Remove empty subdirectories after file deletion (deepest-first)
+		if (orphanedFiles.length > 0) {
+			const dirs = new Set<string>();
+			for (const orphan of orphanedFiles) {
+				const dir = path.dirname(orphan);
+				if (dir !== ".") {
+					dirs.add(dir);
+				}
+			}
+			// Sort deepest-first so child dirs are removed before parents
+			const sortedDirs = [...dirs].sort((a, b) => b.split("/").length - a.split("/").length);
+			for (const dir of sortedDirs) {
+				const fullDir = path.join(resolvedOutputDir, dir);
+				try {
+					const entries = await fs.promises.readdir(fullDir);
+					if (entries.length === 0) {
+						await fs.promises.rmdir(fullDir);
+						console.log(`🗑️  REMOVED EMPTY DIR: ${dir}`);
+					}
+				} catch {
+					// Directory doesn't exist or can't be read, ignore
+				}
+			}
+		}
+	} catch {
+		// readdir failed (outputDir doesn't exist), ignore
+	}
+}

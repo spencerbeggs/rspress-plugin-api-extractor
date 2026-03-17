@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
-import { generatePages, prepareWorkItems, writeFiles, writeMetadata } from "../src/build-stages.js";
+import { cleanupAndCommit, generatePages, prepareWorkItems, writeFiles, writeMetadata } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
 import { ApiModelLoader } from "../src/model-loader.js";
 import { SnapshotManager } from "../src/snapshot-manager.js";
@@ -495,6 +495,93 @@ describe("writeMetadata", () => {
 		// Only "class" should appear — "interface" has no items
 		expect(rootMeta).toHaveLength(1);
 		expect(rootMeta[0].name).toBe("class");
+
+		snapshotManager.close();
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});
+
+describe("cleanupAndCommit", () => {
+	it("batch upserts snapshots for written files only", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "cleanup-test-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotManager = new SnapshotManager(dbPath);
+
+		const buildTime = new Date().toISOString();
+		const results: FileWriteResult[] = [
+			{
+				relativePathWithExt: "class/foo.mdx",
+				absolutePath: path.join(tmpDir, "class/foo.mdx"),
+				status: "new",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/foo.mdx",
+					publishedTime: buildTime,
+					modifiedTime: buildTime,
+					contentHash: "abc",
+					frontmatterHash: "def",
+					buildTime,
+				},
+				categoryKey: "classes",
+				label: "Foo",
+				routePath: "/api/class/foo",
+			},
+			{
+				relativePathWithExt: "class/bar.mdx",
+				absolutePath: path.join(tmpDir, "class/bar.mdx"),
+				status: "unchanged",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: "class/bar.mdx",
+					publishedTime: buildTime,
+					modifiedTime: buildTime,
+					contentHash: "ghi",
+					frontmatterHash: "jkl",
+					buildTime,
+				},
+				categoryKey: "classes",
+				label: "Bar",
+				routePath: "/api/class/bar",
+			},
+		];
+
+		await cleanupAndCommit({
+			fileResults: results,
+			snapshotManager,
+			resolvedOutputDir: tmpDir,
+			generatedFiles: new Set(["class/foo.mdx", "class/bar.mdx"]),
+		});
+
+		// Only written file should have a snapshot (not unchanged)
+		const snapshots = snapshotManager.getSnapshotsForOutputDir(tmpDir);
+		expect(snapshots.length).toBe(1);
+		expect(snapshots[0].filePath).toBe("class/foo.mdx");
+
+		snapshotManager.close();
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+
+	it("deletes orphaned files not in generatedFiles set", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "orphan-test-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotManager = new SnapshotManager(dbPath);
+
+		const orphanDir = path.join(tmpDir, "class");
+		await fs.promises.mkdir(orphanDir, { recursive: true });
+		await fs.promises.writeFile(path.join(orphanDir, "orphan.mdx"), "old content");
+
+		await cleanupAndCommit({
+			fileResults: [],
+			snapshotManager,
+			resolvedOutputDir: tmpDir,
+			generatedFiles: new Set(),
+		});
+
+		const exists = await fs.promises
+			.access(path.join(orphanDir, "orphan.mdx"))
+			.then(() => true)
+			.catch(() => false);
+		expect(exists).toBe(false);
 
 		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
