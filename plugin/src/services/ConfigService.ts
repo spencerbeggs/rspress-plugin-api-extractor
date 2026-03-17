@@ -1,34 +1,78 @@
-import type { Effect } from "effect";
+import type { ApiPackage } from "@microsoft/api-extractor-model";
+import type { Effect, Scope } from "effect";
 import { Context } from "effect";
-import type { ConfigValidationError } from "../errors.js";
+import type { Highlighter, ShikiTransformer } from "shiki";
+import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
+import type { ApiModelLoadError, ConfigValidationError, TypeRegistryError } from "../errors.js";
+import type { PackageJson, TypeResolutionCompilerOptions } from "../internal-types.js";
+import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
+import type { OpenGraphResolver } from "../og-resolver.js";
+import type { CategoryConfig, LlmsPlugin, LogLevel, OpenGraphImageConfig, SourceConfig } from "../schemas/index.js";
+import type { ShikiCrossLinker } from "../shiki-transformer.js";
+import type { SnapshotManager } from "../snapshot-manager.js";
 
 /**
- * Validated plugin configuration derived from user-provided options.
- * This is the post-validation shape -- all invariants are guaranteed.
+ * Subset of RSPress config needed by ConfigService.
+ * Extracted from the UserConfig in beforeBuild/config hooks.
  */
-export interface ValidatedApiConfig {
+export interface RspressConfigSubset {
+	readonly multiVersion?: { default: string; versions: string[] };
+	readonly locales?: ReadonlyArray<{ lang: string }>;
+	readonly lang?: string;
+	readonly root?: string;
+}
+
+/**
+ * Fully resolved config for a single API. Produced after model loading,
+ * category merging, path derivation, and package resolution.
+ * Plain interface (not Schema) because it contains ApiPackage.
+ */
+export interface ResolvedApiConfig {
+	readonly apiPackage: ApiPackage;
 	readonly packageName: string;
-	readonly model: string;
+	readonly apiName?: string;
+	readonly outputDir: string;
 	readonly baseRoute: string;
-	readonly apiFolder: string;
-	readonly tsconfig: string | undefined;
-	readonly compilerOptions: Record<string, unknown> | undefined;
-	readonly externalPackages: ReadonlyArray<{ name: string; version: string }>;
+	readonly categories: Record<string, CategoryConfig>;
+	readonly source?: SourceConfig;
+	readonly packageJson?: PackageJson;
+	readonly llmsPlugin?: LlmsPlugin;
+	readonly siteUrl?: string;
+	readonly ogImage?: OpenGraphImageConfig;
+	readonly docsDir?: string;
+	readonly docsRoot?: string;
+	readonly theme?: ShikiThemeConfig;
 }
 
-export interface ValidatedPluginConfig {
-	readonly mode: "single" | "multi";
-	readonly apis: ReadonlyArray<ValidatedApiConfig>;
-	readonly logLevel: "debug" | "verbose" | "info" | "warn" | "error";
+/**
+ * Everything needed to run the doc generation pipeline.
+ * Produced by ConfigService.resolve().
+ */
+export interface ResolvedBuildContext {
+	readonly apiConfigs: ReadonlyArray<ResolvedApiConfig>;
+	readonly combinedVfs: ReadonlyMap<string, string>;
+	readonly highlighter: Highlighter;
+	readonly tsEnvCache: ReadonlyMap<string, VirtualTypeScriptEnvironment>;
+	readonly resolvedCompilerOptions: TypeResolutionCompilerOptions;
+	readonly ogResolver: OpenGraphResolver | null;
+	readonly snapshotManager: SnapshotManager;
+	readonly shikiCrossLinker: ShikiCrossLinker;
+	readonly hideCutTransformer: ShikiTransformer;
+	readonly hideCutLinesTransformer: ShikiTransformer;
+	readonly twoslashTransformer: ShikiTransformer | undefined;
 	readonly pageConcurrency: number;
+	readonly logLevel: LogLevel;
+	readonly suppressExampleErrors: boolean;
 }
 
+/**
+ * ConfigService resolves plugin options + RSPress config into a fully
+ * prepared build context with loaded models, type system, and resources.
+ */
 export interface ConfigServiceShape {
-	readonly getPluginConfig: Effect.Effect<ValidatedPluginConfig>;
-	readonly validateMultiVersion: (
-		rspressVersions: ReadonlyArray<string>,
-		defaultVersion: string,
-	) => Effect.Effect<void, ConfigValidationError>;
+	readonly resolve: (
+		rspressConfig: RspressConfigSubset,
+	) => Effect.Effect<ResolvedBuildContext, ConfigValidationError | ApiModelLoadError | TypeRegistryError, Scope.Scope>;
 }
 
 export class ConfigService extends Context.Tag("rspress-plugin-api-extractor/ConfigService")<
