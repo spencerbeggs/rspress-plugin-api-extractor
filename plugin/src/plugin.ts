@@ -1356,8 +1356,10 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Clear file context map for this build
 			fileContextMap.clear();
 
-			// Read RSPress config for multiVersion
+			// Read RSPress config for multiVersion and locales
 			const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } }).multiVersion;
+			const rspressLocales = (_config as { locales?: Array<{ lang: string }> }).locales?.map((l) => l.lang) ?? [];
+			const rspressLang = (_config as { lang?: string }).lang;
 			const rspressRoot = docsRoot || process.cwd();
 
 			// Count APIs for build start event
@@ -1555,13 +1557,29 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 								perfManager?.mark(`vfs.generate.${version}.end`);
 								perfManager?.measure("vfs.generate", `vfs.generate.${version}.start`, `vfs.generate.${version}.end`);
 
-								// Compute output directory and route using deriveOutputPaths for this version
-								const versionDir = path.join(rspressRoot, version);
-								const apiFolder = api.apiFolder ?? "api";
-								const outputDir = apiFolder
-									? path.join(versionDir, baseRoute.replace(/^\//, ""), apiFolder)
-									: path.join(versionDir, baseRoute.replace(/^\//, ""));
-								const fullRoute = apiFolder ? `${baseRoute}/${apiFolder}` : baseRoute;
+								// Use deriveOutputPaths for versioned paths (supports i18n + versioned cross-product)
+								const versionDerivedPaths = deriveOutputPaths({
+									mode: "single",
+									docsRoot: rspressRoot,
+									baseRoute,
+									apiFolder: api.apiFolder ?? "api",
+									locales: rspressLocales,
+									defaultLang: rspressLang,
+									versions: [version],
+									defaultVersion: rspressMultiVersion?.default,
+								});
+								// Use the first derived path for this version (non-i18n case)
+								// When i18n is active, we'd need to iterate all locale variants
+								const versionDp = versionDerivedPaths[0];
+								if (!versionDp) {
+									return {
+										vfs: new Map<string, string>(),
+										externalPackages: [] as Array<{ name: string; version: string }>,
+										config: null,
+									};
+								}
+								const outputDir = versionDp.outputDir;
+								const fullRoute = versionDp.routeBase;
 
 								// Resolve ogImage with cascading: version > API > global
 								const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
@@ -1584,7 +1602,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 										llmsPlugin: resolvedLlms,
 										siteUrl: options.siteUrl,
 										ogImage: resolvedOgImage,
-										docsDir: versionDir,
+										docsDir: path.dirname(outputDir),
 										docsRoot,
 										theme: resolvedTheme,
 									},
@@ -1603,7 +1621,9 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 							if (result.externalPackages.length > 0) {
 								allExternalPackages.push(...result.externalPackages);
 							}
-							apiConfigs.push(result.config);
+							if (result.config) {
+								apiConfigs.push(result.config);
+							}
 						}
 					} else {
 						// Non-versioned single-API mode
@@ -1612,8 +1632,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 							docsRoot: rspressRoot,
 							baseRoute,
 							apiFolder: api.apiFolder ?? "api",
-							locales: [],
-							defaultLang: undefined,
+							locales: rspressLocales,
+							defaultLang: rspressLang,
 							versions: [],
 							defaultVersion: undefined,
 						});
@@ -1650,8 +1670,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 								docsRoot: rspressRoot,
 								baseRoute,
 								apiFolder: api.apiFolder ?? "api",
-								locales: [],
-								defaultLang: undefined,
+								locales: rspressLocales,
+								defaultLang: rspressLang,
 								versions: [],
 								defaultVersion: undefined,
 							});
