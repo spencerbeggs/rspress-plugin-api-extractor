@@ -3,7 +3,10 @@ import { Effect, Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effec
 
 /**
  * All build metrics as named counters/histograms.
- * These replace the 5 ad-hoc stats collector classes.
+ *
+ * Note: Effect Metrics use a process-wide registry. In tests, counters
+ * accumulate across test cases within the same process. Test assertions
+ * should use loose matching (toContain) rather than exact count checks.
  */
 export const BuildMetrics = {
 	filesTotal: Metric.counter("files.total"),

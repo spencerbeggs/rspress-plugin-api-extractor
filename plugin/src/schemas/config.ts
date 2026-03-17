@@ -12,7 +12,7 @@ export const ModelInput = Schema.declare(
 		typeof input === "string" || typeof input === "function" || input instanceof URL,
 );
 
-export const LogLevel = Schema.Literal("none", "info", "verbose", "debug");
+export const LogLevel = Schema.Literal("none", "info", "verbose", "debug", "warn", "error");
 export type LogLevel = Schema.Schema.Type<typeof LogLevel>;
 
 export const ExternalPackageSpec = Schema.mutable(

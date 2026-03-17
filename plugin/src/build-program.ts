@@ -124,8 +124,8 @@ export function generateApiDocs(
 			...(ogImage != null ? { ogImage } : {}),
 		});
 
-		const changedAfterPipeline = fileResults.filter((r) => r.status !== "unchanged").length;
-		yield* Effect.logInfo(`Generated ${changedAfterPipeline} pages`);
+		const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
+		yield* Effect.logInfo(`Generated ${changedCount} pages`);
 
 		// Track generated files and file context
 		const generatedFiles = new Set<string>();
@@ -159,7 +159,6 @@ export function generateApiDocs(
 			generatedFiles,
 		});
 
-		const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
 		yield* Effect.logInfo(`Generated ${changedCount} API documentation files for ${packageName}`);
 
 		return crossLinkData;

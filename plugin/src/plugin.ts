@@ -52,11 +52,10 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	// Support LOG_LEVEL environment variable as override (useful for CI/debugging)
 	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
 	const logLevel = envLogLevel || options.logLevel || "info";
-	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
 	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
-		PluginLoggerLayer(effectLogLevel),
+		PluginLoggerLayer(logLevel),
 		TypeRegistryServiceLive,
 		NodeFileSystem.layer,
 		SnapshotServiceLive(dbPath),
@@ -199,8 +198,10 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 					}).pipe(Effect.scoped),
 				);
 
-				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
-				console.log(`✅ API documentation complete (${totalTime}s)`);
+				if (logLevel !== "none") {
+					const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
+					console.log(`✅ API documentation complete (${totalTime}s)`);
+				}
 			} catch (error) {
 				console.error(
 					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
