@@ -6,7 +6,7 @@ import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata 
 import { ApiParser } from "./loader.js";
 import { markdownCrossLinker } from "./markdown/index.js";
 import type { ResolvedApiConfig, ResolvedBuildContext } from "./services/ConfigService.js";
-import type { FileSnapshot } from "./snapshot-manager.js";
+import { SnapshotService } from "./services/SnapshotService.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import type { VfsConfig } from "./vfs-registry.js";
 import { VfsRegistry } from "./vfs-registry.js";
@@ -28,9 +28,10 @@ export function generateApiDocs(
 	apiConfig: ResolvedApiConfig & { suppressExampleErrors?: boolean },
 	buildContext: ResolvedBuildContext,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-): Effect.Effect<CrossLinkData, never, FileSystem.FileSystem> {
+): Effect.Effect<CrossLinkData, never, FileSystem.FileSystem | SnapshotService> {
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
+		const snapshotSvc = yield* SnapshotService;
 
 		const {
 			apiPackage,
@@ -48,7 +49,6 @@ export function generateApiDocs(
 		const suppressExampleErrors = apiConfig.suppressExampleErrors ?? true;
 
 		const {
-			snapshotManager,
 			shikiCrossLinker,
 			highlighter,
 			hideCutTransformer,
@@ -61,14 +61,9 @@ export function generateApiDocs(
 		const resolvedOutputDir = path.resolve(process.cwd(), outputDir);
 		const buildTime = new Date().toISOString();
 
-		// Load existing snapshots from database for this outputDir (sync)
-		const existingSnapshots = yield* Effect.sync(() => {
-			const map = new Map<string, FileSnapshot>();
-			for (const s of snapshotManager.getSnapshotsForOutputDir(resolvedOutputDir)) {
-				map.set(s.filePath, s);
-			}
-			return map;
-		});
+		// Load existing snapshots from database for this outputDir
+		const allSnapshots = yield* snapshotSvc.getAllForDirectory(resolvedOutputDir).pipe(Effect.orDie);
+		const existingSnapshots = new Map(allSnapshots.map((s) => [s.filePath, s]));
 
 		// Create the output directory if it doesn't exist
 		yield* fileSystem.makeDirectory(resolvedOutputDir, { recursive: true }).pipe(Effect.orDie);
@@ -149,7 +144,6 @@ export function generateApiDocs(
 			fileResults,
 			categories,
 			resolvedOutputDir,
-			snapshotManager,
 			existingSnapshots,
 			buildTime,
 			baseRoute,
@@ -161,7 +155,6 @@ export function generateApiDocs(
 		// Phase 5: Cleanup and commit snapshots
 		yield* cleanupAndCommit({
 			fileResults,
-			snapshotManager,
 			resolvedOutputDir,
 			generatedFiles,
 		});

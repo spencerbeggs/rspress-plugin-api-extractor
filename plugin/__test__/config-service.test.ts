@@ -45,7 +45,6 @@ describe("ConfigService types", () => {
 		void ctx.apiConfigs;
 		void ctx.combinedVfs;
 		void ctx.highlighter;
-		void ctx.snapshotManager;
 		void ctx.shikiCrossLinker;
 		void ctx.hideCutTransformer;
 		void ctx.hideCutLinesTransformer;
@@ -78,7 +77,6 @@ describe("ConfigServiceLive.resolve", () => {
 		expect(result.apiConfigs[0].packageName).toBe("example-module");
 		expect(result.apiConfigs[0].baseRoute).toBe("/example-module/api");
 		expect(result.highlighter).toBeDefined();
-		expect(result.snapshotManager).toBeDefined();
 		expect(result.shikiCrossLinker).toBeDefined();
 		expect(result.pageConcurrency).toBeGreaterThan(0);
 	});

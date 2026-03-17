@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { createHighlighter } from "shiki";
 import { describe, expect, it } from "vitest";
 import { generateApiDocs } from "../src/build-program.js";
@@ -11,7 +11,7 @@ import { ApiModelLoader } from "../src/model-loader.js";
 import { DEFAULT_CATEGORIES } from "../src/schemas/index.js";
 import type { ResolvedApiConfig, ResolvedBuildContext } from "../src/services/ConfigService.js";
 import { ShikiCrossLinker } from "../src/shiki-transformer.js";
-import { SnapshotManager } from "../src/snapshot-manager.js";
+import { MockSnapshotServiceLayer } from "./utils/layers.js";
 
 describe("generateApiDocs (Effect program)", () => {
 	it("generates docs for fixture model and populates crossLinkData + fileContextMap", async () => {
@@ -21,8 +21,6 @@ describe("generateApiDocs (Effect program)", () => {
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
 
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "build-program-"));
-		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
 
 		const highlighter = await createHighlighter({
 			themes: ["github-light-default", "github-dark-default"],
@@ -45,7 +43,6 @@ describe("generateApiDocs (Effect program)", () => {
 			tsEnvCache: new Map(),
 			resolvedCompilerOptions: {},
 			ogResolver: null,
-			snapshotManager,
 			shikiCrossLinker: new ShikiCrossLinker(),
 			hideCutTransformer: { name: "mock-hide-cut" },
 			hideCutLinesTransformer: { name: "mock-hide-cut-lines" },
@@ -58,7 +55,8 @@ describe("generateApiDocs (Effect program)", () => {
 		const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
 
 		const program = generateApiDocs(apiConfig, buildContext, fileContextMap);
-		const crossLinkData = await Effect.runPromise(program.pipe(Effect.provide(NodeFileSystem.layer)));
+		const testLayer = Layer.merge(NodeFileSystem.layer, MockSnapshotServiceLayer);
+		const crossLinkData = await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
 
 		// Cross-link data should be populated
 		expect(crossLinkData.routes.size).toBeGreaterThan(0);
@@ -77,7 +75,6 @@ describe("generateApiDocs (Effect program)", () => {
 		expect(mdxFiles.length).toBeGreaterThan(0);
 
 		// Cleanup
-		snapshotManager.close();
 		highlighter.dispose();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	}, 30_000);

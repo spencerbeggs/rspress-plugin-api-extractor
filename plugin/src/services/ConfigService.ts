@@ -9,8 +9,6 @@ import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
 import type { OpenGraphResolver } from "../og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, LogLevel, OpenGraphImageConfig, SourceConfig } from "../schemas/index.js";
 import type { ShikiCrossLinker } from "../shiki-transformer.js";
-import type { SnapshotManager } from "../snapshot-manager.js";
-
 /**
  * Subset of RSPress config needed by ConfigService.
  * Extracted from the UserConfig in beforeBuild/config hooks.
@@ -55,7 +53,6 @@ export interface ResolvedBuildContext {
 	readonly tsEnvCache: ReadonlyMap<string, VirtualTypeScriptEnvironment>;
 	readonly resolvedCompilerOptions: TypeResolutionCompilerOptions;
 	readonly ogResolver: OpenGraphResolver | null;
-	readonly snapshotManager: SnapshotManager;
 	readonly shikiCrossLinker: ShikiCrossLinker;
 	readonly hideCutTransformer: ShikiTransformer;
 	readonly hideCutLinesTransformer: ShikiTransformer;

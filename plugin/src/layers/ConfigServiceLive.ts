@@ -37,7 +37,6 @@ import { ConfigService } from "../services/ConfigService.js";
 import { PathDerivationService } from "../services/PathDerivationService.js";
 import { TypeRegistryService } from "../services/TypeRegistryService.js";
 import type { ShikiCrossLinker } from "../shiki-transformer.js";
-import { SnapshotManager } from "../snapshot-manager.js";
 import { TwoslashManager } from "../twoslash-transformer.js";
 import { TypeReferenceExtractor } from "../type-reference-extractor.js";
 import { resolveTypeScriptConfig } from "../typescript-config.js";
@@ -626,14 +625,7 @@ export function ConfigServiceLive(
 							`Initializing Shiki highlighter: ${(performance.now() - shikiStartMs).toFixed(0)}ms`,
 						);
 
-						// --- 9. Snapshot DB (scoped resource) ---
-						const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
-						const snapshotManager = yield* Effect.acquireRelease(
-							Effect.sync(() => new SnapshotManager(dbPath)),
-							(sm) => Effect.sync(() => sm.close()),
-						);
-
-						// --- 10. OG resolver ---
+						// --- 9. OG resolver ---
 						const ogResolver = options.siteUrl
 							? new OpenGraphResolver({
 									siteUrl: options.siteUrl,
@@ -641,13 +633,13 @@ export function ConfigServiceLive(
 								})
 							: null;
 
-						// --- 11. Transformers ---
+						// --- 10. Transformers ---
 						const hideCutTransformer: ShikiTransformer = MemberFormatTransformer;
 						const hideCutLinesTransformer: ShikiTransformer = HideCutLinesTransformer;
 						const twoslashTransformer: ShikiTransformer | undefined =
 							TwoslashManager.getInstance().getTransformer() ?? undefined;
 
-						// --- 12. Assemble context ---
+						// --- 11. Assemble context ---
 						const logLevel = options.logLevel ?? "info";
 						const suppressExampleErrors = options.errors?.example !== "show";
 
@@ -658,7 +650,6 @@ export function ConfigServiceLive(
 							tsEnvCache,
 							resolvedCompilerOptions,
 							ogResolver,
-							snapshotManager,
 							shikiCrossLinker,
 							hideCutTransformer,
 							hideCutLinesTransformer,
