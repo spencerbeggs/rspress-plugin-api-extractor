@@ -7,7 +7,6 @@ import type { ShikiTransformer } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type ts from "typescript";
-import type { DebugLogger } from "./debug-logger.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { TypeResolutionCompilerOptions } from "./types.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
@@ -282,7 +281,7 @@ function renderMarkdownInline(markdown: string, context: string): ElementContent
  * **Error Handling:**
  * TypeScript errors in code blocks are captured (not thrown) and:
  * - Counted via Effect Metric (BuildMetrics.twoslashErrors)
- * - Logged inline at DEBUG level via {@link DebugLogger}
+ * - Logged inline via console.error
  * - Displayed in the rendered output as error annotations
  *
  * **Relationships:**
@@ -310,11 +309,6 @@ export class TwoslashManager {
 	private transformer: ShikiTransformer | null = null;
 
 	/**
-	 * Logger instance for inline error reporting
-	 */
-	private logger: DebugLogger | null = null;
-
-	/**
 	 * Private constructor to enforce singleton pattern
 	 */
 	private constructor() {}
@@ -335,18 +329,17 @@ export class TwoslashManager {
 	 *
 	 * @param vfs - Virtual file system mapping file paths to .d.ts content
 	 * @param _reserved - Reserved parameter (previously errorStatsCollector, now tracked via Effect Metrics)
-	 * @param logger - Optional logger for inline error reporting
+	 * @param _reserved2 - Reserved parameter (previously logger, now uses console)
 	 * @param tsEnvCache - TypeScript virtual environment cache for reusing language services
 	 * @param compilerOptions - TypeScript compiler options for Twoslash (defaults to DEFAULT_COMPILER_OPTIONS)
 	 */
 	public initialize(
 		vfs: VirtualFileSystem,
 		_reserved?: undefined,
-		logger?: DebugLogger,
+		_reserved2?: undefined,
 		tsEnvCache?: Map<string, VirtualTypeScriptEnvironment>,
 		compilerOptions?: TypeResolutionCompilerOptions,
 	): void {
-		this.logger = logger || null;
 		// Convert VFS Map to record for Twoslash extraFiles
 		const extraFiles: Record<string, string> = {};
 		for (const [path, content] of vfs.entries()) {
@@ -394,22 +387,16 @@ export class TwoslashManager {
 			// Documentation examples may be intentionally incomplete
 			throws: false,
 			// Log when transforming
-			onTwoslashError: (error: unknown, code: string): void => {
+			onTwoslashError: (error: unknown, _code: string): void => {
 				// Increment Effect Metric counter for aggregate tracking
 				Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
 
-				// Log inline at DEBUG level if logger is available
-				if (this.logger) {
-					const errorMsg = error instanceof Error ? error.message : String(error);
-					this.logger.debug(`🔴 Twoslash error: ${errorMsg}`);
-					this.logger.debug(`   Code (first 200 chars): ${code.substring(0, 200).replace(/\n/g, " ")}`);
-				}
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				console.error(`🔴 Twoslash error: ${errorMsg}`);
 			},
 		});
 
-		if (this.logger) {
-			this.logger.verbose(`✅ Twoslash transformer initialized with ${vfs.size} type definition files`);
-		}
+		console.log(`✅ Twoslash transformer initialized with ${vfs.size} type definition files`);
 	}
 
 	/**

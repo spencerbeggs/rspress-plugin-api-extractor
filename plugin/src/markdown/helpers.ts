@@ -8,7 +8,6 @@
  * @module helpers
  */
 
-import type { DebugLogger } from "../debug-logger.js";
 import { formatCode } from "../prettier-formatter.js";
 import { classifyCutDirective, isTwoslashDirective } from "../twoslash-patterns.js";
 import type { ImportStatement } from "../type-reference-extractor.js";
@@ -438,16 +437,14 @@ export function prependHiddenImports(code: string, imports: ImportStatement[]): 
  * @param code - The code to format
  * @param language - The code fence language (e.g., "typescript", "ts")
  * @param _context - Optional context (reserved for future use)
- * @param logger - Optional logger for debug output
  * @returns The formatted code (or original if formatting fails)
  */
 export async function formatExampleCode(
 	code: string,
 	language: string,
 	_context?: { file?: string; api?: string; blockType?: string },
-	logger?: DebugLogger,
 ): Promise<string> {
-	const result = await formatCode(code, language, logger);
+	const result = await formatCode(code, language);
 
 	return result.code;
 }

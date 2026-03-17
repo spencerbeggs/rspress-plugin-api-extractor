@@ -1022,33 +1022,8 @@ export interface ApiExtractorPluginOptions {
 	performance?: PerformanceConfig;
 
 	/**
-	 * Path to JSONL file for structured debug events.
-	 * Each line is a Zod-validated JSON object with event type and data.
-	 *
-	 * Events include:
-	 * - `page.generation.start`: Page generation started for an API item
-	 * - `shiki.hast.generated`: Shiki highlighter generated HAST from code
-	 * - `component.props.generated`: Component props serialized for MDX
-	 * - `serialization.debug`: Serialization details for debugging MDX issues
-	 * - `mdx.write.complete`: MDX file written to disk
-	 * - `build.error`: Build error occurred
-	 *
-	 * @example
-	 * ```ts
-	 * logFile: ".rspress/debug-events.jsonl"
-	 * ```
-	 *
-	 * @example Analyze with jq
-	 * ```bash
-	 * # Find serialization events with problematic chars
-	 * jq 'select(.event == "serialization.debug" and .data.containsProblematicChars == true)' debug-events.jsonl
-	 *
-	 * # Find build errors
-	 * jq 'select(.event == "build.error")' debug-events.jsonl
-	 *
-	 * # Track page generation timing
-	 * jq 'select(.event == "page.generation.start")' debug-events.jsonl
-	 * ```
+	 * @deprecated No longer used. File-based debug logging has been removed.
+	 * This option is retained for backward compatibility and will be removed in a future release.
 	 */
 	logFile?: string;
 }

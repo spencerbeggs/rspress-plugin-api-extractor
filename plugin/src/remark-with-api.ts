@@ -5,7 +5,6 @@ import type { ShikiTransformer } from "shiki";
 import { codeToHast, hastToHtml } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import type { DebugLogger } from "./debug-logger.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
@@ -47,7 +46,6 @@ interface RemarkWithApiOptions {
 	shikiCrossLinker: ShikiCrossLinker;
 	/** Getter for the shared Twoslash transformer from TwoslashManager */
 	getTransformer: () => ShikiTransformer | null;
-	logger?: DebugLogger;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
 }
@@ -69,7 +67,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const { shikiCrossLinker, getTransformer, logger, theme } = options;
+	const { shikiCrossLinker, getTransformer, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -114,14 +112,8 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				const rawCode = node.value;
 
 				// Format code with Prettier for consistent styling
-				const formatResult = await formatCode(rawCode, lang, logger);
+				const formatResult = await formatCode(rawCode, lang);
 				const code = formatResult.code;
-
-				if (formatResult.success && formatResult.formatTime > 0) {
-					logger?.debug(
-						`✨ [remark-with-api] Formatted ${rawCode.length} chars in ${formatResult.formatTime.toFixed(1)}ms`,
-					);
-				}
 
 				// Build transformers array - twoslash only, cross-linker runs post-process
 				// Note: hideCutTransformer is intentionally NOT used here - it's only for member
@@ -269,8 +261,8 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 		}
 
 		const fileTime = performance.now() - fileStart;
-		if (blockCount > 0 && logger) {
-			logger.verbose(
+		if (blockCount > 0) {
+			console.log(
 				`⏱️  [remark-with-api] Processed ${blockCount} blocks in ${fileTime.toFixed(0)}ms (avg: ${(fileTime / blockCount).toFixed(0)}ms per block)`,
 			);
 		}

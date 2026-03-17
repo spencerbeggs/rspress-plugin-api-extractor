@@ -24,7 +24,6 @@ import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
 import { CategoryResolver } from "./category-resolver.js";
 import { validatePluginOptions } from "./config-validation.js";
-import { DebugLogger } from "./debug-logger.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
@@ -147,7 +146,6 @@ async function writeFile(
 	baseRoute: string,
 	routePath: string,
 	content: string,
-	logger: DebugLogger,
 	skipIfExists: boolean = false,
 ): Promise<boolean> {
 	// Extract the relative path from the route path
@@ -166,7 +164,6 @@ async function writeFile(
 	if (skipIfExists && existingContent !== null) {
 		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
 		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-		logger.debug(`✓ UNCHANGED: ${relativePath}.mdx`);
 		return false;
 	}
 
@@ -179,9 +176,6 @@ async function writeFile(
 	} else {
 		status = "modified";
 	}
-
-	// Validate MDX content for potential issues (always validate, even unchanged)
-	logger.validateMDXContent(filePath, content);
 
 	// Only write if changed
 	if (status !== "unchanged") {
@@ -198,9 +192,6 @@ async function writeFile(
 	if (status === "new") Effect.runSync(Metric.increment(BuildMetrics.filesNew));
 	else if (status === "modified") Effect.runSync(Metric.increment(BuildMetrics.filesModified));
 	else Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-	logger.debug(
-		`${status === "new" ? "📄" : status === "modified" ? "✏️" : "✓"} ${status.toUpperCase()}: ${relativePath}.mdx`,
-	);
 
 	return true;
 }
@@ -229,7 +220,6 @@ async function generateApiDocs(
 	shikiCrossLinker: ShikiCrossLinker,
 	snapshotManager: SnapshotManager,
 	ogResolver: OpenGraphResolver | null,
-	logger: DebugLogger,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
 	highlighter?: Highlighter,
 	hideCutTransformer?: ShikiTransformer,
@@ -262,11 +252,6 @@ async function generateApiDocs(
 
 	// Track all files generated in this build
 	const generatedFiles = new Set<string>();
-
-	// Log package.json info if loaded
-	if (packageJson) {
-		logger.debug(`📦 Loaded package.json for ${packageName}: ${packageJson.name}@${packageJson.version}`);
-	}
 
 	// Create the output directory if it doesn't exist (async)
 	await fs.promises.mkdir(resolvedOutputDir, { recursive: true });
@@ -337,7 +322,6 @@ async function generateApiDocs(
 			apiScope,
 			theme: config.theme,
 		});
-		logger.debug(`📦 Registered VFS config for remark plugin: ${apiScope}`);
 	}
 
 	let fileCount = 0;
@@ -389,7 +373,7 @@ async function generateApiDocs(
 		apiMetaPublished = apiMetaOldSnapshot?.publishedTime || buildTime;
 		apiMetaModified = buildTime;
 		apiMetaUnchanged = false;
-		logger.verbose(`📄 NEW (missing on disk): ${apiMetaJsonRelPath}`);
+		console.log(`📄 NEW (missing on disk): ${apiMetaJsonRelPath}`);
 	} else if (!apiMetaOldSnapshot) {
 		// No snapshot but file exists - compare content (normalize JSON formatting)
 		const existingContent = await fs.promises.readFile(apiMetaJsonPath, "utf-8");
@@ -403,24 +387,22 @@ async function generateApiDocs(
 			apiMetaPublished = "2024-01-01T00:00:00.000Z";
 			apiMetaModified = "2024-01-01T00:00:00.000Z";
 			apiMetaUnchanged = true;
-			logger.debug(`✓ UNCHANGED (no snapshot, file matches): ${apiMetaJsonRelPath}`);
 		} else {
 			// File exists but changed
 			apiMetaPublished = "2024-01-01T00:00:00.000Z";
 			apiMetaModified = buildTime;
-			logger.verbose(`✏️  MODIFIED (no snapshot, file changed): ${apiMetaJsonRelPath}`);
+			console.log(`✏️  MODIFIED (no snapshot, file changed): ${apiMetaJsonRelPath}`);
 		}
 	} else if (apiMetaOldSnapshot.contentHash === apiMetaContentHash) {
 		// File exists, snapshot exists, content unchanged
 		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
 		apiMetaModified = apiMetaOldSnapshot.modifiedTime;
 		apiMetaUnchanged = true;
-		logger.debug(`✓ UNCHANGED: ${apiMetaJsonRelPath}`);
 	} else {
 		// File exists, snapshot exists, content changed
 		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
 		apiMetaModified = buildTime;
-		logger.verbose(`✏️  MODIFIED: ${apiMetaJsonRelPath}`);
+		console.log(`✏️  MODIFIED: ${apiMetaJsonRelPath}`);
 	}
 
 	if (!apiMetaUnchanged) {
@@ -450,7 +432,7 @@ async function generateApiDocs(
 	// Add to generatedFiles so it's not deleted as stale
 	generatedFiles.add(apiMetaJsonRelPath);
 
-	logger.verbose("✅ Generated _meta.json with category entries");
+	console.log("✅ Generated _meta.json with category entries");
 
 	// Generate main index page with category counts (skip if exists)
 	const categoryCounts: Record<string, number> = {};
@@ -459,7 +441,7 @@ async function generateApiDocs(
 	}
 	const mainIndexGenerator = new MainIndexPageGenerator();
 	const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
-	if (await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, logger, true)) {
+	if (await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, true)) {
 		fileCount++;
 
 		// Track file context for remark plugin
@@ -521,8 +503,7 @@ async function generateApiDocs(
 	}
 
 	const totalItems = allWorkItems.length;
-	logger.debug(`🚀 Page generation parallelism: ${pageConcurrency} concurrent pages (${cpuCores} CPU cores detected)`);
-	logger.verbose(`📝 Generating ${totalItems} pages across ${Object.keys(categories).length} categories in parallel`);
+	console.log(`📝 Generating ${totalItems} pages across ${Object.keys(categories).length} categories in parallel`);
 
 	// Process ALL items in parallel (not category by category)
 	const allItemResults = await parallelLimit(
@@ -530,30 +511,6 @@ async function generateApiDocs(
 		pageConcurrency,
 		async ({ item, categoryKey, categoryConfig, namespaceMember }) => {
 			let page: { routePath: string; content: string } | null = null;
-
-			// Use qualified name for namespace members, otherwise use display name
-			const itemName = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
-			const pageFilePath = `${categoryConfig.folderName}/${itemName}.mdx`;
-
-			// Count members for debug logging
-			const memberCount = "members" in item ? (item.members as unknown[]).length : 0;
-
-			// Log page generation start
-			logger.pageGenerationStart({
-				file: pageFilePath,
-				apiItemType: ApiItemKind[item.kind] as
-					| "Class"
-					| "Interface"
-					| "Function"
-					| "TypeAlias"
-					| "Enum"
-					| "Variable"
-					| "Namespace",
-				memberCount,
-				category: categoryConfig.folderName,
-				apiName,
-				version: packageJson?.version,
-			});
 
 			// Generate appropriate page based on item kind
 			switch (item.kind) {
@@ -692,13 +649,11 @@ async function generateApiDocs(
 					break;
 				}
 				default: {
-					logger.warn(
+					console.warn(
 						`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
 					);
-					logger.verbose(
-						`  Item categorized as "${categoryKey}" but kind ${item.kind} has no matching page generator.`,
-					);
-					logger.verbose(`  Supported kinds: Class, Interface, Function, TypeAlias, Enum, Variable`);
+					console.log(`  Item categorized as "${categoryKey}" but kind ${item.kind} has no matching page generator.`);
+					console.log(`  Supported kinds: Class, Interface, Function, TypeAlias, Enum, Variable`);
 					// Return null result for unsupported items
 					return null;
 				}
@@ -766,30 +721,28 @@ async function generateApiDocs(
 						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
 						modifiedTime = (existingFrontmatter["article:modified_time"] as string | undefined) || buildTime;
 						isUnchanged = true;
-						logger.debug(`✓ UNCHANGED (no snapshot, file matches): ${relativePathWithExt}`);
 					} else {
 						// File exists but content changed - preserve published, update modified
 						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
 						modifiedTime = buildTime;
-						logger.verbose(`✏️  MODIFIED (no snapshot, file changed): ${relativePathWithExt}`);
+						console.log(`✏️  MODIFIED (no snapshot, file changed): ${relativePathWithExt}`);
 					}
 				} else {
 					// File doesn't exist - truly new
 					publishedTime = buildTime;
 					modifiedTime = buildTime;
-					logger.verbose(`📄 NEW: ${relativePathWithExt}`);
+					console.log(`📄 NEW: ${relativePathWithExt}`);
 				}
 			} else if (oldSnapshot.contentHash === contentHash && oldSnapshot.frontmatterHash === frontmatterHash) {
 				// NO CHANGES: Preserve both existing timestamps, skip file write
 				publishedTime = oldSnapshot.publishedTime;
 				modifiedTime = oldSnapshot.modifiedTime;
 				isUnchanged = true;
-				logger.debug(`✓ UNCHANGED: ${relativePathWithExt}`);
 			} else {
 				// CHANGED: Preserve published time, update modified time
 				publishedTime = oldSnapshot.publishedTime;
 				modifiedTime = buildTime;
-				logger.verbose(`✏️  MODIFIED: ${relativePathWithExt}`);
+				console.log(`✏️  MODIFIED: ${relativePathWithExt}`);
 			}
 
 			// Return result for aggregation (include category info for grouping)
@@ -811,7 +764,7 @@ async function generateApiDocs(
 		},
 	);
 
-	logger.verbose(`✅ Generated ${allItemResults.filter((r) => r !== null).length} pages in parallel`);
+	console.log(`✅ Generated ${allItemResults.filter((r) => r !== null).length} pages in parallel`);
 
 	// Collect all snapshots for batch update (avoids SQLite contention during file writes)
 	const snapshotsToUpdate: import("./snapshot-manager.js").FileSnapshot[] = [];
@@ -902,7 +855,7 @@ async function generateApiDocs(
 		}
 
 		// Write the file
-		const written = await writeFile(resolvedOutputDir, baseRoute, page.routePath, finalContent, logger, false);
+		const written = await writeFile(resolvedOutputDir, baseRoute, page.routePath, finalContent, false);
 
 		// Use qualified name for namespace members
 		const metaName = namespaceMember ? namespaceMember.qualifiedName.toLowerCase() : item.displayName.toLowerCase();
@@ -987,8 +940,7 @@ async function generateApiDocs(
 
 	// Batch-update all page snapshots in a single transaction (much faster than individual updates)
 	if (snapshotsToUpdate.length > 0) {
-		const batchUpdated = snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
-		logger.debug(`💾 Batch-updated ${batchUpdated} page snapshots`);
+		snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
 	}
 
 	// Write all category _meta.json files in parallel and collect snapshots
@@ -1013,7 +965,7 @@ async function generateApiDocs(
 				publishedTime = oldSnapshot?.publishedTime || buildTime;
 				modifiedTime = buildTime;
 				isUnchanged = false;
-				logger.verbose(`📄 NEW (missing on disk): ${relPath}`);
+				console.log(`📄 NEW (missing on disk): ${relPath}`);
 			} else if (!oldSnapshot) {
 				// No snapshot but file exists - compare content (normalize JSON formatting)
 				const existingContent = await fs.promises.readFile(write.path, "utf-8");
@@ -1026,24 +978,22 @@ async function generateApiDocs(
 					publishedTime = "2024-01-01T00:00:00.000Z";
 					modifiedTime = "2024-01-01T00:00:00.000Z";
 					isUnchanged = true;
-					logger.debug(`✓ UNCHANGED (no snapshot, file matches): ${relPath}`);
 				} else {
 					// File exists but changed
 					publishedTime = "2024-01-01T00:00:00.000Z";
 					modifiedTime = buildTime;
-					logger.verbose(`✏️  MODIFIED (no snapshot, file changed): ${relPath}`);
+					console.log(`✏️  MODIFIED (no snapshot, file changed): ${relPath}`);
 				}
 			} else if (oldSnapshot.contentHash === contentHash) {
 				// File exists, snapshot exists, content unchanged
 				publishedTime = oldSnapshot.publishedTime;
 				modifiedTime = oldSnapshot.modifiedTime;
 				isUnchanged = true;
-				logger.debug(`✓ UNCHANGED: ${relPath}`);
 			} else {
 				// File exists, snapshot exists, content changed
 				publishedTime = oldSnapshot.publishedTime;
 				modifiedTime = buildTime;
-				logger.verbose(`✏️  MODIFIED: ${relPath}`);
+				console.log(`✏️  MODIFIED: ${relPath}`);
 			}
 
 			if (!isUnchanged) {
@@ -1066,7 +1016,7 @@ async function generateApiDocs(
 			// Add to generatedFiles so it's not deleted as stale
 			generatedFiles.add(relPath);
 
-			logger.verbose(`✅ Generated _meta.json for ${write.folderName} with ${write.count} entries`);
+			console.log(`✅ Generated _meta.json for ${write.folderName} with ${write.count} entries`);
 
 			// Return snapshot data for batch update (only if file was actually written)
 			// Skip unchanged files - their snapshots are already correct in the database
@@ -1092,7 +1042,6 @@ async function generateApiDocs(
 	);
 	if (metaSnapshotsToUpdate.length > 0) {
 		snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate);
-		logger.debug(`💾 Batch-updated ${metaSnapshotsToUpdate.length} _meta.json snapshots`);
 	}
 
 	// Clean up stale files (in DB but not generated in this build) - parallelize for better performance
@@ -1102,7 +1051,7 @@ async function generateApiDocs(
 			const fullPath = path.join(resolvedOutputDir, staleFile);
 			try {
 				await fs.promises.unlink(fullPath);
-				logger.verbose(`🗑️  DELETED STALE: ${staleFile}`);
+				console.log(`🗑️  DELETED STALE: ${staleFile}`);
 			} catch {
 				// File already doesn't exist, ignore
 			}
@@ -1133,7 +1082,7 @@ async function generateApiDocs(
 				try {
 					await fs.promises.unlink(fullPath);
 					snapshotManager.deleteSnapshot(resolvedOutputDir, orphan);
-					logger.verbose(`🗑️  DELETED ORPHAN: ${orphan}`);
+					console.log(`🗑️  DELETED ORPHAN: ${orphan}`);
 				} catch {
 					// File already doesn't exist, ignore
 				}
@@ -1157,7 +1106,7 @@ async function generateApiDocs(
 					const entries = await fs.promises.readdir(fullDir);
 					if (entries.length === 0) {
 						await fs.promises.rmdir(fullDir);
-						logger.verbose(`🗑️  REMOVED EMPTY DIR: ${dir}`);
+						console.log(`🗑️  REMOVED EMPTY DIR: ${dir}`);
 					}
 				} catch {
 					// Directory doesn't exist or can't be read, ignore
@@ -1168,7 +1117,7 @@ async function generateApiDocs(
 		// readdir failed (outputDir doesn't exist), ignore
 	}
 
-	logger.verbose(`✅ Generated ${fileCount} API documentation files for ${packageName}`);
+	console.log(`✅ Generated ${fileCount} API documentation files for ${packageName}`);
 }
 
 /**
@@ -1196,11 +1145,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// File context map (reset in beforeBuild for each build)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
 
-	// Initialize debug logger at plugin level (handles all logging)
-	const debugLogger = new DebugLogger({
-		logLevel,
-		logFile: options.logFile,
-	});
+	// Verbose check helper
+	const isVerbose = logLevel === "verbose" || logLevel === "debug";
 
 	// Shiki highlighter (initialized once in beforeBuild)
 	let shikiHighlighter: Highlighter | undefined;
@@ -1229,9 +1175,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Clear VFS registry from previous builds to avoid stale configs
 			VfsRegistry.clear();
 
-			debugLogger.verbose("🚀 RSPress API Extractor Plugin");
-			if (options.logFile) {
-				debugLogger.verbose(`📊 Debug logging enabled (buildId: ${debugLogger.getBuildId()})`);
+			if (isVerbose) {
+				console.log("🚀 RSPress API Extractor Plugin");
 			}
 
 			// Clear file context map for this build
@@ -1242,15 +1187,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			const rspressLocales = (_config as { locales?: Array<{ lang: string }> }).locales?.map((l) => l.lang) ?? [];
 			const rspressLang = (_config as { lang?: string }).lang;
 			const rspressRoot = docsRoot || process.cwd();
-
-			// Count APIs for build start event
-			const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
-
-			// Emit build start event (we'll update externalPackageCount after collecting them)
-			debugLogger.buildStart({
-				apiCount,
-				externalPackageCount: 0, // Will be updated in externalPackagesLoaded event
-			});
 
 			// Initialize snapshot manager
 			const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
@@ -1291,7 +1227,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				const categoryResolver = new CategoryResolver();
 				const pluginDefaults = categoryResolver.mergeCategories(DEFAULT_CATEGORIES, options.defaultCategories);
 
-				const loadTimer = debugLogger.startTimer("Loading API models");
+				const loadStart = performance.now();
 
 				/** Helper to process a single API model (shared by single and multi modes) */
 				const processSimpleApi = async (
@@ -1516,7 +1452,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						firstApiTsconfig = apisWithTsconfig[0].tsconfig;
 						const uniqueTsconfigs = new Set(apisWithTsconfig.map((a) => String(a.tsconfig)));
 						if (uniqueTsconfigs.size > 1) {
-							debugLogger.warn(
+							console.warn(
 								`⚠️  Multiple APIs specify different tsconfig values: ${[...uniqueTsconfigs].join(", ")}. ` +
 									`Using '${String(firstApiTsconfig)}' for TypeScript resolution. ` +
 									`Per-API tsconfig resolution will be supported in a future release.`,
@@ -1565,7 +1501,10 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					}
 				}
 
-				loadTimer.end();
+				const loadMs = performance.now() - loadStart;
+				if (isVerbose) {
+					console.log(`⏱  Loading API models: ${loadMs.toFixed(0)}ms`);
+				}
 
 				// Resolve TypeScript compiler options from configuration cascade
 				// Uses project root (cwd) for resolving tsconfig.json paths
@@ -1580,7 +1519,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					globalTsConfig,
 				);
 
-				debugLogger.verbose(
+				console.log(
 					`📝 Resolved TypeScript config: target=${resolvedCompilerOptions.target}, ` +
 						`module=${resolvedCompilerOptions.module}, lib=[${resolvedCompilerOptions.lib?.join(", ")}]`,
 				);
@@ -1589,15 +1528,10 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Note: We ALWAYS create the TypeScript cache to ensure lib files are loaded,
 				// even if there are no external packages to fetch
 				let tsEnvCache: Map<string, VirtualTypeScriptEnvironment> | undefined;
-				const loader = new TypeRegistryLoader(undefined, 7 * 24 * 60 * 60 * 1000, debugLogger);
+				const loader = new TypeRegistryLoader(undefined, 7 * 24 * 60 * 60 * 1000);
 
 				if (TypeRegistryLoader.hasPackages(allExternalPackages)) {
-					const typesTimer = debugLogger.startTimer("Loading external package types");
-
-					// Show heading in verbose mode
-					if (debugLogger.isVerbose()) {
-						debugLogger.verbose(`📦 Loading types for ${allExternalPackages.length} external package(s)...`);
-					}
+					const typesStart = performance.now();
 
 					const result = await loader.load(allExternalPackages, {
 						createTsCache: true,
@@ -1614,66 +1548,44 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 					// Log results
 					if (result.loaded.length > 0) {
-						debugLogger.verbose(`✅ Successfully loaded types for ${result.loaded.length} package(s)`);
+						console.log(`✅ Successfully loaded types for ${result.loaded.length} package(s)`);
 					}
 					if (result.failed.length > 0) {
-						debugLogger.warn(`⚠️  Failed to load types for ${result.failed.length} package(s):`);
+						console.warn(`⚠️  Failed to load types for ${result.failed.length} package(s):`);
 						for (const { package: pkg, error } of result.failed) {
-							debugLogger.warn(`   - ${pkg.name}@${pkg.version}: ${error}`);
+							console.warn(`   - ${pkg.name}@${pkg.version}: ${error}`);
 						}
 					}
 
-					// Emit external packages loaded event
-					const externalDurationMs = performance.now() - buildStartTime;
-					debugLogger.externalPackagesLoaded({
-						loaded: result.loaded.map((pkg) => `${pkg.name}@${pkg.version}`),
-						failed: result.failed.map(({ package: pkg }) => `${pkg.name}@${pkg.version}`),
-						durationMs: externalDurationMs,
-					});
-
-					typesTimer.end();
+					if (isVerbose) {
+						console.log(`⏱  Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`);
+					}
 				} else {
 					// No external packages, but still create TypeScript cache to load lib files
 					// This ensures built-in types like Array, Promise, etc. are available in Twoslash
-					const typesTimer = debugLogger.startTimer("Creating TypeScript environment cache");
 					const result = await loader.load([], {
 						createTsCache: true,
 						compilerOptions: resolvedCompilerOptions,
 					});
 					tsEnvCache = result.tsCache;
-					typesTimer.end();
-					debugLogger.verbose("✅ Created TypeScript environment cache with lib files (no external packages)");
+					console.log("✅ Created TypeScript environment cache with lib files (no external packages)");
 				}
-
-				// Emit VFS merged event
-				debugLogger.vfsMerged({
-					packageCount: apiConfigs.length,
-					totalFiles: combinedVfs.size,
-					durationMs: performance.now() - buildStartTime,
-				});
 
 				// Initialize Twoslash BEFORE generating API docs
 				// VFS now includes both package's own types and external dependencies
-				const twoslashTimer = debugLogger.startTimer("Initializing Twoslash");
 				const twoslashStartMs = performance.now();
 				TwoslashManager.getInstance().initialize(
 					combinedVfs,
 					undefined,
-					debugLogger,
+					undefined,
 					tsEnvCache,
 					resolvedCompilerOptions,
 				);
-				twoslashTimer.end();
-
-				// Emit Twoslash init event
-				debugLogger.twoslashInitComplete({
-					packageCount: apiConfigs.length,
-					vfsFileCount: combinedVfs.size,
-					durationMs: performance.now() - twoslashStartMs,
-				});
+				if (isVerbose) {
+					console.log(`⏱  Initializing Twoslash: ${(performance.now() - twoslashStartMs).toFixed(0)}ms`);
+				}
 
 				// Pre-initialize Shiki highlighter for better performance
-				const shikiTimer = debugLogger.startTimer("Initializing Shiki highlighter");
 				const shikiStartMs = performance.now();
 
 				// Collect all unique themes from API configs
@@ -1709,28 +1621,22 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 				// Combine string theme names and custom theme objects
 				const themes: Array<string | Record<string, unknown>> = [...themeSet, ...customThemes];
-				const themeNames = [...themeSet]; // For logging (only string names)
 
 				const langs = ["typescript", "javascript", "json", "bash", "sh"];
 				shikiHighlighter = await createHighlighter({
 					themes,
 					langs,
 				});
-				shikiTimer.end();
-
-				// Emit Shiki init event
-				debugLogger.shikiInitComplete({
-					themes: themeNames,
-					languages: langs,
-					durationMs: performance.now() - shikiStartMs,
-				});
+				if (isVerbose) {
+					console.log(`⏱  Initializing Shiki highlighter: ${(performance.now() - shikiStartMs).toFixed(0)}ms`);
+				}
 
 				// Generate API documentation with VFS mode for faster rendering
 				// Use bounded parallelism (limit 2) to avoid SQLite contention while improving performance
-				debugLogger.verbose("📝 Generating API documentation...");
+				console.log("📝 Generating API documentation...");
 				const pageGenStart = performance.now();
 				await parallelLimit(apiConfigs, 2, async (config) => {
-					const configTimer = debugLogger.startTimer(`Generating docs for ${config.packageName}`);
+					const configStart = performance.now();
 
 					await generateApiDocs(
 						{
@@ -1740,7 +1646,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						shikiCrossLinker,
 						snapshotManager,
 						ogResolver,
-						debugLogger,
 						fileContextMap,
 						shikiHighlighter,
 						hideCutTransformer,
@@ -1748,24 +1653,23 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						TwoslashManager.getInstance().getTransformer() ?? undefined,
 					);
 
-					configTimer.end();
+					if (isVerbose) {
+						console.log(
+							`⏱  Generating docs for ${config.packageName}: ${(performance.now() - configStart).toFixed(0)}ms`,
+						);
+					}
 				});
 				const pageGenMs = performance.now() - pageGenStart;
-				debugLogger.verbose(`📝 Page generation completed in ${pageGenMs.toFixed(0)}ms`);
+				console.log(`📝 Page generation completed in ${pageGenMs.toFixed(0)}ms`);
 
 				// Close snapshot manager connection
 				snapshotManager.close();
-				debugLogger.verbose("💾 Closed snapshot database");
+				console.log("💾 Closed snapshot database");
 
 				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
-				debugLogger.verbose(`✅ API documentation complete (${totalTime}s)`);
+				console.log(`✅ API documentation complete (${totalTime}s)`);
 			} catch (error) {
-				// Log build error
-				debugLogger.buildError({
-					phase: "page.generate",
-					error: error instanceof Error ? error : new Error(String(error)),
-				});
-				debugLogger.error(
+				console.error(
 					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
 				);
 				throw error;
@@ -1779,47 +1683,12 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Log build summary via Effect metrics
 				await effectRuntime.runPromise(logBuildSummary);
 
-				// Read metric values for debug logger events
-				const totalFiles = Effect.runSync(Metric.value(BuildMetrics.filesTotal)).count;
-				const twoslashErrorCount = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors)).count;
-				const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
-				const codeblockTotalCount = Effect.runSync(Metric.value(BuildMetrics.codeblockTotal)).count;
-				const codeblockSlowCount = Effect.runSync(Metric.value(BuildMetrics.codeblockSlow)).count;
-				const totalErrors = twoslashErrorCount + prettierErrorCount;
-
-				// Emit summary events to debug logger
-				debugLogger.codeBlockStatsSummary({
-					total: codeblockTotalCount,
-					slow: codeblockSlowCount,
-					avgTimeMs: 0,
-					byType: {},
-					slowestMs: 0,
-					fastestMs: 0,
-				});
-				debugLogger.errorStatsSummary({
-					twoslash: { total: twoslashErrorCount },
-					prettier: { total: prettierErrorCount },
-				});
-
-				// Emit build complete event
-				debugLogger.buildComplete({
-					durationMs: performance.now() - buildStartTime,
-					summary: {
-						files: totalFiles,
-						pages: 0,
-						errors: totalErrors,
-					},
-				});
-
 				// Mark first build as complete
 				isFirstBuild = false;
 			}
 
 			// Dispose Effect runtime (guaranteed cleanup of all scoped resources)
 			await effectRuntime.dispose();
-
-			// Close debug logger (await to ensure all events are written)
-			await debugLogger.close();
 		},
 
 		// Use config hook to modify RSPress configuration
@@ -1913,7 +1782,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				{
 					shikiCrossLinker,
 					getTransformer: () => TwoslashManager.getInstance().getTransformer(),
-					logger: debugLogger,
 					theme: remarkTheme,
 				},
 			]);
@@ -1921,12 +1789,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Add remark plugin for on-demand API code block rendering (dev mode)
 			// This transforms raw code fences with api-signature/api-example metadata
 			// into rendered HAST components during MDX compilation
-			updatedConfig.markdown.remarkPlugins.push([
-				remarkApiCodeblocks,
-				{
-					logger: debugLogger,
-				},
-			]);
+			updatedConfig.markdown.remarkPlugins.push([remarkApiCodeblocks]);
 
 			// Note: Deferred rendering architecture:
 			// - Generated API docs output raw code fences with metadata (api-signature, api-example, etc.)

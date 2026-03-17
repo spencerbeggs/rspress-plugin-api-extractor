@@ -1,7 +1,6 @@
 import { Effect, Metric } from "effect";
 import { format } from "prettier";
 import { addLogicalBlankLines } from "./code-post-processor.js";
-import type { DebugLogger } from "./debug-logger.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 
 /**
@@ -50,10 +49,9 @@ export interface FormatResult {
  *
  * @param code - The code to format
  * @param language - The code fence language (e.g., "typescript", "ts", "js")
- * @param logger - Optional logger for debug output
  * @returns FormatResult with formatted code and metadata
  */
-export async function formatCode(code: string, language: string, logger?: DebugLogger): Promise<FormatResult> {
+export async function formatCode(code: string, language: string): Promise<FormatResult> {
 	const start = performance.now();
 
 	// Get the appropriate parser for the language
@@ -76,8 +74,6 @@ export async function formatCode(code: string, language: string, logger?: DebugL
 		const formatTime = performance.now() - start;
 		const postProcessed = addLogicalBlankLines(formatted.trim());
 
-		logger?.debug(`✨ Prettier formatted ${code.length} chars in ${formatTime.toFixed(1)}ms`);
-
 		return {
 			code: postProcessed,
 			success: true,
@@ -89,8 +85,6 @@ export async function formatCode(code: string, language: string, logger?: DebugL
 
 		// Increment Prettier error counter
 		Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
-
-		logger?.debug(`⚠️ Prettier error: ${errorMsg.split("\n")[0]}`);
 
 		// Return original code on error (fallthrough behavior)
 		return {

@@ -3,7 +3,6 @@ import { PackageSpec } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { createTypeScriptCache, fetchAndCache, getVFS, resolveVersion } from "type-registry-effect/node";
 import type ts from "typescript";
-import type { DebugLogger } from "./debug-logger.js";
 import type { ExternalPackageSpec, TypeResolutionCompilerOptions } from "./types.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
 
@@ -70,12 +69,10 @@ export class TypeRegistryLoader {
 	/**
 	 * @param _cacheDir - Reserved for future use; the Promise API uses platform defaults.
 	 * @param ttl - Cache TTL in milliseconds passed to fetchAndCache.
-	 * @param logger - Optional debug logger.
 	 */
 	constructor(
 		readonly _cacheDir?: string,
 		private readonly ttl?: number,
-		private readonly logger?: DebugLogger,
 	) {}
 
 	/**
@@ -128,9 +125,7 @@ export class TypeRegistryLoader {
 			// Create cache with empty packages - this still loads lib files from node_modules
 			const tsCache = await createTypeScriptCache([], compilerOpts);
 
-			if (this.logger?.isVerbose()) {
-				this.logger.verbose("✅ Created TypeScript environment cache with lib files (no external packages)");
-			}
+			console.log("✅ Created TypeScript environment cache with lib files (no external packages)");
 
 			return {
 				vfs: new Map(),
@@ -142,10 +137,7 @@ export class TypeRegistryLoader {
 
 		const startTime = performance.now();
 
-		// Emit batch start event
-		if (this.logger?.isVerbose()) {
-			this.logger.verbose(`📦 Loading types for ${packages.length} external package(s)...`);
-		}
+		console.log(`📦 Loading types for ${packages.length} external package(s)...`);
 
 		const loaded: ExternalPackageSpec[] = [];
 		const failed: Array<{ package: ExternalPackageSpec; error: string }> = [];
@@ -179,18 +171,12 @@ export class TypeRegistryLoader {
 				resolvedSpecs.push(pkgSpec);
 				loaded.push(resolvedPkg);
 
-				// Log in verbose mode only
-				if (this.logger?.isVerbose()) {
-					this.logger.verbose(`   ✓ ${resolvedPkg.name}@${resolvedPkg.version}`);
-				}
+				console.log(`   ✓ ${resolvedPkg.name}@${resolvedPkg.version}`);
 			} else {
 				const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
 				failed.push({ package: pkg, error: errorMessage });
 
-				// Always warn on failures (unless logger is silent)
-				if (this.logger) {
-					this.logger.warn(`   ✗ ${pkg.name}@${pkg.version}: ${errorMessage}`);
-				}
+				console.warn(`   ✗ ${pkg.name}@${pkg.version}: ${errorMessage}`);
 			}
 		}
 
@@ -203,31 +189,28 @@ export class TypeRegistryLoader {
 		// Calculate duration
 		const durationMs = performance.now() - startTime;
 
-		// Emit batch complete event in verbose mode
-		if (this.logger?.isVerbose()) {
-			const duration = durationMs >= 1000 ? `${(durationMs / 1000).toFixed(2)}s` : `${durationMs.toFixed(0)}ms`;
-			if (failed.length > 0) {
-				this.logger.verbose(
-					`   Completed: ${loaded.length}/${packages.length} packages loaded (${combinedVfs.size} files, ${duration}) - ${failed.length} failed`,
-				);
-			} else {
-				this.logger.verbose(`   Completed: ${loaded.length} packages loaded (${combinedVfs.size} files, ${duration})`);
-			}
+		const duration = durationMs >= 1000 ? `${(durationMs / 1000).toFixed(2)}s` : `${durationMs.toFixed(0)}ms`;
+		if (failed.length > 0) {
+			console.log(
+				`   Completed: ${loaded.length}/${packages.length} packages loaded (${combinedVfs.size} files, ${duration}) - ${failed.length} failed`,
+			);
+		} else {
+			console.log(`   Completed: ${loaded.length} packages loaded (${combinedVfs.size} files, ${duration})`);
 		}
 
 		// Create TypeScript cache if requested
 		let tsCache: Map<string, VirtualTypeScriptEnvironment> | undefined;
 		if (options?.createTsCache && loaded.length > 0) {
-			const cacheTimer = this.logger?.startTimer("Creating TypeScript environment cache");
+			const cacheStart = performance.now();
 			// Use provided compiler options or fall back to defaults
 			// Cast to ts.CompilerOptions for compatibility with the expected type
 			const compilerOpts = (options.compilerOptions ?? DEFAULT_COMPILER_OPTIONS) as ts.CompilerOptions;
 			tsCache = await createTypeScriptCache(resolvedSpecs, compilerOpts);
-			cacheTimer?.end();
+			const cacheMs = performance.now() - cacheStart;
 
-			if (this.logger?.isVerbose()) {
-				this.logger.verbose(`   ✓ Created TypeScript environment cache with ${loaded.length} package(s)`);
-			}
+			console.log(
+				`   ✓ Created TypeScript environment cache with ${loaded.length} package(s) (${cacheMs.toFixed(0)}ms)`,
+			);
 		}
 
 		return {
