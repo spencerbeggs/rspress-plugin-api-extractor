@@ -9,7 +9,6 @@
  */
 
 import type { DebugLogger } from "../debug-logger.js";
-import type { PrettierErrorStatsCollector } from "../prettier-error-stats.js";
 import { formatCode } from "../prettier-formatter.js";
 import { classifyCutDirective, isTwoslashDirective } from "../twoslash-patterns.js";
 import type { ImportStatement } from "../type-reference-extractor.js";
@@ -438,33 +437,17 @@ export function prependHiddenImports(code: string, imports: ImportStatement[]): 
  *
  * @param code - The code to format
  * @param language - The code fence language (e.g., "typescript", "ts")
- * @param context - Optional context for error tracking
- * @param prettierErrorStats - Optional error stats collector
+ * @param _context - Optional context (reserved for future use)
  * @param logger - Optional logger for debug output
  * @returns The formatted code (or original if formatting fails)
  */
 export async function formatExampleCode(
 	code: string,
 	language: string,
-	context?: { file?: string; api?: string; blockType?: string },
-	prettierErrorStats?: PrettierErrorStatsCollector,
+	_context?: { file?: string; api?: string; blockType?: string },
 	logger?: DebugLogger,
 ): Promise<string> {
-	// Set context for error tracking if provided
-	if (prettierErrorStats && context) {
-		prettierErrorStats.setContext({
-			file: context.file,
-			api: context.api,
-			blockType: context.blockType as "with-api" | "example" | undefined,
-		});
-	}
-
-	const result = await formatCode(code, language, prettierErrorStats, logger);
-
-	// Clear context after formatting
-	if (prettierErrorStats) {
-		prettierErrorStats.clearContext();
-	}
+	const result = await formatCode(code, language, logger);
 
 	return result.code;
 }

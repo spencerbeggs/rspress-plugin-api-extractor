@@ -11,7 +11,6 @@ import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
 import type { PerformanceManager } from "./performance-manager.js";
-import type { PrettierErrorStatsCollector } from "./prettier-error-stats.js";
 import { formatCode } from "./prettier-formatter.js";
 import type { ShikiCrossLinker } from "./shiki-transformer.js";
 import type { TwoslashErrorStatsCollector } from "./twoslash-error-stats.js";
@@ -53,7 +52,6 @@ interface RemarkWithApiOptions {
 	logger?: DebugLogger;
 	statsCollector?: CodeBlockStatsCollector;
 	twoslashErrorStats?: TwoslashErrorStatsCollector;
-	prettierErrorStats?: PrettierErrorStatsCollector;
 	perfManager?: PerformanceManager;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
@@ -76,16 +74,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const {
-		shikiCrossLinker,
-		getTransformer,
-		logger,
-		statsCollector,
-		twoslashErrorStats,
-		prettierErrorStats,
-		perfManager,
-		theme,
-	} = options;
+	const { shikiCrossLinker, getTransformer, logger, statsCollector, twoslashErrorStats, perfManager, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -145,18 +134,10 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 							blockType: "with-api",
 						});
 					}
-
-					if (prettierErrorStats) {
-						prettierErrorStats.setContext({
-							file: relativePath,
-							api: apiScope,
-							blockType: "with-api",
-						});
-					}
 				}
 
 				// Format code with Prettier for consistent styling
-				const formatResult = await formatCode(rawCode, lang, prettierErrorStats, logger);
+				const formatResult = await formatCode(rawCode, lang, logger);
 				const code = formatResult.code;
 
 				if (formatResult.success && formatResult.formatTime > 0) {
@@ -266,9 +247,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				// Clear error contexts after processing this block
 				if (twoslashErrorStats) {
 					twoslashErrorStats.clearContext();
-				}
-				if (prettierErrorStats) {
-					prettierErrorStats.clearContext();
 				}
 			})();
 

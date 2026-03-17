@@ -47,7 +47,6 @@ import { ApiModelLoader } from "./model-loader.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import type { PerformanceManager } from "./performance-manager.js";
-import { PrettierErrorStatsCollector } from "./prettier-error-stats.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
@@ -1263,8 +1262,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// Stats collectors with callbacks (initialized after debugLogger is available)
 	let statsCollector: CodeBlockStatsCollector;
 	let twoslashErrorStats: TwoslashErrorStatsCollector;
-	let prettierErrorStats: PrettierErrorStatsCollector;
-
 	// Shiki highlighter (initialized once in beforeBuild)
 	let shikiHighlighter: Highlighter | undefined;
 
@@ -1319,15 +1316,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				onError: (data: { file?: string; errorCode?: string; errorMessage: string; codeSnippet: string }): void =>
 					debugLogger.twoslashError(data),
 			});
-			prettierErrorStats = new PrettierErrorStatsCollector({
-				onError: (data: {
-					file?: string;
-					language: string;
-					errorMessage: string;
-					location?: { line: number; column: number };
-				}): void => debugLogger.prettierError(data),
-			});
-
 			// Clear file context map for this build
 			fileContextMap.clear();
 
@@ -1924,7 +1912,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Get summaries
 			const codeBlockSummary = statsCollector.getSummary();
 			const twoslashSummary = twoslashErrorStats.getSummary();
-			const prettierSummary = prettierErrorStats.getSummary();
+			// Prettier error count is now tracked via Effect Metrics
+			const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
 
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
@@ -1932,13 +1921,12 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// NOTE: file stats summary deferred to logBuildSummary (wired in Task 7)
 				statsCollector.logSummary(debugLogger);
 				twoslashErrorStats.logSummary(debugLogger);
-				prettierErrorStats.logSummary(debugLogger);
 
 				// Emit summary events to debug logger
 				debugLogger.codeBlockStatsSummary(codeBlockSummary);
 				debugLogger.errorStatsSummary({
 					twoslash: twoslashSummary,
-					prettier: prettierSummary,
+					prettier: { total: prettierErrorCount },
 				});
 
 				// Emit build complete event
@@ -1947,7 +1935,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					summary: {
 						files: 0, // TODO: read from Effect Metrics in Task 7
 						pages: 0, // TODO: read from Effect Metrics in Task 7
-						errors: twoslashSummary.total + prettierSummary.total,
+						errors: twoslashSummary.total + prettierErrorCount,
 					},
 				});
 
@@ -2058,7 +2046,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					logger: debugLogger,
 					statsCollector,
 					twoslashErrorStats,
-					prettierErrorStats,
 					perfManager,
 					theme: remarkTheme,
 				},
