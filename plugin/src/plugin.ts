@@ -15,7 +15,7 @@ import type {
 } from "@microsoft/api-extractor-model";
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
-import { Layer, ManagedRuntime } from "effect";
+import { Effect, Layer, ManagedRuntime, Metric } from "effect";
 import matter from "gray-matter";
 import type { Highlighter, ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
@@ -26,9 +26,8 @@ import { CategoryResolver } from "./category-resolver.js";
 import { CodeBlockStatsCollector } from "./code-block-stats.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
-import { FileGenerationStatsCollector } from "./file-generation-stats.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
-import { PluginLoggerLayer } from "./layers/ObservabilityLive.js";
+import { BuildMetrics, PluginLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
@@ -152,9 +151,7 @@ async function writeFile(
 	baseRoute: string,
 	routePath: string,
 	content: string,
-	fileStatsCollector: FileGenerationStatsCollector,
 	logger: DebugLogger,
-	context?: { category?: string; api?: string; version?: string },
 	skipIfExists: boolean = false,
 	perfManager?: PerformanceManager,
 ): Promise<boolean> {
@@ -179,7 +176,8 @@ async function writeFile(
 
 	// Skip if file exists and skipIfExists is true (for overview files)
 	if (skipIfExists && existingContent !== null) {
-		fileStatsCollector.recordFile(relativePath, filePath, "unchanged", context);
+		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
 		logger.debug(`✓ UNCHANGED: ${relativePath}.mdx`);
 		return false;
 	}
@@ -216,8 +214,11 @@ async function writeFile(
 	perfManager?.mark(`file.operation.${relativePath}.end`);
 	perfManager?.measure("file.operation", `file.operation.${relativePath}.start`, `file.operation.${relativePath}.end`);
 
-	// Track file generation
-	fileStatsCollector.recordFile(relativePath, filePath, status, context);
+	// Track file generation via Effect Metrics
+	Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+	if (status === "new") Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+	else if (status === "modified") Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+	else Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
 	logger.debug(
 		`${status === "new" ? "📄" : status === "modified" ? "✏️" : "✓"} ${status.toUpperCase()}: ${relativePath}.mdx`,
 	);
@@ -250,7 +251,6 @@ async function generateApiDocs(
 	snapshotManager: SnapshotManager,
 	ogResolver: OpenGraphResolver | null,
 	logger: DebugLogger,
-	fileStatsCollector: FileGenerationStatsCollector,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
 	twoslashErrorStats: TwoslashErrorStatsCollector,
 	perfManager?: PerformanceManager,
@@ -448,17 +448,15 @@ async function generateApiDocs(
 
 	if (!apiMetaUnchanged) {
 		await fs.promises.writeFile(apiMetaJsonPath, apiMetaJsonContent, "utf-8");
-		fileStatsCollector.recordFile(apiMetaJsonRelPath, apiMetaJsonPath, apiMetaOldSnapshot ? "modified" : "new", {
-			category: "_meta",
-			api: apiName,
-			version: packageJson?.version,
-		});
+		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+		if (apiMetaOldSnapshot) {
+			Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+		} else {
+			Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+		}
 	} else {
-		fileStatsCollector.recordFile(apiMetaJsonRelPath, apiMetaJsonPath, "unchanged", {
-			category: "_meta",
-			api: apiName,
-			version: packageJson?.version,
-		});
+		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
 	}
 
 	// Track in snapshot (note: _meta.json has no frontmatter)
@@ -485,17 +483,7 @@ async function generateApiDocs(
 	const mainIndexGenerator = new MainIndexPageGenerator();
 	const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
 	if (
-		await writeFile(
-			resolvedOutputDir,
-			baseRoute,
-			mainIndex.routePath,
-			mainIndex.content,
-			fileStatsCollector,
-			logger,
-			{ api: apiName, version: packageJson?.version },
-			true,
-			perfManager,
-		)
+		await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, logger, true, perfManager)
 	) {
 		fileCount++;
 
@@ -897,11 +885,8 @@ async function generateApiDocs(
 			// The content was already validated when it was first written
 
 			// Track as unchanged without writing
-			fileStatsCollector.recordFile(relativePathWithExt, absolutePath, "unchanged", {
-				category: categoryKey,
-				api: apiName,
-				version: packageJson?.version,
-			});
+			Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+			Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
 
 			// Use qualified name for namespace members
 			const metaName = namespaceMember ? namespaceMember.qualifiedName.toLowerCase() : item.displayName.toLowerCase();
@@ -962,13 +947,7 @@ async function generateApiDocs(
 			baseRoute,
 			page.routePath,
 			finalContent,
-			fileStatsCollector,
 			logger,
-			{
-				category: categoryKey,
-				api: apiName,
-				version: packageJson?.version,
-			},
 			false,
 			perfManager,
 		);
@@ -1129,17 +1108,15 @@ async function generateApiDocs(
 				await fs.promises.mkdir(categoryDir, { recursive: true });
 
 				await fs.promises.writeFile(write.path, write.content, "utf-8");
-				fileStatsCollector.recordFile(relPath, write.path, oldSnapshot ? "modified" : "new", {
-					category: "_meta",
-					api: apiName,
-					version: packageJson?.version,
-				});
+				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+				if (oldSnapshot) {
+					Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+				} else {
+					Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+				}
 			} else {
-				fileStatsCollector.recordFile(relPath, write.path, "unchanged", {
-					category: "_meta",
-					api: apiName,
-					version: packageJson?.version,
-				});
+				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+				Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
 			}
 
 			// Add to generatedFiles so it's not deleted as stale
@@ -1285,7 +1262,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 	// Stats collectors with callbacks (initialized after debugLogger is available)
 	let statsCollector: CodeBlockStatsCollector;
-	let fileStatsCollector: FileGenerationStatsCollector;
 	let twoslashErrorStats: TwoslashErrorStatsCollector;
 	let prettierErrorStats: PrettierErrorStatsCollector;
 
@@ -1339,7 +1315,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				onSlowBlock: (data: { blockType: string; durationMs: number; file?: string; thresholdMs: number }): void =>
 					debugLogger.codeBlockSlow(data),
 			});
-			fileStatsCollector = new FileGenerationStatsCollector();
 			twoslashErrorStats = new TwoslashErrorStatsCollector({
 				onError: (data: { file?: string; errorCode?: string; errorMessage: string; codeSnippet: string }): void =>
 					debugLogger.twoslashError(data),
@@ -1903,7 +1878,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						snapshotManager,
 						ogResolver,
 						debugLogger,
-						fileStatsCollector,
 						fileContextMap,
 						twoslashErrorStats,
 						perfManager,
@@ -1948,7 +1922,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 		// Use afterBuild hook to log statistics
 		async afterBuild(): Promise<void> {
 			// Get summaries
-			const fileSummary = fileStatsCollector.getSummary();
 			const codeBlockSummary = statsCollector.getSummary();
 			const twoslashSummary = twoslashErrorStats.getSummary();
 			const prettierSummary = prettierErrorStats.getSummary();
@@ -1956,13 +1929,12 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
 				// Log statistics summaries
-				fileStatsCollector.logSummary(debugLogger);
+				// NOTE: file stats summary deferred to logBuildSummary (wired in Task 7)
 				statsCollector.logSummary(debugLogger);
 				twoslashErrorStats.logSummary(debugLogger);
 				prettierErrorStats.logSummary(debugLogger);
 
 				// Emit summary events to debug logger
-				debugLogger.fileStatsSummary(fileSummary);
 				debugLogger.codeBlockStatsSummary(codeBlockSummary);
 				debugLogger.errorStatsSummary({
 					twoslash: twoslashSummary,
@@ -1973,8 +1945,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				debugLogger.buildComplete({
 					durationMs: performance.now() - buildStartTime,
 					summary: {
-						files: fileSummary.total,
-						pages: fileSummary.total - (fileSummary.byCategory?._meta || 0), // Exclude _meta.json files
+						files: 0, // TODO: read from Effect Metrics in Task 7
+						pages: 0, // TODO: read from Effect Metrics in Task 7
 						errors: twoslashSummary.total + prettierSummary.total,
 					},
 				});
