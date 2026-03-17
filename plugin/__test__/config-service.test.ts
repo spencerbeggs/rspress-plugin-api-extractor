@@ -128,6 +128,121 @@ describe("ConfigServiceLive.resolve", () => {
 		expect(result.apiConfigs).toHaveLength(2);
 	});
 
+	it("resolves versioned single-API config", async () => {
+		const options: PluginOptions = {
+			api: {
+				packageName: "example-module",
+				versions: {
+					"1.0.0": fixtureModel,
+					"2.0.0": { model: fixtureModel },
+				},
+			},
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({
+				multiVersion: { default: "2.0.0", versions: ["1.0.0", "2.0.0"] },
+			});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+
+		expect(result.apiConfigs).toHaveLength(2);
+	});
+
+	it("fails when apis array is empty", async () => {
+		const options: PluginOptions = { apis: [] };
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(makeTestLayer(options))));
+		expect(result._tag).toBe("Failure");
+	});
+
+	it("fails when multiVersion active but no versions provided", async () => {
+		const options: PluginOptions = {
+			api: { packageName: "foo", model: fixtureModel },
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({
+				multiVersion: { default: "1.0.0", versions: ["1.0.0"] },
+			});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(makeTestLayer(options))));
+		expect(result._tag).toBe("Failure");
+	});
+
+	it("fails when version keys don't match multiVersion versions", async () => {
+		const options: PluginOptions = {
+			api: {
+				packageName: "foo",
+				versions: { "1.0.0": { model: fixtureModel } },
+			},
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({
+				multiVersion: { default: "2.0.0", versions: ["1.0.0", "2.0.0"] },
+			});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(makeTestLayer(options))));
+		expect(result._tag).toBe("Failure");
+	});
+
+	it("resolves with siteUrl and ogImage", async () => {
+		const options: PluginOptions = {
+			api: {
+				packageName: "example-module",
+				model: fixtureModel,
+				baseRoute: "/example-module",
+			},
+			siteUrl: "https://example.com",
+			ogImage: "/images/og.png",
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+		expect(result.ogResolver).not.toBeNull();
+	});
+
+	it("resolves with custom categories", async () => {
+		const options: PluginOptions = {
+			api: {
+				packageName: "example-module",
+				model: fixtureModel,
+				baseRoute: "/example-module",
+				categories: {
+					classes: {
+						displayName: "Custom Classes",
+						singularName: "Custom Class",
+						folderName: "custom-class",
+					},
+				},
+			},
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+		expect(result.apiConfigs[0].categories.classes.displayName).toBe("Custom Classes");
+	});
+
 	it("recovers from TypeRegistryError", async () => {
 		const FailingTypeRegistryLayer = Layer.succeed(TypeRegistryService, {
 			loadPackages: () =>

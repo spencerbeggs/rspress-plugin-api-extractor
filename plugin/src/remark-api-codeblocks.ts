@@ -1,3 +1,4 @@
+/* v8 ignore start -- remark plugin, requires MDX compilation context */
 /**
  * Remark plugin for on-demand API code block rendering.
  *

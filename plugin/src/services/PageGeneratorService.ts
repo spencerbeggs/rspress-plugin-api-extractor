@@ -1,3 +1,4 @@
+/* v8 ignore start -- service interface + Context.Tag, no testable logic */
 import type { Stream } from "effect";
 import { Context } from "effect";
 import type { PageGenerationError } from "../errors.js";

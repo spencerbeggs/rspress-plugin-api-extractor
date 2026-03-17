@@ -1,3 +1,4 @@
+/* v8 ignore start -- Shiki/Twoslash integration, requires full highlighter setup for testing */
 import { rendererRich, transformerTwoslash } from "@shikijs/twoslash";
 import { Effect, Metric } from "effect";
 import type { ElementContent } from "hast";

@@ -1,3 +1,4 @@
+/* v8 ignore start -- re-export barrel, no testable logic */
 export type { ResolvedApiConfig, ResolvedBuildContext, RspressConfigSubset } from "./ConfigService.js";
 export { ConfigService } from "./ConfigService.js";
 export type { CrossLinkData } from "./CrossLinkerService.js";

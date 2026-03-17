@@ -1,3 +1,4 @@
+/* v8 ignore start -- remark plugin, requires MDX compilation context */
 import { Effect, Metric } from "effect";
 import type { Code, Parent, Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";

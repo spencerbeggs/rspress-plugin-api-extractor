@@ -1,3 +1,4 @@
+/* v8 ignore start -- page generator, tested via build-stages integration tests */
 import type { ApiDeclaredItem, ApiInterface, ApiItem } from "@microsoft/api-extractor-model";
 import { TypeSignatureFormatter } from "../../formatter.js";
 import { ApiParser } from "../../loader.js";

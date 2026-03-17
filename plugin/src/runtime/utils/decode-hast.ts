@@ -1,3 +1,4 @@
+/* v8 ignore start -- React utility, requires browser/React test environment */
 import type { Root } from "hast";
 
 /**

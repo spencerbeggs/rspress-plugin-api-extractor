@@ -1,3 +1,4 @@
+/* v8 ignore start -- type-only definitions, no runtime code */
 import type { PathLike } from "node:fs";
 import type { ApiModel } from "@microsoft/api-extractor-model";
 import type ts from "typescript";

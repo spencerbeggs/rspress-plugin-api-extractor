@@ -1,3 +1,4 @@
+/* v8 ignore start -- re-export barrel, no testable logic */
 export {
 	AutoDetectDependencies,
 	CategoryConfig,

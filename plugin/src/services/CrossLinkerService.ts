@@ -1,3 +1,4 @@
+/* v8 ignore start -- service interface + Context.Tag, no testable logic */
 import type { Effect } from "effect";
 import { Context } from "effect";
 

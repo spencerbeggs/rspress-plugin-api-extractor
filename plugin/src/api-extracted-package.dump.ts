@@ -1,3 +1,4 @@
+/* v8 ignore start -- debug utility script, not production code */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ApiExtractedPackage } from "./api-extracted-package.js";

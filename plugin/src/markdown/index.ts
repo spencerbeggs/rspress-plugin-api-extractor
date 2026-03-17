@@ -1,3 +1,4 @@
+/* v8 ignore start -- re-export barrel, no testable logic */
 // Cross-linking functionality
 export type { CrossLinkableItem } from "./cross-linker.js";
 export { MarkdownCrossLinker, markdownCrossLinker } from "./cross-linker.js";

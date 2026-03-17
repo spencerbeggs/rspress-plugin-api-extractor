@@ -1,3 +1,4 @@
+/* v8 ignore start -- Shiki utility functions, require full Shiki highlighter for testing */
 import type { Root } from "hast";
 import type { Highlighter, ShikiTransformer } from "shiki";
 

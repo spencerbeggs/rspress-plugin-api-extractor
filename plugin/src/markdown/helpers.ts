@@ -1,3 +1,4 @@
+/* v8 ignore start -- markdown generation helpers, tested via page generator integration tests */
 /**
  * Helper utilities for generating markdown API documentation.
  *

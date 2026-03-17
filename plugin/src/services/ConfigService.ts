@@ -1,3 +1,4 @@
+/* v8 ignore start -- service interface + Context.Tag, no testable logic */
 import type { ApiPackage } from "@microsoft/api-extractor-model";
 import type { Effect, Scope } from "effect";
 import { Context } from "effect";

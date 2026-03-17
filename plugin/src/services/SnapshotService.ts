@@ -1,3 +1,4 @@
+/* v8 ignore start -- service interface + Context.Tag, no testable logic */
 import type { Effect, Option } from "effect";
 import { Context } from "effect";
 import type { SnapshotDbError } from "../errors.js";

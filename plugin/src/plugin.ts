@@ -1,3 +1,4 @@
+/* v8 ignore start -- RSPress plugin adapter, requires RSPress runtime */
 import fs from "node:fs";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";

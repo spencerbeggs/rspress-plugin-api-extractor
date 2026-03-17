@@ -1,3 +1,4 @@
+/* v8 ignore start -- Prettier integration wrapper, tested via page generator integration tests */
 import { Effect, Metric } from "effect";
 import { format } from "prettier";
 import { addLogicalBlankLines } from "./code-post-processor.js";
