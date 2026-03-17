@@ -47,7 +47,7 @@
 		"mdast-util-to-hast": "^13.2.1",
 		"prettier": "^3.8.1",
 		"react-markdown": "^10.1.0",
-		"semver": "^7.7.3",
+		"semver-effect": "^0.1.0",
 		"type-registry-effect": "^0.2.0",
 		"typescript": "^5.9.3"
 	},
@@ -64,7 +64,6 @@
 		"@types/mdast": "^4.0.4",
 		"@types/node": "^25.1.0",
 		"@types/react": "^19.2.10",
-		"@types/semver": "^7.7.1",
 		"@types/unist": "^3.0.3",
 		"@typescript/native-preview": "7.0.0-dev.20260128.1",
 		"mdast-util-mdx-jsx": "^3.2.0",
