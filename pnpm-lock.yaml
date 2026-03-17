@@ -107,9 +107,6 @@ importers:
       '@shikijs/twoslash':
         specifier: ^3.21.0
         version: 3.23.0(typescript@5.9.3)
-      better-sqlite3:
-        specifier: ^12.6.2
-        version: 12.8.0
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -168,9 +165,6 @@ importers:
       '@rspress/plugin-llms':
         specifier: ^2.0.0
         version: 2.0.5(@rspress/core@2.0.5(@types/mdast@4.0.4)(@types/react@19.2.14)(core-js@3.47.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
@@ -1510,9 +1504,6 @@ packages:
 
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
-
-  '@types/better-sqlite3@7.6.13':
-    resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -5888,10 +5879,6 @@ snapshots:
     optional: true
 
   '@types/argparse@1.0.38': {}
-
-  '@types/better-sqlite3@7.6.13':
-    dependencies:
-      '@types/node': 25.5.0
 
   '@types/chai@5.2.3':
     dependencies:
