@@ -45,7 +45,6 @@ import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { ApiModelLoader } from "./model-loader.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
-import type { PerformanceManager } from "./performance-manager.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
@@ -150,23 +149,15 @@ async function writeFile(
 	content: string,
 	logger: DebugLogger,
 	skipIfExists: boolean = false,
-	perfManager?: PerformanceManager,
 ): Promise<boolean> {
 	// Extract the relative path from the route path
 	const relativePath = routePath.replace(baseRoute, "").replace(/^\//, "");
 	const filePath = path.join(resolvedOutputDir, `${relativePath}.mdx`);
 
-	// Track file operation start
-	perfManager?.mark(`file.operation.${relativePath}.start`);
-
 	// Check if file exists
 	let existingContent: string | null = null;
 	try {
-		perfManager?.mark(`file.read.${relativePath}.start`);
 		existingContent = await fs.promises.readFile(filePath, "utf-8");
-		perfManager?.mark(`file.read.${relativePath}.end`);
-		perfManager?.measure("file.read", `file.read.${relativePath}.start`, `file.read.${relativePath}.end`);
-		perfManager?.increment("file.reads");
 	} catch {
 		// File doesn't exist
 	}
@@ -199,17 +190,8 @@ async function writeFile(
 		await fs.promises.mkdir(dirPath, { recursive: true });
 
 		// Write the file
-		perfManager?.mark(`file.write.${relativePath}.start`);
 		await fs.promises.writeFile(filePath, content, "utf-8");
-		perfManager?.mark(`file.write.${relativePath}.end`);
-		perfManager?.measure("file.write", `file.write.${relativePath}.start`, `file.write.${relativePath}.end`);
-		perfManager?.increment("file.writes");
-		perfManager?.increment(`file.writes.${status}`);
 	}
-
-	// Track file operation end
-	perfManager?.mark(`file.operation.${relativePath}.end`);
-	perfManager?.measure("file.operation", `file.operation.${relativePath}.start`, `file.operation.${relativePath}.end`);
 
 	// Track file generation via Effect Metrics
 	Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
@@ -249,7 +231,6 @@ async function generateApiDocs(
 	ogResolver: OpenGraphResolver | null,
 	logger: DebugLogger,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-	perfManager?: PerformanceManager,
 	highlighter?: Highlighter,
 	hideCutTransformer?: ShikiTransformer,
 	hideCutLinesTransformer?: ShikiTransformer,
@@ -478,9 +459,7 @@ async function generateApiDocs(
 	}
 	const mainIndexGenerator = new MainIndexPageGenerator();
 	const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
-	if (
-		await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, logger, true, perfManager)
-	) {
+	if (await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, logger, true)) {
 		fileCount++;
 
 		// Track file context for remark plugin
@@ -544,8 +523,6 @@ async function generateApiDocs(
 	const totalItems = allWorkItems.length;
 	logger.debug(`🚀 Page generation parallelism: ${pageConcurrency} concurrent pages (${cpuCores} CPU cores detected)`);
 	logger.verbose(`📝 Generating ${totalItems} pages across ${Object.keys(categories).length} categories in parallel`);
-
-	perfManager?.mark("pages.parallel.start");
 
 	// Process ALL items in parallel (not category by category)
 	const allItemResults = await parallelLimit(
@@ -744,7 +721,7 @@ async function generateApiDocs(
 			}
 
 			// Track page generation
-			perfManager?.increment("pages.generated");
+			Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
 
 			// Parse the generated content to extract frontmatter and body
 			const parsed = matter(page.content);
@@ -834,8 +811,6 @@ async function generateApiDocs(
 		},
 	);
 
-	perfManager?.mark("pages.parallel.end");
-	perfManager?.measure("pages.parallel", "pages.parallel.start", "pages.parallel.end");
 	logger.verbose(`✅ Generated ${allItemResults.filter((r) => r !== null).length} pages in parallel`);
 
 	// Collect all snapshots for batch update (avoids SQLite contention during file writes)
@@ -845,7 +820,6 @@ async function generateApiDocs(
 	const validResults = allItemResults.filter((r): r is NonNullable<typeof r> => r !== null);
 
 	// Process all file operations in parallel (reads, writes, OG resolution)
-	perfManager?.mark("files.parallel.start");
 	const fileResults = await parallelLimit(validResults, pageConcurrency, async (result) => {
 		const {
 			item,
@@ -928,15 +902,7 @@ async function generateApiDocs(
 		}
 
 		// Write the file
-		const written = await writeFile(
-			resolvedOutputDir,
-			baseRoute,
-			page.routePath,
-			finalContent,
-			logger,
-			false,
-			perfManager,
-		);
+		const written = await writeFile(resolvedOutputDir, baseRoute, page.routePath, finalContent, logger, false);
 
 		// Use qualified name for namespace members
 		const metaName = namespaceMember ? namespaceMember.qualifiedName.toLowerCase() : item.displayName.toLowerCase();
@@ -959,8 +925,6 @@ async function generateApiDocs(
 			written,
 		};
 	});
-	perfManager?.mark("files.parallel.end");
-	perfManager?.measure("files.parallel", "files.parallel.start", "files.parallel.end");
 
 	// Collect results into appropriate structures
 	const categoryMetaEntriesMap = new Map<string, Array<{ name: string; label: string }>>();
@@ -1019,17 +983,11 @@ async function generateApiDocs(
 				count: categoryMeta.length,
 			});
 		}
-
-		// Track category stats (no longer timing individual categories since we process in parallel)
-		perfManager?.increment(`category.${categoryKey}.pages`, categoryMetaEntries.length);
 	}
 
 	// Batch-update all page snapshots in a single transaction (much faster than individual updates)
 	if (snapshotsToUpdate.length > 0) {
-		perfManager?.mark("snapshot.batch.start");
 		const batchUpdated = snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
-		perfManager?.mark("snapshot.batch.end");
-		perfManager?.measure("snapshot.batch", "snapshot.batch.start", "snapshot.batch.end");
 		logger.debug(`💾 Batch-updated ${batchUpdated} page snapshots`);
 	}
 
@@ -1253,9 +1211,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// Capture RSPress root directory for OG image auto-detection
 	let docsRoot: string | undefined;
 
-	// Performance manager (initialized in beforeBuild)
-	let perfManager: PerformanceManager | undefined;
-
 	// Build start time for duration tracking
 	let buildStartTime: number = 0;
 
@@ -1273,15 +1228,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 			// Clear VFS registry from previous builds to avoid stale configs
 			VfsRegistry.clear();
-
-			// Initialize performance manager
-			const performanceThresholds = options.performance?.thresholds;
-			const { PerformanceManager: PerfMgr } = await import("./performance-manager.js");
-			perfManager = PerfMgr.getInstance(debugLogger, performanceThresholds);
-			debugLogger.debug(`PerformanceManager initialized (thresholds: ${performanceThresholds ? "custom" : "default"})`);
-
-			// Mark start of build for performance tracking
-			perfManager.mark("build.start");
 
 			debugLogger.verbose("🚀 RSPress API Extractor Plugin");
 			if (options.logFile) {
@@ -1354,15 +1300,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					outputDir: string,
 					fullRoute: string,
 				) => {
-					// Set API context for performance tracking
-					perfManager?.setContext({ api: api.name || api.packageName });
-					perfManager?.mark("api.load.simple.start");
-
 					const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(model);
-
-					perfManager?.mark("api.load.simple.end");
-					perfManager?.measure("api.load", "api.load.simple.start", "api.load.simple.end");
-					perfManager?.increment("api.simple.loaded");
 					const resolvedCategories = categoryResolver.resolveCategoryConfig(pluginDefaults, api.categories);
 					const resolvedSource = categoryResolver.resolveSourceConfig(api.source, loaderSource);
 					const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin);
@@ -1379,16 +1317,13 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 					// Track external packages
 					if (externalPackages && externalPackages.length > 0) {
-						perfManager?.increment("external.packages.total", externalPackages.length);
+						Effect.runSync(Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length));
 					}
 
 					// Generate virtual file system from API model for Twoslash
-					perfManager?.mark("vfs.generate.simple.start");
 					const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
 					const vfs = pkg.generateVfs();
 					prependImportsToVfs(vfs, apiPackage, api.packageName);
-					perfManager?.mark("vfs.generate.simple.end");
-					perfManager?.measure("vfs.generate", "vfs.generate.simple.start", "vfs.generate.simple.end");
 
 					// Resolve ogImage with cascading: API > global
 					const resolvedOgImage = api.ogImage ?? options.ogImage;
@@ -1429,14 +1364,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 					if (rspressMultiVersion && api.versions) {
 						// Versioned single-API mode
-						perfManager?.setContext({ api: api.name || api.packageName });
-
 						const versionResults = await Promise.all(
 							Object.entries(api.versions).map(async ([version, versionValue]) => {
-								// Set version context for performance tracking
-								perfManager?.setContext({ version });
-								perfManager?.mark(`api.load.${version}.start`);
-
 								// Normalize version value to VersionConfig
 								const versionConfig: VersionConfig = isVersionConfig(versionValue)
 									? versionValue
@@ -1453,9 +1382,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 									ogImage: versionOgImage,
 								} = await ApiModelLoader.loadVersionModel(versionConfig);
 
-								perfManager?.mark(`api.load.${version}.end`);
-								perfManager?.measure("api.load", `api.load.${version}.start`, `api.load.${version}.end`);
-								perfManager?.increment("api.versions.loaded");
+								Effect.runSync(Metric.increment(BuildMetrics.apiVersionsLoaded));
 								const resolvedCategories = categoryResolver.resolveCategoryConfig(
 									pluginDefaults,
 									api.categories,
@@ -1481,16 +1408,13 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 								// Track external packages
 								if (externalPackages && externalPackages.length > 0) {
-									perfManager?.increment("external.packages.total", externalPackages.length);
+									Effect.runSync(Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length));
 								}
 
 								// Generate virtual file system from API model for Twoslash
-								perfManager?.mark(`vfs.generate.${version}.start`);
 								const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
 								const vfs = pkg.generateVfs();
 								prependImportsToVfs(vfs, apiPackage, api.packageName);
-								perfManager?.mark(`vfs.generate.${version}.end`);
-								perfManager?.measure("vfs.generate", `vfs.generate.${version}.start`, `vfs.generate.${version}.end`);
 
 								// Use deriveOutputPaths for versioned paths (supports i18n + versioned cross-product)
 								const versionDerivedPaths = deriveOutputPaths({
@@ -1544,9 +1468,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 								};
 							}),
 						);
-
-						// Clear version context after processing all versions
-						perfManager?.clearContext("version");
 
 						// Flatten and merge version results
 						for (const result of versionResults) {
@@ -1646,9 +1567,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 				loadTimer.end();
 
-				// Clear API context after loading all models
-				perfManager?.clearContext("api");
-
 				// Resolve TypeScript compiler options from configuration cascade
 				// Uses project root (cwd) for resolving tsconfig.json paths
 				const projectRoot = process.cwd();
@@ -1681,17 +1599,10 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						debugLogger.verbose(`📦 Loading types for ${allExternalPackages.length} external package(s)...`);
 					}
 
-					// Track external package loading
-					perfManager?.mark("external.packages.load.start");
-					perfManager?.set("external.packages.count", allExternalPackages.length);
-
 					const result = await loader.load(allExternalPackages, {
 						createTsCache: true,
 						compilerOptions: resolvedCompilerOptions,
 					});
-
-					perfManager?.mark("external.packages.load.end");
-					perfManager?.measure("external.packages.load", "external.packages.load.start", "external.packages.load.end");
 
 					// Merge external package VFS into combined VFS
 					for (const [path, content] of result.vfs.entries()) {
@@ -1700,10 +1611,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 					// Store TypeScript cache for Twoslash
 					tsEnvCache = result.tsCache;
-
-					// Track loaded and failed packages
-					perfManager?.increment("external.packages.loaded", result.loaded.length);
-					perfManager?.increment("external.packages.failed", result.failed.length);
 
 					// Log results
 					if (result.loaded.length > 0) {
@@ -1821,13 +1728,9 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Generate API documentation with VFS mode for faster rendering
 				// Use bounded parallelism (limit 2) to avoid SQLite contention while improving performance
 				debugLogger.verbose("📝 Generating API documentation...");
-				perfManager?.mark("page.generation.start");
+				const pageGenStart = performance.now();
 				await parallelLimit(apiConfigs, 2, async (config) => {
 					const configTimer = debugLogger.startTimer(`Generating docs for ${config.packageName}`);
-
-					// Set API context for page generation tracking
-					perfManager?.setContext({ api: config.apiName || config.packageName });
-					perfManager?.mark(`page.generation.api.start`);
 
 					await generateApiDocs(
 						{
@@ -1839,29 +1742,20 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						ogResolver,
 						debugLogger,
 						fileContextMap,
-						perfManager,
 						shikiHighlighter,
 						hideCutTransformer,
 						hideCutLinesTransformer,
 						TwoslashManager.getInstance().getTransformer() ?? undefined,
 					);
 
-					perfManager?.mark(`page.generation.api.end`);
-					perfManager?.measure("page.generation.api", `page.generation.api.start`, `page.generation.api.end`);
-					perfManager?.clearContext("api");
-
 					configTimer.end();
 				});
-				perfManager?.mark("page.generation.end");
-				perfManager?.measure("page.generation.total", "page.generation.start", "page.generation.end");
+				const pageGenMs = performance.now() - pageGenStart;
+				debugLogger.verbose(`📝 Page generation completed in ${pageGenMs.toFixed(0)}ms`);
 
 				// Close snapshot manager connection
 				snapshotManager.close();
 				debugLogger.verbose("💾 Closed snapshot database");
-
-				// Mark end of build and measure total time
-				perfManager?.mark("build.end");
-				perfManager?.measure("build.total", "build.start", "build.end");
 
 				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
 				debugLogger.verbose(`✅ API documentation complete (${totalTime}s)`);
@@ -1982,8 +1876,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				}
 			}
 
-			// Performance manager is initialized in beforeBuild (async context)
-
 			// Inject Shiki transformer for cross-linking type references in code blocks
 			const updatedConfig = { ..._config };
 
@@ -2022,7 +1914,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					shikiCrossLinker,
 					getTransformer: () => TwoslashManager.getInstance().getTransformer(),
 					logger: debugLogger,
-					perfManager,
 					theme: remarkTheme,
 				},
 			]);

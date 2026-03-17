@@ -10,7 +10,6 @@ import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
-import type { PerformanceManager } from "./performance-manager.js";
 import { formatCode } from "./prettier-formatter.js";
 import type { ShikiCrossLinker } from "./shiki-transformer.js";
 
@@ -49,7 +48,6 @@ interface RemarkWithApiOptions {
 	/** Getter for the shared Twoslash transformer from TwoslashManager */
 	getTransformer: () => ShikiTransformer | null;
 	logger?: DebugLogger;
-	perfManager?: PerformanceManager;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
 }
@@ -71,7 +69,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const { shikiCrossLinker, getTransformer, logger, perfManager, theme } = options;
+	const { shikiCrossLinker, getTransformer, logger, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -112,10 +110,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 			blockCount++;
 			const promise = (async () => {
 				const blockStart = performance.now();
-
-				// Track code block processing start
-				const blockId = `with-api.${blockCount}`;
-				perfManager?.mark(`code.block.${blockId}.start`);
 
 				const rawCode = node.value;
 
@@ -160,19 +154,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 
 				const shikiTime = performance.now() - shikiStart;
 				const totalBlockTime = performance.now() - blockStart;
-
-				// Track code block processing end
-				perfManager?.mark(`code.block.${blockId}.end`);
-				perfManager?.measure("code.block.render", `code.block.${blockId}.start`, `code.block.${blockId}.end`);
-				perfManager?.increment("code.blocks.processed");
-				perfManager?.increment("code.blocks.with-api");
-
-				// Log slow blocks at debug level
-				if (perfManager?.isSlow("code.block", totalBlockTime) && logger) {
-					logger.debug(
-						`⏱️  [remark-with-api] Slow block: ${totalBlockTime.toFixed(0)}ms (shiki: ${shikiTime.toFixed(0)}ms, ${code.length} chars)`,
-					);
-				}
 
 				// Track block stats via Effect Metrics
 				Effect.runSync(Metric.increment(BuildMetrics.codeblockTotal));
