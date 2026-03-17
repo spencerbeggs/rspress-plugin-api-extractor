@@ -132,7 +132,10 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 					Effect.gen(function* () {
 						const configSvc = yield* ConfigService;
 						return yield* configSvc.resolve(rspressConfigSubset);
-					}).pipe(Effect.scoped),
+					}),
+					// Note: NOT using Effect.scoped — the SnapshotManager's acquireRelease
+					// scope must span the entire build (resolve + generateApiDocs). The
+					// ManagedRuntime scope (disposed in afterBuild) manages the lifetime.
 				);
 
 				// Generate API documentation
