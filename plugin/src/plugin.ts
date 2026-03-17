@@ -3,14 +3,11 @@ import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Schema } from "effect";
-import type { CrossLinkData } from "./build-stages.js";
-import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
+import { generateApiDocs } from "./build-program.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
-import { ApiParser } from "./loader.js";
-import { markdownCrossLinker } from "./markdown/index.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
@@ -18,12 +15,9 @@ import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
 import type { LogLevel } from "./schemas/index.js";
 import { PluginOptions } from "./schemas/index.js";
-import type { ResolvedApiConfig, ResolvedBuildContext } from "./services/ConfigService.js";
 import { ConfigService } from "./services/ConfigService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
-
-import type { VfsConfig } from "./vfs-registry.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 /**
@@ -58,164 +52,6 @@ function normalizeThemeConfig(
 
 	// Custom theme object - use for both modes
 	return { light: theme, dark: theme };
-}
-
-/**
- * Generate markdown documentation for a single API.
- *
- * Orchestrates the 5 build stages:
- * 1. prepareWorkItems — categorize items, build cross-link data, flatten work items
- * 2. generatePages — generate page content, hash, resolve timestamps
- * 3. writeFiles — write changed files to disk
- * 4. writeMetadata — write root _meta.json, main index, category _meta.json files
- * 5. cleanupAndCommit — batch upsert snapshots, delete stale/orphan files
- *
- * Returns the CrossLinkData for this API so callers can merge cross-link data
- * across multiple APIs.
- */
-async function generateApiDocs(
-	apiConfig: ResolvedApiConfig & { suppressExampleErrors?: boolean },
-	buildContext: ResolvedBuildContext,
-	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-): Promise<CrossLinkData> {
-	const {
-		apiPackage,
-		packageName,
-		apiName,
-		outputDir,
-		baseRoute,
-		categories,
-		source,
-		packageJson,
-		llmsPlugin,
-		siteUrl,
-		ogImage,
-	} = apiConfig;
-	const suppressExampleErrors = apiConfig.suppressExampleErrors ?? true;
-
-	const {
-		snapshotManager,
-		shikiCrossLinker,
-		highlighter,
-		hideCutTransformer,
-		hideCutLinesTransformer,
-		twoslashTransformer,
-		ogResolver,
-		pageConcurrency,
-	} = buildContext;
-
-	const resolvedOutputDir = path.resolve(process.cwd(), outputDir);
-	const buildTime = new Date().toISOString();
-
-	// Load existing snapshots from database for this outputDir
-	const existingSnapshots = new Map<string, import("./snapshot-manager.js").FileSnapshot>();
-	for (const snapshot of snapshotManager.getSnapshotsForOutputDir(resolvedOutputDir)) {
-		existingSnapshots.set(snapshot.filePath, snapshot);
-	}
-
-	// Create the output directory if it doesn't exist
-	await fs.promises.mkdir(resolvedOutputDir, { recursive: true });
-
-	// Phase 1: Prepare work items and cross-link data
-	const { workItems, crossLinkData } = prepareWorkItems({
-		apiPackage,
-		categories,
-		baseRoute,
-		packageName,
-	});
-
-	// Initialize cross-linkers with the prepared data
-	markdownCrossLinker.initialize(ApiParser.categorizeApiItems(apiPackage, categories), baseRoute, categories);
-	// API scope is derived from baseRoute to match file path inference in remark plugins
-	// e.g., baseRoute "/example-module" -> scope "example-module"
-	// When baseRoute is "/" (single-API mode), fall back to packageName to ensure a non-empty scope
-	const apiScope = baseRoute.replace(/^\//, "").split("/")[0] || packageName;
-	shikiCrossLinker.reinitialize(crossLinkData.routes, crossLinkData.kinds, apiScope);
-	TwoslashManager.addTypeRoutes(crossLinkData.routes);
-
-	// Register VFS config for the remark plugin
-	if (highlighter) {
-		const vfsConfig: VfsConfig = {
-			vfs: new Map(),
-			highlighter,
-			crossLinker: shikiCrossLinker,
-			packageName,
-			apiScope,
-		};
-		if (twoslashTransformer != null) vfsConfig.twoslashTransformer = twoslashTransformer;
-		if (hideCutTransformer != null) vfsConfig.hideCutTransformer = hideCutTransformer;
-		if (hideCutLinesTransformer != null) vfsConfig.hideCutLinesTransformer = hideCutLinesTransformer;
-		if (apiConfig.theme != null) vfsConfig.theme = apiConfig.theme;
-		VfsRegistry.register(apiScope, vfsConfig);
-	}
-
-	// Phase 2+3: Generate pages and write files via Stream pipeline
-	console.log(
-		`📝 Generating ${workItems.length} pages across ${Object.keys(categories).length} categories in parallel`,
-	);
-	const fileResults = await Effect.runPromise(
-		buildPipelineForApi({
-			workItems,
-			baseRoute,
-			packageName,
-			apiScope,
-			...(apiName != null ? { apiName } : {}),
-			...(source != null ? { source } : {}),
-			buildTime,
-			resolvedOutputDir,
-			pageConcurrency,
-			existingSnapshots,
-			...(suppressExampleErrors != null ? { suppressExampleErrors } : {}),
-			...(llmsPlugin != null ? { llmsPlugin } : {}),
-			...(ogResolver !== undefined ? { ogResolver } : {}),
-			...(siteUrl != null ? { siteUrl } : {}),
-			...(ogImage != null ? { ogImage } : {}),
-		}).pipe(Effect.provide(NodeFileSystem.layer)),
-	);
-	console.log(`✅ Generated ${fileResults.filter((r) => r.status !== "unchanged").length} pages`);
-
-	// Track generated files and file context
-	const generatedFiles = new Set<string>();
-	for (const r of fileResults) {
-		generatedFiles.add(r.relativePathWithExt);
-		const ctx: { api?: string; version?: string; file: string } = {
-			file: r.relativePathWithExt,
-		};
-		if (apiName != null) ctx.api = apiName;
-		if (packageJson?.version != null) ctx.version = packageJson.version;
-		fileContextMap.set(r.absolutePath, ctx);
-	}
-
-	// Phase 4: Write metadata (root _meta.json, main index, category _meta.json)
-	await Effect.runPromise(
-		writeMetadata({
-			fileResults,
-			categories,
-			resolvedOutputDir,
-			snapshotManager,
-			existingSnapshots,
-			buildTime,
-			baseRoute,
-			packageName,
-			...(apiName != null ? { apiName } : {}),
-			generatedFiles,
-		}).pipe(Effect.provide(NodeFileSystem.layer)),
-	);
-
-	// Phase 5: Cleanup and commit snapshots
-	await Effect.runPromise(
-		cleanupAndCommit({
-			fileResults,
-			snapshotManager,
-			resolvedOutputDir,
-			generatedFiles,
-		}).pipe(Effect.provide(NodeFileSystem.layer)),
-	);
-
-	const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
-	console.log(`✅ Generated ${changedCount} API documentation files for ${packageName}`);
-
-	return crossLinkData;
 }
 
 /**
@@ -303,23 +139,19 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				console.log("📝 Generating API documentation...");
 				const pageGenStart = performance.now();
 
-				await Effect.runPromise(
+				await effectRuntime.runPromise(
 					Effect.forEach(
 						buildContext.apiConfigs,
 						(apiConfig) =>
-							Effect.promise(async () => {
-								const configStart = performance.now();
-								await generateApiDocs(
-									{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
-									buildContext,
-									fileContextMap,
-								);
-								if (isVerbose) {
-									console.log(
-										`⏱  Generating docs for ${apiConfig.packageName}: ${(performance.now() - configStart).toFixed(0)}ms`,
-									);
-								}
-							}),
+							generateApiDocs(
+								{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
+								buildContext,
+								fileContextMap,
+							).pipe(
+								Effect.tap(() =>
+									isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
+								),
+							),
 						{ concurrency: 2 },
 					),
 				);
