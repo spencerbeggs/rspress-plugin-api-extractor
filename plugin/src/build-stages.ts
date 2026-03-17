@@ -14,6 +14,7 @@ import type {
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import { Effect, Metric, Stream } from "effect";
 import matter from "gray-matter";
+import { hashContent, hashFrontmatter } from "./content-hash.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
@@ -30,7 +31,10 @@ import {
 } from "./markdown/index.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
-import { SnapshotManager } from "./snapshot-manager.js";
+import type { FileSnapshot } from "./services/SnapshotService.js";
+import { SnapshotService } from "./services/SnapshotService.js";
+
+export type { FileSnapshot } from "./services/SnapshotService.js";
 
 export interface WorkItem {
 	readonly item: ApiItem;
@@ -56,16 +60,6 @@ export interface GeneratedPageResult {
 export interface CrossLinkData {
 	readonly routes: Map<string, string>;
 	readonly kinds: Map<string, string>;
-}
-
-export interface FileSnapshot {
-	readonly outputDir: string;
-	readonly filePath: string;
-	readonly publishedTime: string;
-	readonly modifiedTime: string;
-	readonly contentHash: string;
-	readonly frontmatterHash: string;
-	readonly buildTime: string;
 }
 
 export interface FileWriteResult {
@@ -234,7 +228,7 @@ export function normalizeMarkdownSpacing(content: string): string {
  * for every item in a single API build.
  */
 export interface GenerateSinglePageContext {
-	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly existingSnapshots: Map<string, FileSnapshot>;
 	readonly baseRoute: string;
 	readonly packageName: string;
 	readonly apiScope: string;
@@ -455,8 +449,8 @@ export function generateSinglePage(
 		const relativePathWithExt = `${relativePath}.mdx`;
 
 		// Hash the content and frontmatter
-		const contentHash = SnapshotManager.hashContent(bodyContent);
-		const frontmatterHash = SnapshotManager.hashFrontmatter(frontmatterData);
+		const contentHash = hashContent(bodyContent);
+		const frontmatterHash = hashFrontmatter(frontmatterData);
 
 		// Determine timestamps based on previous snapshot
 		let publishedTime: string;
@@ -480,8 +474,8 @@ export function generateSinglePage(
 					const { data: existingFrontmatter, content: existingBody } = matter(existingContent);
 					// Apply same normalization as generated content for accurate comparison
 					const normalizedExistingBody = normalizeMarkdownSpacing(existingBody);
-					const existingContentHash = SnapshotManager.hashContent(normalizedExistingBody);
-					const existingFrontmatterHash = SnapshotManager.hashFrontmatter(existingFrontmatter);
+					const existingContentHash = hashContent(normalizedExistingBody);
+					const existingFrontmatterHash = hashFrontmatter(existingFrontmatter);
 
 					if (existingContentHash === contentHash && existingFrontmatterHash === frontmatterHash) {
 						// File exists and matches - preserve timestamps, skip write
@@ -667,8 +661,7 @@ export interface WriteMetadataInput {
 	readonly fileResults: readonly FileWriteResult[];
 	readonly categories: Record<string, CategoryConfig>;
 	readonly resolvedOutputDir: string;
-	readonly snapshotManager: import("./snapshot-manager.js").SnapshotManager;
-	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly existingSnapshots: Map<string, FileSnapshot>;
 	readonly buildTime: string;
 	readonly baseRoute: string;
 	readonly packageName: string;
@@ -690,14 +683,16 @@ export interface WriteMetadataInput {
  * The `generatedFiles` Set is mutated — entries are added for each metadata file
  * written. This is required for stale file cleanup by the caller.
  */
-export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, never, FileSystem.FileSystem> {
+export function writeMetadata(
+	input: WriteMetadataInput,
+): Effect.Effect<void, never, FileSystem.FileSystem | SnapshotService> {
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
+		const snapshotSvc = yield* SnapshotService;
 		const {
 			fileResults,
 			categories,
 			resolvedOutputDir,
-			snapshotManager,
 			existingSnapshots,
 			buildTime,
 			baseRoute,
@@ -738,7 +733,7 @@ export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, ne
 		const apiMetaJsonPath = path.join(resolvedOutputDir, "_meta.json");
 		const apiMetaJsonRelPath = "_meta.json";
 		const apiMetaJsonContent = JSON.stringify(apiMetaEntries, null, "\t");
-		const apiMetaContentHash = SnapshotManager.hashContent(apiMetaJsonContent);
+		const apiMetaContentHash = hashContent(apiMetaJsonContent);
 		const apiMetaOldSnapshot = existingSnapshots.get(apiMetaJsonRelPath);
 
 		let apiMetaUnchanged = false;
@@ -790,8 +785,8 @@ export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, ne
 			yield* Metric.increment(BuildMetrics.filesUnchanged);
 		}
 
-		yield* Effect.sync(() =>
-			snapshotManager.upsertSnapshot({
+		yield* snapshotSvc
+			.upsert({
 				outputDir: resolvedOutputDir,
 				filePath: apiMetaJsonRelPath,
 				publishedTime: apiMetaPublished,
@@ -799,8 +794,8 @@ export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, ne
 				contentHash: apiMetaContentHash,
 				frontmatterHash: "",
 				buildTime,
-			}),
-		);
+			})
+			.pipe(Effect.ignore);
 
 		generatedFiles.add(apiMetaJsonRelPath);
 
@@ -866,7 +861,7 @@ export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, ne
 					const categoryMetaPath = path.join(resolvedOutputDir, categoryConfig.folderName, "_meta.json");
 					const relPath = path.join(categoryConfig.folderName, "_meta.json");
 					const content = JSON.stringify(categoryMeta, null, "\t");
-					const contentHash = SnapshotManager.hashContent(content);
+					const contentHash = hashContent(content);
 					const oldSnapshot = existingSnapshots.get(relPath);
 
 					let isUnchanged = false;
@@ -940,18 +935,15 @@ export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, ne
 		);
 
 		// Batch-update all category _meta.json snapshots (filter out nulls for unchanged files)
-		const metaSnapshotsToUpdate = metaSnapshots.filter(
-			(s): s is import("./snapshot-manager.js").FileSnapshot => s !== null,
-		);
+		const metaSnapshotsToUpdate = metaSnapshots.filter((s): s is FileSnapshot => s !== null);
 		if (metaSnapshotsToUpdate.length > 0) {
-			yield* Effect.sync(() => snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate));
+			yield* snapshotSvc.batchUpsert(metaSnapshotsToUpdate).pipe(Effect.ignore);
 		}
 	});
 }
 
 export interface CleanupAndCommitInput {
 	readonly fileResults: readonly FileWriteResult[];
-	readonly snapshotManager: import("./snapshot-manager.js").SnapshotManager;
 	readonly resolvedOutputDir: string;
 	readonly generatedFiles: ReadonlySet<string>;
 }
@@ -969,22 +961,25 @@ export interface CleanupAndCommitInput {
  *    generatedFiles, delete it from disk and remove its snapshot.
  * 4. After deleting orphans, remove empty subdirectories deepest-first.
  */
-export function cleanupAndCommit(input: CleanupAndCommitInput): Effect.Effect<void, never, FileSystem.FileSystem> {
+export function cleanupAndCommit(
+	input: CleanupAndCommitInput,
+): Effect.Effect<void, never, FileSystem.FileSystem | SnapshotService> {
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
-		const { fileResults, snapshotManager, resolvedOutputDir, generatedFiles } = input;
+		const snapshotSvc = yield* SnapshotService;
+		const { fileResults, resolvedOutputDir, generatedFiles } = input;
 
 		// 1. Batch-upsert snapshots for written (non-unchanged) files only
 		const snapshotsToUpdate = fileResults.filter((r) => r.status !== "unchanged").map((r) => r.snapshot);
 
 		if (snapshotsToUpdate.length > 0) {
-			yield* Effect.sync(() => snapshotManager.batchUpsertSnapshots(snapshotsToUpdate));
+			yield* snapshotSvc.batchUpsert(snapshotsToUpdate).pipe(Effect.ignore);
 		}
 
 		// 2. Stale file cleanup: files in DB but not generated in this build
-		const staleFiles: string[] = yield* Effect.sync(() =>
-			snapshotManager.cleanupStaleFiles(resolvedOutputDir, generatedFiles as Set<string>),
-		);
+		const staleFiles = yield* snapshotSvc
+			.cleanupStale(resolvedOutputDir, generatedFiles)
+			.pipe(Effect.orElseSucceed(() => [] as ReadonlyArray<string>));
 		yield* Effect.forEach(
 			staleFiles,
 			(staleFile) =>
@@ -1019,7 +1014,7 @@ export function cleanupAndCommit(input: CleanupAndCommitInput): Effect.Effect<vo
 				Effect.gen(function* () {
 					const fullPath = path.join(resolvedOutputDir, orphan);
 					yield* fileSystem.remove(fullPath).pipe(Effect.ignore);
-					yield* Effect.sync(() => snapshotManager.deleteSnapshot(resolvedOutputDir, orphan));
+					yield* snapshotSvc.deleteSnapshot(resolvedOutputDir, orphan).pipe(Effect.ignore);
 					yield* Effect.logDebug(`🗑️  DELETED ORPHAN: ${orphan}`);
 				}),
 			{ concurrency: "unbounded" },
@@ -1060,7 +1055,7 @@ export interface BuildPipelineInput {
 	readonly buildTime: string;
 	readonly resolvedOutputDir: string;
 	readonly pageConcurrency: number;
-	readonly existingSnapshots: Map<string, import("./snapshot-manager.js").FileSnapshot>;
+	readonly existingSnapshots: Map<string, FileSnapshot>;
 	readonly suppressExampleErrors?: boolean;
 	readonly llmsPlugin?: LlmsPlugin;
 	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;

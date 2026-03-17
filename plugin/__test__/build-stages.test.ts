@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
 	FileWriteResult,
@@ -20,11 +20,11 @@ import {
 	writeSingleFile,
 } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
+import { SnapshotServiceLive } from "../src/layers/SnapshotServiceLive.js";
 import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
 import { ApiModelLoader } from "../src/model-loader.js";
 import type { CategoryConfig } from "../src/schemas/index.js";
 import { DEFAULT_CATEGORIES } from "../src/schemas/index.js";
-import { SnapshotManager } from "../src/snapshot-manager.js";
 
 describe("build-stages types", () => {
 	it("WorkItem has required fields", () => {
@@ -107,7 +107,6 @@ describe("writeMetadata", () => {
 	it("writes _meta.json files for categories with items", async () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-test-"));
 		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
 		const generatedFiles = new Set<string>();
 
 		const categories: Record<string, CategoryConfig> = {
@@ -163,13 +162,12 @@ describe("writeMetadata", () => {
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
-				snapshotManager,
 				existingSnapshots: new Map(),
 				buildTime: new Date().toISOString(),
 				baseRoute: "/api",
 				packageName: "test-package",
 				generatedFiles,
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(Layer.mergeAll(NodeFileSystem.layer, SnapshotServiceLive(dbPath)))),
 		);
 
 		// Category _meta.json should exist with sorted entries
@@ -200,14 +198,13 @@ describe("writeMetadata", () => {
 			.catch(() => false);
 		expect(indexExists).toBe(true);
 
-		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 
 	it("skips writing _meta.json when content is unchanged (snapshot match)", async () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-unchanged-"));
 		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
+		const snapshotLayer = SnapshotServiceLive(dbPath);
 
 		const categories: Record<string, CategoryConfig> = {
 			classes: {
@@ -240,6 +237,8 @@ describe("writeMetadata", () => {
 			},
 		];
 
+		const testLayer = Layer.mergeAll(NodeFileSystem.layer, snapshotLayer);
+
 		// First write — creates the files
 		const generatedFiles1 = new Set<string>();
 		await Effect.runPromise(
@@ -247,21 +246,26 @@ describe("writeMetadata", () => {
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
-				snapshotManager,
 				existingSnapshots: new Map(),
 				buildTime: new Date().toISOString(),
 				baseRoute: "/api",
 				packageName: "test-package",
 				generatedFiles: generatedFiles1,
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(testLayer)),
 		);
 
 		const metaPath = path.join(tmpDir, "class/_meta.json");
 		const statBefore = await fs.promises.stat(metaPath);
 
-		// Build the existingSnapshots from the snapshot manager for the second run
-		const allSnapshots = snapshotManager.getSnapshotsForOutputDir(tmpDir);
-		const existingSnapshots = new Map(allSnapshots.map((s) => [s.filePath, s]));
+		// Build the existingSnapshots by reading the snapshot DB via SnapshotService
+		const { SnapshotService } = await import("../src/services/SnapshotService.js");
+		const existingSnapshots = await Effect.runPromise(
+			Effect.gen(function* () {
+				const svc = yield* SnapshotService;
+				const all = yield* svc.getAllForDirectory(tmpDir);
+				return new Map(all.map((s) => [s.filePath, s]));
+			}).pipe(Effect.provide(snapshotLayer)),
+		);
 
 		// Second write — should be unchanged, file mtime should not change
 		const generatedFiles2 = new Set<string>();
@@ -270,27 +274,24 @@ describe("writeMetadata", () => {
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
-				snapshotManager,
 				existingSnapshots,
 				buildTime: new Date().toISOString(),
 				baseRoute: "/api",
 				packageName: "test-package",
 				generatedFiles: generatedFiles2,
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(testLayer)),
 		);
 
 		const statAfter = await fs.promises.stat(metaPath);
 		// File should not have been rewritten (mtime unchanged)
 		expect(statAfter.mtimeMs).toBe(statBefore.mtimeMs);
 
-		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 
 	it("excludes categories with no items from root _meta.json", async () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "meta-empty-cat-"));
 		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
 		const generatedFiles = new Set<string>();
 
 		const categories: Record<string, CategoryConfig> = {
@@ -338,13 +339,12 @@ describe("writeMetadata", () => {
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
-				snapshotManager,
 				existingSnapshots: new Map(),
 				buildTime: new Date().toISOString(),
 				baseRoute: "/api",
 				packageName: "test-package",
 				generatedFiles,
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(Layer.mergeAll(NodeFileSystem.layer, SnapshotServiceLive(dbPath)))),
 		);
 
 		const rootMeta = JSON.parse(await fs.promises.readFile(path.join(tmpDir, "_meta.json"), "utf-8"));
@@ -352,7 +352,6 @@ describe("writeMetadata", () => {
 		expect(rootMeta).toHaveLength(1);
 		expect(rootMeta[0].name).toBe("class");
 
-		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
@@ -399,7 +398,7 @@ describe("cleanupAndCommit", () => {
 	it("batch upserts snapshots for written files only", async () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "cleanup-test-"));
 		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
+		const snapshotLayer = SnapshotServiceLive(dbPath);
 
 		const buildTime = new Date().toISOString();
 		const results: FileWriteResult[] = [
@@ -439,28 +438,33 @@ describe("cleanupAndCommit", () => {
 			},
 		];
 
+		const testLayer = Layer.mergeAll(NodeFileSystem.layer, snapshotLayer);
+
 		await Effect.runPromise(
 			cleanupAndCommit({
 				fileResults: results,
-				snapshotManager,
 				resolvedOutputDir: tmpDir,
 				generatedFiles: new Set(["class/foo.mdx", "class/bar.mdx"]),
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(testLayer)),
 		);
 
 		// Only written file should have a snapshot (not unchanged)
-		const snapshots = snapshotManager.getSnapshotsForOutputDir(tmpDir);
+		const { SnapshotService } = await import("../src/services/SnapshotService.js");
+		const snapshots = await Effect.runPromise(
+			Effect.gen(function* () {
+				const svc = yield* SnapshotService;
+				return yield* svc.getAllForDirectory(tmpDir);
+			}).pipe(Effect.provide(snapshotLayer)),
+		);
 		expect(snapshots.length).toBe(1);
 		expect(snapshots[0].filePath).toBe("class/foo.mdx");
 
-		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 
 	it("deletes orphaned files not in generatedFiles set", async () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "orphan-test-"));
 		const dbPath = path.join(tmpDir, "test.db");
-		const snapshotManager = new SnapshotManager(dbPath);
 
 		const orphanDir = path.join(tmpDir, "class");
 		await fs.promises.mkdir(orphanDir, { recursive: true });
@@ -469,10 +473,9 @@ describe("cleanupAndCommit", () => {
 		await Effect.runPromise(
 			cleanupAndCommit({
 				fileResults: [],
-				snapshotManager,
 				resolvedOutputDir: tmpDir,
 				generatedFiles: new Set(),
-			}).pipe(Effect.provide(NodeFileSystem.layer)),
+			}).pipe(Effect.provide(Layer.mergeAll(NodeFileSystem.layer, SnapshotServiceLive(dbPath)))),
 		);
 
 		const exists = await fs.promises
@@ -481,7 +484,6 @@ describe("cleanupAndCommit", () => {
 			.catch(() => false);
 		expect(exists).toBe(false);
 
-		snapshotManager.close();
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
