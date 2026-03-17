@@ -2,45 +2,24 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type {
-	ApiClass,
-	ApiEntryPoint,
-	ApiEnum,
-	ApiFunction,
-	ApiInterface,
-	ApiNamespace,
-	ApiPackage,
-	ApiTypeAlias,
-	ApiVariable,
-} from "@microsoft/api-extractor-model";
-import { ApiItemKind } from "@microsoft/api-extractor-model";
+import type { ApiEntryPoint, ApiPackage } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Metric } from "effect";
-import matter from "gray-matter";
 import type { Highlighter, ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
+import type { CrossLinkData } from "./build-stages.js";
+import { cleanupAndCommit, generatePages, prepareWorkItems, writeFiles, writeMetadata } from "./build-stages.js";
 import { CategoryResolver } from "./category-resolver.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
-import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
-import {
-	ClassPageGenerator,
-	EnumPageGenerator,
-	FunctionPageGenerator,
-	InterfacePageGenerator,
-	MainIndexPageGenerator,
-	NamespacePageGenerator,
-	TypeAliasPageGenerator,
-	VariablePageGenerator,
-	markdownCrossLinker,
-} from "./markdown/index.js";
+import { markdownCrossLinker } from "./markdown/index.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { ApiModelLoader } from "./model-loader.js";
 import { OpenGraphResolver } from "./og-resolver.js";
@@ -79,23 +58,6 @@ import { VfsRegistry } from "./vfs-registry.js";
 
 const __filename: string = fileURLToPath(import.meta.url);
 const __dirname: string = path.dirname(__filename);
-
-/**
- * Normalize markdown spacing by removing excessive blank lines
- * - Remove extra blank lines between headings and code blocks
- * - Ensure single blank line between sections
- */
-function normalizeMarkdownSpacing(content: string): string {
-	return (
-		content
-			// Remove multiple consecutive blank lines (3+ blank lines -> 1 blank line)
-			.replace(/\n\n\n+/g, "\n\n")
-			// Remove blank lines between headings and code fences (3 or 4 backticks)
-			.replace(/^(#{1,6}\s+.+?)\n+(?=````)/gm, "$1\n")
-			// Remove blank lines after ## headings before content
-			.replace(/^(#{2}\s+.+?)\n\n+/gm, "$1\n\n")
-	);
-}
 
 /**
  * Default Shiki theme configuration
@@ -140,65 +102,17 @@ function normalizeThemeConfig(
 }
 
 /**
- * Helper function to write a markdown file (async)
- */
-async function writeFile(
-	resolvedOutputDir: string,
-	baseRoute: string,
-	routePath: string,
-	content: string,
-	skipIfExists: boolean = false,
-): Promise<boolean> {
-	// Extract the relative path from the route path
-	const relativePath = routePath.replace(baseRoute, "").replace(/^\//, "");
-	const filePath = path.join(resolvedOutputDir, `${relativePath}.mdx`);
-
-	// Check if file exists
-	let existingContent: string | null = null;
-	try {
-		existingContent = await fs.promises.readFile(filePath, "utf-8");
-	} catch {
-		// File doesn't exist
-	}
-
-	// Skip if file exists and skipIfExists is true (for overview files)
-	if (skipIfExists && existingContent !== null) {
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-		return false;
-	}
-
-	// Determine status
-	let status: "new" | "unchanged" | "modified";
-	if (existingContent === null) {
-		status = "new";
-	} else if (existingContent === content) {
-		status = "unchanged";
-	} else {
-		status = "modified";
-	}
-
-	// Only write if changed
-	if (status !== "unchanged") {
-		// Ensure directory exists
-		const dirPath = path.dirname(filePath);
-		await fs.promises.mkdir(dirPath, { recursive: true });
-
-		// Write the file
-		await fs.promises.writeFile(filePath, content, "utf-8");
-	}
-
-	// Track file generation via Effect Metrics
-	Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-	if (status === "new") Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-	else if (status === "modified") Effect.runSync(Metric.increment(BuildMetrics.filesModified));
-	else Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-
-	return true;
-}
-
-/**
- * Generate markdown documentation for a single API
+ * Generate markdown documentation for a single API.
+ *
+ * Orchestrates the 5 build stages:
+ * 1. prepareWorkItems — categorize items, build cross-link data, flatten work items
+ * 2. generatePages — generate page content, hash, resolve timestamps
+ * 3. writeFiles — write changed files to disk
+ * 4. writeMetadata — write root _meta.json, main index, category _meta.json files
+ * 5. cleanupAndCommit — batch upsert snapshots, delete stale/orphan files
+ *
+ * Returns the CrossLinkData for this API so callers can merge cross-link data
+ * across multiple APIs.
  */
 async function generateApiDocs(
 	config: {
@@ -226,7 +140,7 @@ async function generateApiDocs(
 	hideCutTransformer?: ShikiTransformer,
 	hideCutLinesTransformer?: ShikiTransformer,
 	twoslashTransformer?: ShikiTransformer,
-): Promise<void> {
+): Promise<CrossLinkData> {
 	const {
 		apiPackage,
 		packageName,
@@ -251,69 +165,30 @@ async function generateApiDocs(
 		existingSnapshots.set(snapshot.filePath, snapshot);
 	}
 
-	// Track all files generated in this build
-	const generatedFiles = new Set<string>();
-
-	// Create the output directory if it doesn't exist (async)
+	// Create the output directory if it doesn't exist
 	await fs.promises.mkdir(resolvedOutputDir, { recursive: true });
 
-	// Note: No upfront cleanup needed - we use snapshot-based tracking
-	// to detect and clean up stale files at the end of the build process
+	// Phase 1: Prepare work items and cross-link data
+	const { workItems, crossLinkData } = prepareWorkItems({
+		apiPackage,
+		categories,
+		baseRoute,
+		packageName,
+	});
 
-	// Categorize API items
-	const items = ApiParser.categorizeApiItems(apiPackage, categories);
-
-	// Initialize cross-linking map for markdown and Shiki transformer
-	const crossLinkData = markdownCrossLinker.initialize(items, baseRoute, categories);
+	// Initialize cross-linkers with the prepared data
+	markdownCrossLinker.initialize(ApiParser.categorizeApiItems(apiPackage, categories), baseRoute, categories);
 	// API scope is derived from baseRoute to match file path inference in remark plugins
 	// e.g., baseRoute "/example-module" -> scope "example-module"
 	// When baseRoute is "/" (single-API mode), fall back to packageName to ensure a non-empty scope
 	const apiScope = baseRoute.replace(/^\//, "").split("/")[0] || packageName;
-
-	// Extract namespace members and add their routes to cross-link data
-	const namespaceMembers = ApiParser.extractNamespaceMembers(apiPackage);
-
-	// Track unqualified names to detect collisions across namespaces
-	const unqualifiedNameCounts = new Map<string, number>();
-	for (const nsMember of namespaceMembers) {
-		const name = nsMember.item.displayName;
-		unqualifiedNameCounts.set(name, (unqualifiedNameCounts.get(name) || 0) + 1);
-	}
-
-	for (const nsMember of namespaceMembers) {
-		const categoryEntry = Object.entries(categories).find(([, config]) =>
-			config.itemKinds?.includes(nsMember.item.kind),
-		);
-		if (!categoryEntry) continue;
-		const [, categoryConfig] = categoryEntry;
-
-		const qualifiedRoute = `${baseRoute}/${categoryConfig.folderName}/${nsMember.qualifiedName.toLowerCase()}`;
-
-		// Always add qualified name (e.g., "Formatters.FormatOptions")
-		crossLinkData.routes.set(nsMember.qualifiedName, qualifiedRoute);
-		crossLinkData.kinds.set(nsMember.qualifiedName, nsMember.item.kind);
-
-		// Add unqualified PascalCase name if no collision and not already present
-		const displayName = nsMember.item.displayName;
-		const isPascalCase = /^[A-Z]/.test(displayName);
-		if (isPascalCase && (unqualifiedNameCounts.get(displayName) || 0) <= 1 && !crossLinkData.routes.has(displayName)) {
-			crossLinkData.routes.set(displayName, qualifiedRoute);
-			crossLinkData.kinds.set(displayName, nsMember.item.kind);
-		}
-	}
-
 	shikiCrossLinker.reinitialize(crossLinkData.routes, crossLinkData.kinds, apiScope);
-
-	// Add routes to TwoslashManager for {@link ...} resolution in hover popups
 	TwoslashManager.addTypeRoutes(crossLinkData.routes);
 
 	// Register VFS config for the remark plugin
-	// This enables remarkApiCodeblocks to transform raw code fences during MDX compilation
-	// Note: Cross-linking is now done via post-processing (crossLinker.transformHast) to avoid
-	// interfering with Twoslash popup positioning
 	if (highlighter) {
 		VfsRegistry.register(apiScope, {
-			vfs: new Map(), // VFS is already loaded in TwoslashManager, not needed here
+			vfs: new Map(),
 			highlighter,
 			twoslashTransformer,
 			crossLinker: shikiCrossLinker,
@@ -325,800 +200,81 @@ async function generateApiDocs(
 		});
 	}
 
-	let fileCount = 0;
-
-	// Build _meta.json entries for api folder
-	const apiMetaEntries: Array<{
-		type: string;
-		name: string;
-		label: string;
-		collapsible: boolean;
-		collapsed: boolean;
-		overviewHeaders: number[];
-	}> = [];
-
-	// Add category entries based on what exists
-	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
-		const categoryItems = items[categoryKey] || [];
-		if (categoryItems.length > 0) {
-			apiMetaEntries.push({
-				type: "dir",
-				name: categoryConfig.folderName,
-				label: categoryConfig.displayName,
-				collapsible: categoryConfig.collapsible ?? true,
-				collapsed: categoryConfig.collapsed ?? true,
-				overviewHeaders: categoryConfig.overviewHeaders ?? [2],
-			});
-		}
-	}
-
-	// Write api/_meta.json with snapshot tracking
-	const apiMetaJsonPath = path.join(resolvedOutputDir, "_meta.json");
-	const apiMetaJsonRelPath = "_meta.json";
-	const apiMetaJsonContent = JSON.stringify(apiMetaEntries, null, "\t");
-	const apiMetaContentHash = SnapshotManager.hashContent(apiMetaJsonContent);
-	const apiMetaOldSnapshot = existingSnapshots.get(apiMetaJsonRelPath);
-
-	let apiMetaUnchanged = false;
-	let apiMetaPublished: string;
-	let apiMetaModified: string;
-
-	// Always check if file exists on disk first
-	const apiMetaFileExists = await fs.promises
-		.access(apiMetaJsonPath)
-		.then(() => true)
-		.catch(() => false);
-
-	if (!apiMetaFileExists) {
-		// File doesn't exist - must regenerate regardless of snapshot
-		apiMetaPublished = apiMetaOldSnapshot?.publishedTime || buildTime;
-		apiMetaModified = buildTime;
-		apiMetaUnchanged = false;
-		console.log(`📄 NEW (missing on disk): ${apiMetaJsonRelPath}`);
-	} else if (!apiMetaOldSnapshot) {
-		// No snapshot but file exists - compare content (normalize JSON formatting)
-		const existingContent = await fs.promises.readFile(apiMetaJsonPath, "utf-8");
-		const existingData = JSON.parse(existingContent);
-		const normalizedExisting = JSON.stringify(existingData, null, "\t");
-		const normalizedNew = apiMetaJsonContent;
-
-		if (normalizedExisting === normalizedNew) {
-			// File exists and matches - use arbitrary old timestamp (no frontmatter to extract from)
-			// We use a consistent old date so it doesn't change between builds
-			apiMetaPublished = "2024-01-01T00:00:00.000Z";
-			apiMetaModified = "2024-01-01T00:00:00.000Z";
-			apiMetaUnchanged = true;
-		} else {
-			// File exists but changed
-			apiMetaPublished = "2024-01-01T00:00:00.000Z";
-			apiMetaModified = buildTime;
-			console.log(`✏️  MODIFIED (no snapshot, file changed): ${apiMetaJsonRelPath}`);
-		}
-	} else if (apiMetaOldSnapshot.contentHash === apiMetaContentHash) {
-		// File exists, snapshot exists, content unchanged
-		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
-		apiMetaModified = apiMetaOldSnapshot.modifiedTime;
-		apiMetaUnchanged = true;
-	} else {
-		// File exists, snapshot exists, content changed
-		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
-		apiMetaModified = buildTime;
-		console.log(`✏️  MODIFIED: ${apiMetaJsonRelPath}`);
-	}
-
-	if (!apiMetaUnchanged) {
-		await fs.promises.writeFile(apiMetaJsonPath, apiMetaJsonContent, "utf-8");
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		if (apiMetaOldSnapshot) {
-			Effect.runSync(Metric.increment(BuildMetrics.filesModified));
-		} else {
-			Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-		}
-	} else {
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-	}
-
-	// Track in snapshot (note: _meta.json has no frontmatter)
-	snapshotManager.upsertSnapshot({
-		outputDir: resolvedOutputDir,
-		filePath: apiMetaJsonRelPath,
-		publishedTime: apiMetaPublished,
-		modifiedTime: apiMetaModified,
-		contentHash: apiMetaContentHash,
-		frontmatterHash: "", // No frontmatter in _meta.json
-		buildTime,
-	});
-
-	// Add to generatedFiles so it's not deleted as stale
-	generatedFiles.add(apiMetaJsonRelPath);
-
-	console.log("✅ Generated _meta.json with category entries");
-
-	// Generate main index page with category counts (skip if exists)
-	const categoryCounts: Record<string, number> = {};
-	for (const [categoryKey, categoryItems] of Object.entries(items)) {
-		categoryCounts[categoryKey] = categoryItems.length;
-	}
-	const mainIndexGenerator = new MainIndexPageGenerator();
-	const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
-	if (await writeFile(resolvedOutputDir, baseRoute, mainIndex.routePath, mainIndex.content, true)) {
-		fileCount++;
-
-		// Track file context for remark plugin
-		const relativePathWithExt = `${mainIndex.routePath.replace(/^\//, "")}.mdx`;
-		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
-		fileContextMap.set(absolutePath, {
-			api: apiName,
-			version: packageJson?.version,
-			file: relativePathWithExt,
-		});
-	}
-
-	// Track index page in generatedFiles regardless of whether it was written or skipped
-	generatedFiles.add("index.mdx");
-
-	// Collect category meta writes for parallel execution
-	const categoryMetaWrites: Array<{ path: string; content: string; folderName: string; count: number }> = [];
-
-	// Calculate parallelism level: leave 1-2 cores free for system responsiveness
-	// On machines with 4+ cores, use cores-1; on smaller machines, use at least 2
+	// Calculate concurrency
 	const cpuCores = os.cpus().length;
 	const pageConcurrency = Math.max(cpuCores > 4 ? cpuCores - 1 : cpuCores, 2);
 
-	// === FLATTENED PARALLEL PROCESSING ===
-	// Collect ALL items from ALL categories into a single flat list, then process in parallel.
-	// This eliminates the category-by-category sequential bottleneck.
-	interface WorkItem {
-		item: (typeof items)[string][number];
-		categoryKey: string;
-		categoryConfig: CategoryConfig;
-		/** For namespace members, includes qualified name info */
-		namespaceMember?: NamespaceMember;
-	}
-
-	const allWorkItems: WorkItem[] = [];
-	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
-		const categoryItems = items[categoryKey] || [];
-		for (const item of categoryItems) {
-			allWorkItems.push({ item, categoryKey, categoryConfig });
-		}
-	}
-
-	// Add namespace members to work items (reuse already-extracted list)
-	// These are processed with qualified names (e.g., "MathUtils.Vector")
-	for (const nsMember of namespaceMembers) {
-		// Find the appropriate category for this member kind
-		const categoryEntry = Object.entries(categories).find(([, config]) =>
-			config.itemKinds?.includes(nsMember.item.kind),
-		);
-		if (categoryEntry) {
-			const [categoryKey, categoryConfig] = categoryEntry;
-			allWorkItems.push({
-				item: nsMember.item,
-				categoryKey,
-				categoryConfig,
-				namespaceMember: nsMember,
-			});
-		}
-	}
-
-	const totalItems = allWorkItems.length;
-	console.log(`📝 Generating ${totalItems} pages across ${Object.keys(categories).length} categories in parallel`);
-
-	// Process ALL items in parallel (not category by category)
-	const allItemResults = await parallelLimit(
-		allWorkItems,
-		pageConcurrency,
-		async ({ item, categoryKey, categoryConfig, namespaceMember }) => {
-			let page: { routePath: string; content: string } | null = null;
-
-			// Generate appropriate page based on item kind
-			switch (item.kind) {
-				case ApiItemKind.Class: {
-					const generator = new ClassPageGenerator();
-					page = await generator.generate(
-						item as ApiClass,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					// Update route to use correct folder
-					page = {
-						routePath: page.routePath.replace("/class/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Interface: {
-					const generator = new InterfacePageGenerator();
-					page = await generator.generate(
-						item as ApiInterface,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/interface/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Function: {
-					const generator = new FunctionPageGenerator();
-					page = await generator.generate(
-						item as ApiFunction,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/function/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.TypeAlias: {
-					const generator = new TypeAliasPageGenerator();
-					page = await generator.generate(
-						item as ApiTypeAlias,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/type/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Enum: {
-					const generator = new EnumPageGenerator();
-					page = await generator.generate(
-						item as ApiEnum,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/enum/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Variable: {
-					const generator = new VariablePageGenerator();
-					page = await generator.generate(
-						item as ApiVariable,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/variable/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				case ApiItemKind.Namespace: {
-					const generator = new NamespacePageGenerator();
-					page = await generator.generate(
-						item as ApiNamespace,
-						baseRoute,
-						packageName,
-						categoryConfig.singularName,
-						apiScope,
-						apiName,
-						source,
-						suppressExampleErrors,
-						llmsPlugin,
-					);
-					page = {
-						routePath: page.routePath.replace("/namespace/", `/${categoryConfig.folderName}/`),
-						content: page.content,
-					};
-					break;
-				}
-				default: {
-					console.warn(
-						`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
-					);
-					console.log(`  Item categorized as "${categoryKey}" but kind ${item.kind} has no matching page generator.`);
-					console.log(`  Supported kinds: Class, Interface, Function, TypeAlias, Enum, Variable`);
-					// Return null result for unsupported items
-					return null;
-				}
-			}
-
-			if (!page) {
-				return null;
-			}
-
-			// For namespace members, transform the route path to use qualified name
-			if (namespaceMember) {
-				// Replace the simple member name with the qualified name in the route
-				// e.g., /api/class/vector -> /api/class/mathutils.vector
-				const simpleName = item.displayName.toLowerCase();
-				const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
-				page = {
-					routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
-					content: page.content,
-				};
-			}
-
-			// Track page generation
-			Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
-
-			// Parse the generated content to extract frontmatter and body
-			const parsed = matter(page.content);
-			// Normalize markdown spacing to remove excessive blank lines
-			const bodyContent = normalizeMarkdownSpacing(parsed.content);
-			const frontmatterData = parsed.data;
-
-			// Compute relative path from outputDir
-			const relativePath = page.routePath.replace(baseRoute, "").replace(/^\//, "");
-			const relativePathWithExt = `${relativePath}.mdx`;
-
-			// Hash the content and frontmatter
-			const contentHash = SnapshotManager.hashContent(bodyContent);
-			const frontmatterHash = SnapshotManager.hashFrontmatter(frontmatterData);
-
-			// Determine timestamps based on previous snapshot
-			let publishedTime: string;
-			let modifiedTime: string;
-			let isUnchanged = false;
-
-			const oldSnapshot = existingSnapshots.get(relativePathWithExt);
-
-			if (!oldSnapshot) {
-				// No snapshot exists - check if file exists on disk as fallback
-				const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
-				const fileExists = await fs.promises
-					.access(absolutePath)
-					.then(() => true)
-					.catch(() => false);
-
-				if (fileExists) {
-					// File exists on disk - compare against it to preserve timestamps
-					const existingContent = await fs.promises.readFile(absolutePath, "utf-8");
-					const { data: existingFrontmatter, content: existingBody } = matter(existingContent);
-					// Apply same normalization as generated content for accurate comparison
-					const normalizedExistingBody = normalizeMarkdownSpacing(existingBody);
-					const existingContentHash = SnapshotManager.hashContent(normalizedExistingBody);
-					const existingFrontmatterHash = SnapshotManager.hashFrontmatter(existingFrontmatter);
-
-					if (existingContentHash === contentHash && existingFrontmatterHash === frontmatterHash) {
-						// File exists and matches generated content - preserve timestamps and skip write
-						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
-						modifiedTime = (existingFrontmatter["article:modified_time"] as string | undefined) || buildTime;
-						isUnchanged = true;
-					} else {
-						// File exists but content changed - preserve published, update modified
-						publishedTime = (existingFrontmatter["article:published_time"] as string | undefined) || buildTime;
-						modifiedTime = buildTime;
-						console.log(`✏️  MODIFIED (no snapshot, file changed): ${relativePathWithExt}`);
-					}
-				} else {
-					// File doesn't exist - truly new
-					publishedTime = buildTime;
-					modifiedTime = buildTime;
-					console.log(`📄 NEW: ${relativePathWithExt}`);
-				}
-			} else if (oldSnapshot.contentHash === contentHash && oldSnapshot.frontmatterHash === frontmatterHash) {
-				// NO CHANGES: Preserve both existing timestamps, skip file write
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = oldSnapshot.modifiedTime;
-				isUnchanged = true;
-			} else {
-				// CHANGED: Preserve published time, update modified time
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = buildTime;
-				console.log(`✏️  MODIFIED: ${relativePathWithExt}`);
-			}
-
-			// Return result for aggregation (include category info for grouping)
-			return {
-				item,
-				page,
-				relativePathWithExt,
-				bodyContent,
-				frontmatterData,
-				contentHash,
-				frontmatterHash,
-				publishedTime,
-				modifiedTime,
-				isUnchanged,
-				categoryKey,
-				categoryConfig,
-				namespaceMember,
-			};
-		},
+	// Phase 2: Generate pages
+	console.log(
+		`📝 Generating ${workItems.length} pages across ${Object.keys(categories).length} categories in parallel`,
 	);
+	const pageResults = await generatePages({
+		workItems,
+		existingSnapshots,
+		baseRoute,
+		packageName,
+		apiScope,
+		apiName,
+		source,
+		buildTime,
+		resolvedOutputDir,
+		pageConcurrency,
+		suppressExampleErrors,
+		llmsPlugin,
+	});
+	console.log(`✅ Generated ${pageResults.filter((r) => r !== null).length} pages in parallel`);
 
-	console.log(`✅ Generated ${allItemResults.filter((r) => r !== null).length} pages in parallel`);
-
-	// Collect all snapshots for batch update (avoids SQLite contention during file writes)
-	const snapshotsToUpdate: import("./snapshot-manager.js").FileSnapshot[] = [];
-
-	// Filter out null results and prepare for parallel processing
-	const validResults = allItemResults.filter((r): r is NonNullable<typeof r> => r !== null);
-
-	// Process all file operations in parallel (reads, writes, OG resolution)
-	const fileResults = await parallelLimit(validResults, pageConcurrency, async (result) => {
-		const {
-			item,
-			page,
-			relativePathWithExt,
-			bodyContent,
-			frontmatterData,
-			contentHash,
-			frontmatterHash,
-			publishedTime,
-			modifiedTime,
-			isUnchanged,
-			categoryKey,
-			categoryConfig,
-			namespaceMember,
-		} = result;
-
-		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
-
-		// Handle unchanged files
-		if (isUnchanged) {
-			// Skip MDX validation read for unchanged files - too slow and not critical
-			// The content was already validated when it was first written
-
-			// Track as unchanged without writing
-			Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-			Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-
-			// Use qualified name for namespace members
-			const metaName = namespaceMember ? namespaceMember.qualifiedName.toLowerCase() : item.displayName.toLowerCase();
-			const metaLabel = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
-
-			return {
-				categoryKey,
-				metaEntry: { name: metaName, label: metaLabel },
-				snapshot: {
-					outputDir: resolvedOutputDir,
-					filePath: relativePathWithExt,
-					publishedTime,
-					modifiedTime,
-					contentHash,
-					frontmatterHash,
-					buildTime,
-				},
-				absolutePath,
-				relativePathWithExt,
-				written: false,
-			};
-		}
-
-		// Build OG metadata with determined timestamps (if ogResolver is configured)
-		let finalContent = matter.stringify(bodyContent, frontmatterData);
-		if (ogResolver && siteUrl) {
-			// Resolve OG image metadata (auto-detect dimensions from local files if possible)
-			const ogImageMetadata = await ogResolver.resolve(ogImage, packageName, apiName);
-
-			const ogMetadata = OpenGraphResolver.createPageMetadata({
-				siteUrl,
-				pageRoute: page.routePath,
-				description: frontmatterData.description as string,
-				publishedTime,
-				modifiedTime,
-				section: categoryConfig.displayName,
-				packageName,
-				ogImage: ogImageMetadata,
-			});
-
-			// Regenerate frontmatter with OG metadata
-			const { generateFrontmatter } = await import("./markdown/helpers.js");
-			const newFrontmatter = generateFrontmatter(
-				item.displayName,
-				frontmatterData.description as string,
-				categoryConfig.singularName,
-				apiName,
-				ogMetadata,
-			);
-
-			// Combine new frontmatter with body content
-			finalContent = newFrontmatter + bodyContent;
-		}
-
-		// Write the file
-		const written = await writeFile(resolvedOutputDir, baseRoute, page.routePath, finalContent, false);
-
-		// Use qualified name for namespace members
-		const metaName = namespaceMember ? namespaceMember.qualifiedName.toLowerCase() : item.displayName.toLowerCase();
-		const metaLabel = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
-
-		return {
-			categoryKey,
-			metaEntry: { name: metaName, label: metaLabel },
-			snapshot: {
-				outputDir: resolvedOutputDir,
-				filePath: relativePathWithExt,
-				publishedTime,
-				modifiedTime,
-				contentHash,
-				frontmatterHash,
-				buildTime,
-			},
-			absolutePath,
-			relativePathWithExt,
-			written,
-		};
+	// Phase 3: Write files
+	const fileResults = await writeFiles({
+		pages: pageResults,
+		resolvedOutputDir,
+		baseRoute,
+		buildTime,
+		pageConcurrency,
+		ogResolver,
+		siteUrl,
+		ogImage,
+		packageName,
+		apiName,
 	});
 
-	// Collect results into appropriate structures
-	const categoryMetaEntriesMap = new Map<string, Array<{ name: string; label: string }>>();
-
-	for (const result of fileResults) {
-		// Track generated file
-		generatedFiles.add(result.relativePathWithExt);
-
-		// Track file context for remark plugin
-		fileContextMap.set(result.absolutePath, {
+	// Track generated files and file context
+	const generatedFiles = new Set<string>();
+	for (const r of fileResults) {
+		generatedFiles.add(r.relativePathWithExt);
+		fileContextMap.set(r.absolutePath, {
 			api: apiName,
 			version: packageJson?.version,
-			file: result.relativePathWithExt,
+			file: r.relativePathWithExt,
 		});
-
-		// Collect snapshot for batch update (only if file was actually written)
-		// Skip unchanged files - their snapshots are already correct in the database
-		if (result.written) {
-			snapshotsToUpdate.push(result.snapshot);
-		}
-
-		// Collect category meta entries
-		const entries = categoryMetaEntriesMap.get(result.categoryKey) || [];
-		entries.push(result.metaEntry);
-		categoryMetaEntriesMap.set(result.categoryKey, entries);
-
-		// Count written files
-		if (result.written) {
-			fileCount++;
-		}
 	}
 
-	// Build category _meta.json writes
-	for (const [categoryKey, categoryMetaEntries] of categoryMetaEntriesMap) {
-		const categoryConfig = categories[categoryKey];
-		if (!categoryConfig || categoryMetaEntries.length === 0) continue;
+	// Phase 4: Write metadata (root _meta.json, main index, category _meta.json)
+	await writeMetadata({
+		fileResults,
+		categories,
+		resolvedOutputDir,
+		snapshotManager,
+		existingSnapshots,
+		buildTime,
+		baseRoute,
+		packageName,
+		apiName,
+		generatedFiles,
+	});
 
-		// Prepare _meta.json for this category folder
-		if (categoryMetaEntries.length > 0) {
-			// Sort alphabetically by label
-			categoryMetaEntries.sort((a, b) => a.label.localeCompare(b.label));
+	// Phase 5: Cleanup and commit snapshots
+	await cleanupAndCommit({
+		fileResults,
+		snapshotManager,
+		resolvedOutputDir,
+		generatedFiles,
+	});
 
-			// Build _meta.json array
-			const categoryMeta = categoryMetaEntries.map((entry) => ({
-				type: "file",
-				name: entry.name,
-				label: entry.label,
-			}));
+	const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
+	console.log(`✅ Generated ${changedCount} API documentation files for ${packageName}`);
 
-			// Collect for parallel write later
-			const categoryMetaPath = path.join(resolvedOutputDir, categoryConfig.folderName, "_meta.json");
-			categoryMetaWrites.push({
-				path: categoryMetaPath,
-				content: JSON.stringify(categoryMeta, null, "\t"),
-				folderName: categoryConfig.folderName,
-				count: categoryMeta.length,
-			});
-		}
-	}
-
-	// Batch-update all page snapshots in a single transaction (much faster than individual updates)
-	if (snapshotsToUpdate.length > 0) {
-		snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
-	}
-
-	// Write all category _meta.json files in parallel and collect snapshots
-	const metaSnapshots = await Promise.all(
-		categoryMetaWrites.map(async (write) => {
-			const relPath = path.join(write.folderName, "_meta.json");
-			const contentHash = SnapshotManager.hashContent(write.content);
-			const oldSnapshot = existingSnapshots.get(relPath);
-
-			let isUnchanged = false;
-			let publishedTime: string;
-			let modifiedTime: string;
-
-			// Always check if file exists on disk first
-			const fileExists = await fs.promises
-				.access(write.path)
-				.then(() => true)
-				.catch(() => false);
-
-			if (!fileExists) {
-				// File doesn't exist - must regenerate regardless of snapshot
-				publishedTime = oldSnapshot?.publishedTime || buildTime;
-				modifiedTime = buildTime;
-				isUnchanged = false;
-				console.log(`📄 NEW (missing on disk): ${relPath}`);
-			} else if (!oldSnapshot) {
-				// No snapshot but file exists - compare content (normalize JSON formatting)
-				const existingContent = await fs.promises.readFile(write.path, "utf-8");
-				const existingData = JSON.parse(existingContent);
-				const normalizedExisting = JSON.stringify(existingData, null, "\t");
-				const normalizedNew = write.content;
-
-				if (normalizedExisting === normalizedNew) {
-					// File exists and matches - use arbitrary old timestamp
-					publishedTime = "2024-01-01T00:00:00.000Z";
-					modifiedTime = "2024-01-01T00:00:00.000Z";
-					isUnchanged = true;
-				} else {
-					// File exists but changed
-					publishedTime = "2024-01-01T00:00:00.000Z";
-					modifiedTime = buildTime;
-					console.log(`✏️  MODIFIED (no snapshot, file changed): ${relPath}`);
-				}
-			} else if (oldSnapshot.contentHash === contentHash) {
-				// File exists, snapshot exists, content unchanged
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = oldSnapshot.modifiedTime;
-				isUnchanged = true;
-			} else {
-				// File exists, snapshot exists, content changed
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = buildTime;
-				console.log(`✏️  MODIFIED: ${relPath}`);
-			}
-
-			if (!isUnchanged) {
-				// Ensure category directory exists
-				const categoryDir = path.dirname(write.path);
-				await fs.promises.mkdir(categoryDir, { recursive: true });
-
-				await fs.promises.writeFile(write.path, write.content, "utf-8");
-				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-				if (oldSnapshot) {
-					Effect.runSync(Metric.increment(BuildMetrics.filesModified));
-				} else {
-					Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-				}
-			} else {
-				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-				Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-			}
-
-			// Add to generatedFiles so it's not deleted as stale
-			generatedFiles.add(relPath);
-
-			console.log(`✅ Generated _meta.json for ${write.folderName} with ${write.count} entries`);
-
-			// Return snapshot data for batch update (only if file was actually written)
-			// Skip unchanged files - their snapshots are already correct in the database
-			if (isUnchanged) {
-				return null;
-			}
-
-			return {
-				outputDir: resolvedOutputDir,
-				filePath: relPath,
-				publishedTime,
-				modifiedTime,
-				contentHash,
-				frontmatterHash: "", // No frontmatter in _meta.json
-				buildTime,
-			};
-		}),
-	);
-
-	// Batch-update all _meta.json snapshots (filter out nulls for unchanged files)
-	const metaSnapshotsToUpdate = metaSnapshots.filter(
-		(s): s is import("./snapshot-manager.js").FileSnapshot => s !== null,
-	);
-	if (metaSnapshotsToUpdate.length > 0) {
-		snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate);
-	}
-
-	// Clean up stale files (in DB but not generated in this build) - parallelize for better performance
-	const staleFiles: string[] = snapshotManager.cleanupStaleFiles(resolvedOutputDir, generatedFiles);
-	await Promise.all(
-		staleFiles.map(async (staleFile) => {
-			const fullPath = path.join(resolvedOutputDir, staleFile);
-			try {
-				await fs.promises.unlink(fullPath);
-				console.log(`🗑️  DELETED STALE: ${staleFile}`);
-			} catch {
-				// File already doesn't exist, ignore
-			}
-		}),
-	);
-
-	// Filesystem-based cleanup: remove files on disk that aren't tracked in generatedFiles
-	// This catches files that exist on disk but have no DB record (e.g., created before
-	// the snapshot system, or after a DB reset)
-	try {
-		const allFiles = await fs.promises.readdir(resolvedOutputDir, { recursive: true });
-		const orphanedFiles: string[] = [];
-		for (const entry of allFiles) {
-			const relPath = typeof entry === "string" ? entry : String(entry);
-			// Only consider .mdx and _meta.json files
-			if (!relPath.endsWith(".mdx") && !relPath.endsWith("_meta.json")) continue;
-			// Normalize path separators to forward slashes for comparison
-			const normalizedRelPath = relPath.replace(/\\/g, "/");
-			if (!generatedFiles.has(normalizedRelPath)) {
-				orphanedFiles.push(normalizedRelPath);
-			}
-		}
-
-		// Delete orphaned files from disk and snapshot DB
-		await Promise.all(
-			orphanedFiles.map(async (orphan) => {
-				const fullPath = path.join(resolvedOutputDir, orphan);
-				try {
-					await fs.promises.unlink(fullPath);
-					snapshotManager.deleteSnapshot(resolvedOutputDir, orphan);
-					console.log(`🗑️  DELETED ORPHAN: ${orphan}`);
-				} catch {
-					// File already doesn't exist, ignore
-				}
-			}),
-		);
-
-		// Remove empty subdirectories after file deletion
-		if (orphanedFiles.length > 0) {
-			const dirs = new Set<string>();
-			for (const orphan of orphanedFiles) {
-				const dir = path.dirname(orphan);
-				if (dir !== ".") {
-					dirs.add(dir);
-				}
-			}
-			// Sort deepest-first so child dirs are removed before parents
-			const sortedDirs = [...dirs].sort((a, b) => b.split("/").length - a.split("/").length);
-			for (const dir of sortedDirs) {
-				const fullDir = path.join(resolvedOutputDir, dir);
-				try {
-					const entries = await fs.promises.readdir(fullDir);
-					if (entries.length === 0) {
-						await fs.promises.rmdir(fullDir);
-						console.log(`🗑️  REMOVED EMPTY DIR: ${dir}`);
-					}
-				} catch {
-					// Directory doesn't exist or can't be read, ignore
-				}
-			}
-		}
-	} catch {
-		// readdir failed (outputDir doesn't exist), ignore
-	}
-
-	console.log(`✅ Generated ${fileCount} API documentation files for ${packageName}`);
+	return crossLinkData;
 }
 
 /**
