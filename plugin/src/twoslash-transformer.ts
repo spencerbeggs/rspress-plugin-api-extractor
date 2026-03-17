@@ -1,4 +1,5 @@
 import { rendererRich, transformerTwoslash } from "@shikijs/twoslash";
+import { Effect, Metric } from "effect";
 import type { ElementContent } from "hast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toHast } from "mdast-util-to-hast";
@@ -7,7 +8,7 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type ts from "typescript";
 import type { DebugLogger } from "./debug-logger.js";
-import type { TwoslashErrorStatsCollector } from "./twoslash-error-stats.js";
+import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { TypeResolutionCompilerOptions } from "./types.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
 
@@ -280,27 +281,25 @@ function renderMarkdownInline(markdown: string, context: string): ElementContent
  *
  * **Error Handling:**
  * TypeScript errors in code blocks are captured (not thrown) and:
- * - Recorded in {@link TwoslashErrorStatsCollector} for aggregate reporting
- * - Logged inline at DEBUG level via {@link Logger}
+ * - Counted via Effect Metric (BuildMetrics.twoslashErrors)
+ * - Logged inline at DEBUG level via {@link DebugLogger}
  * - Displayed in the rendered output as error annotations
  *
  * **Relationships:**
  * - Initialized by {@link ApiExtractorPlugin} in the beforeBuild hook
  * - Receives VFS from {@link TypeRegistryLoader}
- * - Works with {@link TwoslashErrorStatsCollector} for error tracking
  * - The transformer is used by page generators for rendering code blocks
  *
  * @example
  * ```ts
  * const manager = TwoslashManager.getInstance();
- * manager.initialize(vfs, errorStats, logger);
+ * manager.initialize(vfs, undefined, logger);
  *
  * const transformer = manager.getTransformer();
  * // Use transformer with Shiki highlighter
  * ```
  *
  * @see {@link TypeRegistryLoader} for VFS generation
- * @see {@link TwoslashErrorStatsCollector} for error tracking
  */
 export class TwoslashManager {
 	private static instance: TwoslashManager | null = null;
@@ -309,11 +308,6 @@ export class TwoslashManager {
 	 * Twoslash transformer instance
 	 */
 	private transformer: ShikiTransformer | null = null;
-
-	/**
-	 * Error stats collector instance
-	 */
-	private errorStatsCollector: TwoslashErrorStatsCollector | null = null;
 
 	/**
 	 * Logger instance for inline error reporting
@@ -340,19 +334,18 @@ export class TwoslashManager {
 	 * This enables type-aware documentation with hover information and IntelliSense.
 	 *
 	 * @param vfs - Virtual file system mapping file paths to .d.ts content
-	 * @param errorStatsCollector - Optional collector for tracking Twoslash errors
+	 * @param _reserved - Reserved parameter (previously errorStatsCollector, now tracked via Effect Metrics)
 	 * @param logger - Optional logger for inline error reporting
 	 * @param tsEnvCache - TypeScript virtual environment cache for reusing language services
 	 * @param compilerOptions - TypeScript compiler options for Twoslash (defaults to DEFAULT_COMPILER_OPTIONS)
 	 */
 	public initialize(
 		vfs: VirtualFileSystem,
-		errorStatsCollector?: TwoslashErrorStatsCollector,
+		_reserved?: undefined,
 		logger?: DebugLogger,
 		tsEnvCache?: Map<string, VirtualTypeScriptEnvironment>,
 		compilerOptions?: TypeResolutionCompilerOptions,
 	): void {
-		this.errorStatsCollector = errorStatsCollector || null;
 		this.logger = logger || null;
 		// Convert VFS Map to record for Twoslash extraFiles
 		const extraFiles: Record<string, string> = {};
@@ -402,32 +395,14 @@ export class TwoslashManager {
 			throws: false,
 			// Log when transforming
 			onTwoslashError: (error: unknown, code: string): void => {
-				// Record error in stats collector if available
-				if (this.errorStatsCollector) {
-					this.errorStatsCollector.recordError(error, code);
+				// Increment Effect Metric counter for aggregate tracking
+				Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
 
-					// Log inline at DEBUG level if logger is available
-					if (this.logger) {
-						this.errorStatsCollector.logError(this.logger, error, code);
-					}
-				} else if (this.logger) {
-					// Fallback to logger if no collector but logger available
+				// Log inline at DEBUG level if logger is available
+				if (this.logger) {
 					const errorMsg = error instanceof Error ? error.message : String(error);
-					const stack = error instanceof Error ? error.stack : undefined;
 					this.logger.debug(`🔴 Twoslash error: ${errorMsg}`);
-					if (stack) {
-						this.logger.debug(`   Stack: ${stack.split("\n").slice(0, 3).join("\n   ")}`);
-					}
 					this.logger.debug(`   Code (first 200 chars): ${code.substring(0, 200).replace(/\n/g, " ")}`);
-				} else {
-					// Ultimate fallback to console logging if no collector or logger
-					const errorMsg = error instanceof Error ? error.message : String(error);
-					const stack = error instanceof Error ? error.stack : undefined;
-					console.error("🔴 Twoslash error:", errorMsg);
-					if (stack) {
-						console.error("   Stack:", stack.split("\n").slice(0, 3).join("\n   "));
-					}
-					console.error("   Code (first 200 chars):", code.substring(0, 200).replace(/\n/g, " "));
 				}
 			},
 		});

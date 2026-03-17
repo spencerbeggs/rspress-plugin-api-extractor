@@ -51,7 +51,6 @@ import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
-import { TwoslashErrorStatsCollector } from "./twoslash-error-stats.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import { TypeReferenceExtractor } from "./type-reference-extractor.js";
 import { TypeRegistryLoader } from "./type-registry-loader.js";
@@ -251,7 +250,6 @@ async function generateApiDocs(
 	ogResolver: OpenGraphResolver | null,
 	logger: DebugLogger,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-	twoslashErrorStats: TwoslashErrorStatsCollector,
 	perfManager?: PerformanceManager,
 	highlighter?: Highlighter,
 	hideCutTransformer?: ShikiTransformer,
@@ -559,17 +557,7 @@ async function generateApiDocs(
 
 			// Use qualified name for namespace members, otherwise use display name
 			const itemName = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
-
-			// Set error context for this page. Note: this uses shared mutable state on the
-			// stats collector, which can interleave with other parallel workers. However,
-			// the onTwoslashError callback in the transformer reads this.currentContext
-			// and cannot receive per-worker context directly. Errors are rare in practice.
 			const pageFilePath = `${categoryConfig.folderName}/${itemName}.mdx`;
-			twoslashErrorStats.setContext({
-				file: pageFilePath,
-				api: apiName,
-				version: packageJson?.version,
-			});
 
 			// Count members for debug logging
 			const memberCount = "members" in item ? (item.members as unknown[]).length : 0;
@@ -1261,7 +1249,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 	// Stats collectors with callbacks (initialized after debugLogger is available)
 	let statsCollector: CodeBlockStatsCollector;
-	let twoslashErrorStats: TwoslashErrorStatsCollector;
 	// Shiki highlighter (initialized once in beforeBuild)
 	let shikiHighlighter: Highlighter | undefined;
 
@@ -1311,10 +1298,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				slowThreshold: slowCodeBlockThreshold,
 				onSlowBlock: (data: { blockType: string; durationMs: number; file?: string; thresholdMs: number }): void =>
 					debugLogger.codeBlockSlow(data),
-			});
-			twoslashErrorStats = new TwoslashErrorStatsCollector({
-				onError: (data: { file?: string; errorCode?: string; errorMessage: string; codeSnippet: string }): void =>
-					debugLogger.twoslashError(data),
 			});
 			// Clear file context map for this build
 			fileContextMap.clear();
@@ -1779,7 +1762,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				const twoslashStartMs = performance.now();
 				TwoslashManager.getInstance().initialize(
 					combinedVfs,
-					twoslashErrorStats,
+					undefined,
 					debugLogger,
 					tsEnvCache,
 					resolvedCompilerOptions,
@@ -1867,7 +1850,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 						ogResolver,
 						debugLogger,
 						fileContextMap,
-						twoslashErrorStats,
 						perfManager,
 						shikiHighlighter,
 						hideCutTransformer,
@@ -1911,8 +1893,8 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 		async afterBuild(): Promise<void> {
 			// Get summaries
 			const codeBlockSummary = statsCollector.getSummary();
-			const twoslashSummary = twoslashErrorStats.getSummary();
-			// Prettier error count is now tracked via Effect Metrics
+			// Twoslash and Prettier error counts are now tracked via Effect Metrics
+			const twoslashErrorCount = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors)).count;
 			const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
 
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
@@ -1920,12 +1902,14 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Log statistics summaries
 				// NOTE: file stats summary deferred to logBuildSummary (wired in Task 7)
 				statsCollector.logSummary(debugLogger);
-				twoslashErrorStats.logSummary(debugLogger);
+				if (twoslashErrorCount > 0) {
+					debugLogger.info(`🔴 Twoslash errors: ${twoslashErrorCount} error(s) in code blocks`);
+				}
 
 				// Emit summary events to debug logger
 				debugLogger.codeBlockStatsSummary(codeBlockSummary);
 				debugLogger.errorStatsSummary({
-					twoslash: twoslashSummary,
+					twoslash: { total: twoslashErrorCount },
 					prettier: { total: prettierErrorCount },
 				});
 
@@ -1935,7 +1919,7 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					summary: {
 						files: 0, // TODO: read from Effect Metrics in Task 7
 						pages: 0, // TODO: read from Effect Metrics in Task 7
-						errors: twoslashSummary.total + prettierErrorCount,
+						errors: twoslashErrorCount + prettierErrorCount,
 					},
 				});
 
@@ -2045,7 +2029,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					getTransformer: () => TwoslashManager.getInstance().getTransformer(),
 					logger: debugLogger,
 					statsCollector,
-					twoslashErrorStats,
 					perfManager,
 					theme: remarkTheme,
 				},

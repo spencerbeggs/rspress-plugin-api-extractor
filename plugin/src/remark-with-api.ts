@@ -1,4 +1,3 @@
-import * as path from "node:path";
 import type { Code, Parent, Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import type { ShikiTransformer } from "shiki";
@@ -13,7 +12,6 @@ import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
 import type { PerformanceManager } from "./performance-manager.js";
 import { formatCode } from "./prettier-formatter.js";
 import type { ShikiCrossLinker } from "./shiki-transformer.js";
-import type { TwoslashErrorStatsCollector } from "./twoslash-error-stats.js";
 
 /**
  * Supported languages for with-api code blocks
@@ -51,7 +49,6 @@ interface RemarkWithApiOptions {
 	getTransformer: () => ShikiTransformer | null;
 	logger?: DebugLogger;
 	statsCollector?: CodeBlockStatsCollector;
-	twoslashErrorStats?: TwoslashErrorStatsCollector;
 	perfManager?: PerformanceManager;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
@@ -74,7 +71,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const { shikiCrossLinker, getTransformer, logger, statsCollector, twoslashErrorStats, perfManager, theme } = options;
+	const { shikiCrossLinker, getTransformer, logger, statsCollector, perfManager, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -121,20 +118,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				perfManager?.mark(`code.block.${blockId}.start`);
 
 				const rawCode = node.value;
-
-				// Set context for error collectors
-				if (currentFilePath) {
-					const relativePath = path.basename(currentFilePath);
-					const apiScope = inferApiScope(currentFilePath);
-
-					if (twoslashErrorStats) {
-						twoslashErrorStats.setContext({
-							file: relativePath,
-							api: apiScope,
-							blockType: "with-api",
-						});
-					}
-				}
 
 				// Format code with Prettier for consistent styling
 				const formatResult = await formatCode(rawCode, lang, logger);
@@ -242,11 +225,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 						parent.children[index] = mdxNode;
 						needsApiExampleImport = true;
 					}
-				}
-
-				// Clear error contexts after processing this block
-				if (twoslashErrorStats) {
-					twoslashErrorStats.clearContext();
 				}
 			})();
 
