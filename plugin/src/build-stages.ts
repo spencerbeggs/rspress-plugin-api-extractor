@@ -518,3 +518,147 @@ export async function generatePages(input: GeneratePagesInput): Promise<(Generat
 		},
 	);
 }
+
+export interface WriteFilesInput {
+	readonly pages: readonly (GeneratedPageResult | null)[];
+	readonly resolvedOutputDir: string;
+	readonly baseRoute: string;
+	readonly buildTime: string;
+	readonly pageConcurrency: number;
+	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
+	readonly siteUrl?: string;
+	readonly ogImage?: import("./types.js").OpenGraphImageConfig;
+	readonly packageName?: string;
+	readonly apiName?: string;
+}
+
+/**
+ * Write changed files to disk, resolving OG metadata where configured,
+ * and return FileWriteResult[] for metadata/snapshot tracking.
+ *
+ * For each GeneratedPageResult:
+ * - If unchanged: skip write, increment metrics, return status "unchanged"
+ * - If changed:
+ *   1. Optionally resolve OG metadata and regenerate frontmatter
+ *   2. Write the file to disk (creating directories as needed)
+ *   3. Determine status: "new" if file didn't exist, "modified" if it did
+ *   4. Increment appropriate metrics
+ */
+export async function writeFiles(input: WriteFilesInput): Promise<FileWriteResult[]> {
+	const { pages, resolvedOutputDir, buildTime, pageConcurrency, ogResolver, siteUrl, ogImage, packageName, apiName } =
+		input;
+
+	// Filter out null results
+	const validPages = pages.filter((p): p is GeneratedPageResult => p !== null);
+
+	return parallelLimit(validPages, pageConcurrency, async (result: GeneratedPageResult): Promise<FileWriteResult> => {
+		const {
+			workItem,
+			bodyContent,
+			frontmatter,
+			contentHash,
+			frontmatterHash,
+			publishedTime,
+			modifiedTime,
+			isUnchanged,
+			routePath,
+			relativePathWithExt,
+		} = result;
+		const { item, categoryKey, categoryConfig, namespaceMember } = workItem;
+
+		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
+
+		// Use qualified name for namespace members
+		const label = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
+
+		const snapshot: FileSnapshot = {
+			outputDir: resolvedOutputDir,
+			filePath: relativePathWithExt,
+			publishedTime,
+			modifiedTime,
+			contentHash,
+			frontmatterHash,
+			buildTime,
+		};
+
+		// Handle unchanged files - skip write
+		if (isUnchanged) {
+			Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+			Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
+
+			return {
+				relativePathWithExt,
+				absolutePath,
+				status: "unchanged",
+				snapshot,
+				categoryKey,
+				label,
+				routePath,
+			};
+		}
+
+		// Build final file content
+		let finalContent = matter.stringify(bodyContent, frontmatter);
+
+		if (ogResolver && siteUrl && packageName) {
+			// Resolve OG image metadata (auto-detect dimensions from local files if possible)
+			const ogImageMetadata = await ogResolver.resolve(ogImage, packageName, apiName);
+
+			const { OpenGraphResolver } = await import("./og-resolver.js");
+			const ogMetadata = OpenGraphResolver.createPageMetadata({
+				siteUrl,
+				pageRoute: routePath,
+				description: frontmatter.description as string,
+				publishedTime,
+				modifiedTime,
+				section: categoryConfig.displayName,
+				packageName,
+				ogImage: ogImageMetadata,
+			});
+
+			// Regenerate frontmatter with OG metadata
+			const { generateFrontmatter } = await import("./markdown/helpers.js");
+			const newFrontmatter = generateFrontmatter(
+				item.displayName,
+				frontmatter.description as string,
+				categoryConfig.singularName,
+				apiName,
+				ogMetadata,
+			);
+
+			// Combine new frontmatter with body content
+			finalContent = newFrontmatter + bodyContent;
+		}
+
+		// Check if file exists before writing to determine status
+		const fileExisted = await fs.promises
+			.access(absolutePath)
+			.then(() => true)
+			.catch(() => false);
+
+		// Ensure directory exists and write the file
+		const dirPath = path.dirname(absolutePath);
+		await fs.promises.mkdir(dirPath, { recursive: true });
+		await fs.promises.writeFile(absolutePath, finalContent, "utf-8");
+
+		const status: "new" | "modified" = fileExisted ? "modified" : "new";
+
+		// Increment metrics
+		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+		if (status === "new") {
+			Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+		} else {
+			Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+		}
+
+		return {
+			relativePathWithExt,
+			absolutePath,
+			status,
+			snapshot,
+			categoryKey,
+			label,
+			routePath,
+		};
+	});
+}

@@ -1,7 +1,9 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { FileWriteResult, GeneratedPageResult, WorkItem } from "../src/build-stages.js";
-import { generatePages, prepareWorkItems } from "../src/build-stages.js";
+import { generatePages, prepareWorkItems, writeFiles } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
 import { ApiModelLoader } from "../src/model-loader.js";
 import { DEFAULT_CATEGORIES } from "../src/types.js";
@@ -173,5 +175,80 @@ describe("generatePages", () => {
 		if (!secondResult) throw new Error("Expected second result to be non-null");
 		expect(secondResult.isUnchanged).toBe(true);
 		expect(secondResult.publishedTime).toBe("2025-01-01T00:00:00.000Z");
+	});
+});
+
+describe("writeFiles", () => {
+	it("writes changed files and skips unchanged files", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "build-stages-"));
+
+		const changedPage: GeneratedPageResult = {
+			workItem: {
+				item: { displayName: "Foo" } as GeneratedPageResult["workItem"]["item"],
+				categoryKey: "classes",
+				categoryConfig: {
+					folderName: "class",
+					displayName: "Classes",
+					singularName: "Class",
+				} as GeneratedPageResult["workItem"]["categoryConfig"],
+			},
+			content: "---\ntitle: Foo\n---\n# Foo\n",
+			bodyContent: "# Foo\n",
+			frontmatter: { title: "Foo" },
+			contentHash: "abc123",
+			frontmatterHash: "def456",
+			routePath: "/example-module/class/foo",
+			relativePathWithExt: "class/foo.mdx",
+			publishedTime: "2025-01-01T00:00:00.000Z",
+			modifiedTime: "2025-01-01T00:00:00.000Z",
+			isUnchanged: false,
+		};
+
+		const unchangedPage: GeneratedPageResult = {
+			workItem: {
+				item: { displayName: "Bar" } as GeneratedPageResult["workItem"]["item"],
+				categoryKey: "classes",
+				categoryConfig: {
+					folderName: "class",
+					displayName: "Classes",
+					singularName: "Class",
+				} as GeneratedPageResult["workItem"]["categoryConfig"],
+			},
+			content: "---\ntitle: Bar\n---\n# Bar\n",
+			bodyContent: "# Bar\n",
+			frontmatter: { title: "Bar" },
+			contentHash: "abc123",
+			frontmatterHash: "def456",
+			routePath: "/example-module/class/bar",
+			relativePathWithExt: "class/bar.mdx",
+			publishedTime: "2025-01-01T00:00:00.000Z",
+			modifiedTime: "2025-01-01T00:00:00.000Z",
+			isUnchanged: true,
+		};
+
+		const results = await writeFiles({
+			pages: [changedPage, unchangedPage],
+			resolvedOutputDir: tmpDir,
+			baseRoute: "/example-module",
+			buildTime: new Date().toISOString(),
+			pageConcurrency: 2,
+		});
+
+		expect(results).toHaveLength(2);
+
+		const changedResult = results.find((r: FileWriteResult) => r.relativePathWithExt === "class/foo.mdx");
+		expect(changedResult?.status).toBe("new");
+
+		const unchangedResult = results.find((r: FileWriteResult) => r.relativePathWithExt === "class/bar.mdx");
+		expect(unchangedResult?.status).toBe("unchanged");
+
+		const filePath = path.join(tmpDir, "class/foo.mdx");
+		const exists = await fs.promises
+			.access(filePath)
+			.then(() => true)
+			.catch(() => false);
+		expect(exists).toBe(true);
+
+		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
