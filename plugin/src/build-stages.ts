@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import type {
@@ -970,33 +969,37 @@ export interface CleanupAndCommitInput {
  *    generatedFiles, delete it from disk and remove its snapshot.
  * 4. After deleting orphans, remove empty subdirectories deepest-first.
  */
-export async function cleanupAndCommit(input: CleanupAndCommitInput): Promise<void> {
-	const { fileResults, snapshotManager, resolvedOutputDir, generatedFiles } = input;
+export function cleanupAndCommit(input: CleanupAndCommitInput): Effect.Effect<void, never, FileSystem.FileSystem> {
+	return Effect.gen(function* () {
+		const fileSystem = yield* FileSystem.FileSystem;
+		const { fileResults, snapshotManager, resolvedOutputDir, generatedFiles } = input;
 
-	// 1. Batch-upsert snapshots for written (non-unchanged) files only
-	const snapshotsToUpdate = fileResults.filter((r) => r.status !== "unchanged").map((r) => r.snapshot);
+		// 1. Batch-upsert snapshots for written (non-unchanged) files only
+		const snapshotsToUpdate = fileResults.filter((r) => r.status !== "unchanged").map((r) => r.snapshot);
 
-	if (snapshotsToUpdate.length > 0) {
-		snapshotManager.batchUpsertSnapshots(snapshotsToUpdate);
-	}
+		if (snapshotsToUpdate.length > 0) {
+			yield* Effect.sync(() => snapshotManager.batchUpsertSnapshots(snapshotsToUpdate));
+		}
 
-	// 2. Stale file cleanup: files in DB but not generated in this build
-	const staleFiles: string[] = snapshotManager.cleanupStaleFiles(resolvedOutputDir, generatedFiles as Set<string>);
-	await Promise.all(
-		staleFiles.map(async (staleFile) => {
-			const fullPath = path.join(resolvedOutputDir, staleFile);
-			try {
-				await fs.promises.unlink(fullPath);
-				console.log(`🗑️  DELETED STALE: ${staleFile}`);
-			} catch {
-				// File already doesn't exist, ignore
-			}
-		}),
-	);
+		// 2. Stale file cleanup: files in DB but not generated in this build
+		const staleFiles: string[] = yield* Effect.sync(() =>
+			snapshotManager.cleanupStaleFiles(resolvedOutputDir, generatedFiles as Set<string>),
+		);
+		yield* Effect.forEach(
+			staleFiles,
+			(staleFile) =>
+				Effect.gen(function* () {
+					const fullPath = path.join(resolvedOutputDir, staleFile);
+					yield* fileSystem.remove(fullPath).pipe(Effect.ignore);
+					yield* Effect.logDebug(`🗑️  DELETED STALE: ${staleFile}`);
+				}),
+			{ concurrency: "unbounded" },
+		);
 
-	// 3. Orphan file cleanup: files on disk not tracked in generatedFiles
-	try {
-		const allFiles = await fs.promises.readdir(resolvedOutputDir, { recursive: true });
+		// 3. Orphan file cleanup: files on disk not tracked in generatedFiles
+		const allFiles = yield* fileSystem
+			.readDirectory(resolvedOutputDir, { recursive: true })
+			.pipe(Effect.orElseSucceed(() => [] as string[]));
 		const orphanedFiles: string[] = [];
 		for (const entry of allFiles) {
 			const relPath = typeof entry === "string" ? entry : String(entry);
@@ -1010,17 +1013,16 @@ export async function cleanupAndCommit(input: CleanupAndCommitInput): Promise<vo
 		}
 
 		// Delete orphaned files from disk and snapshot DB
-		await Promise.all(
-			orphanedFiles.map(async (orphan) => {
-				const fullPath = path.join(resolvedOutputDir, orphan);
-				try {
-					await fs.promises.unlink(fullPath);
-					snapshotManager.deleteSnapshot(resolvedOutputDir, orphan);
-					console.log(`🗑️  DELETED ORPHAN: ${orphan}`);
-				} catch {
-					// File already doesn't exist, ignore
-				}
-			}),
+		yield* Effect.forEach(
+			orphanedFiles,
+			(orphan) =>
+				Effect.gen(function* () {
+					const fullPath = path.join(resolvedOutputDir, orphan);
+					yield* fileSystem.remove(fullPath).pipe(Effect.ignore);
+					yield* Effect.sync(() => snapshotManager.deleteSnapshot(resolvedOutputDir, orphan));
+					yield* Effect.logDebug(`🗑️  DELETED ORPHAN: ${orphan}`);
+				}),
+			{ concurrency: "unbounded" },
 		);
 
 		// 4. Remove empty subdirectories after file deletion (deepest-first)
@@ -1036,20 +1038,16 @@ export async function cleanupAndCommit(input: CleanupAndCommitInput): Promise<vo
 			const sortedDirs = [...dirs].sort((a, b) => b.split("/").length - a.split("/").length);
 			for (const dir of sortedDirs) {
 				const fullDir = path.join(resolvedOutputDir, dir);
-				try {
-					const entries = await fs.promises.readdir(fullDir);
-					if (entries.length === 0) {
-						await fs.promises.rmdir(fullDir);
-						console.log(`🗑️  REMOVED EMPTY DIR: ${dir}`);
-					}
-				} catch {
-					// Directory doesn't exist or can't be read, ignore
+				const entries = yield* fileSystem
+					.readDirectory(fullDir)
+					.pipe(Effect.orElseSucceed(() => ["placeholder"] as string[]));
+				if (entries.length === 0) {
+					yield* fileSystem.remove(fullDir).pipe(Effect.ignore);
+					yield* Effect.logDebug(`🗑️  REMOVED EMPTY DIR: ${dir}`);
 				}
 			}
 		}
-	} catch {
-		// readdir failed (outputDir doesn't exist), ignore
-	}
+	});
 }
 
 export interface BuildPipelineInput {

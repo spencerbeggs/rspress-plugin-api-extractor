@@ -203,12 +203,14 @@ async function generateApiDocs(
 	);
 
 	// Phase 5: Cleanup and commit snapshots
-	await cleanupAndCommit({
-		fileResults,
-		snapshotManager,
-		resolvedOutputDir,
-		generatedFiles,
-	});
+	await Effect.runPromise(
+		cleanupAndCommit({
+			fileResults,
+			snapshotManager,
+			resolvedOutputDir,
+			generatedFiles,
+		}).pipe(Effect.provide(NodeFileSystem.layer)),
+	);
 
 	const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
 	console.log(`✅ Generated ${changedCount} API documentation files for ${packageName}`);

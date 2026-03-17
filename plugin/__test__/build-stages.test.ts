@@ -439,12 +439,14 @@ describe("cleanupAndCommit", () => {
 			},
 		];
 
-		await cleanupAndCommit({
-			fileResults: results,
-			snapshotManager,
-			resolvedOutputDir: tmpDir,
-			generatedFiles: new Set(["class/foo.mdx", "class/bar.mdx"]),
-		});
+		await Effect.runPromise(
+			cleanupAndCommit({
+				fileResults: results,
+				snapshotManager,
+				resolvedOutputDir: tmpDir,
+				generatedFiles: new Set(["class/foo.mdx", "class/bar.mdx"]),
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		// Only written file should have a snapshot (not unchanged)
 		const snapshots = snapshotManager.getSnapshotsForOutputDir(tmpDir);
@@ -464,12 +466,14 @@ describe("cleanupAndCommit", () => {
 		await fs.promises.mkdir(orphanDir, { recursive: true });
 		await fs.promises.writeFile(path.join(orphanDir, "orphan.mdx"), "old content");
 
-		await cleanupAndCommit({
-			fileResults: [],
-			snapshotManager,
-			resolvedOutputDir: tmpDir,
-			generatedFiles: new Set(),
-		});
+		await Effect.runPromise(
+			cleanupAndCommit({
+				fileResults: [],
+				snapshotManager,
+				resolvedOutputDir: tmpDir,
+				generatedFiles: new Set(),
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		const exists = await fs.promises
 			.access(path.join(orphanDir, "orphan.mdx"))
