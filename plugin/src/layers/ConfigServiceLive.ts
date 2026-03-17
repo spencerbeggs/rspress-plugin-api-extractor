@@ -103,9 +103,9 @@ export function ConfigServiceLive(options: ApiExtractorPluginOptions): Layer.Lay
 		getPluginConfig: Effect.succeed({
 			mode: options.apis ? "multi" : "single",
 			apis: [],
-			logLevel: options.logLevel ?? "info",
-			pageConcurrency: options.pageConcurrency ?? os.cpus().length,
-		} satisfies ValidatedPluginConfig),
+			logLevel: (options.logLevel === "none" ? "info" : options.logLevel) ?? "info",
+			pageConcurrency: os.cpus().length,
+		} as ValidatedPluginConfig),
 		validateMultiVersion: (rspressVersions: ReadonlyArray<string>, defaultVersion: string) =>
 			validateOptions(options, {
 				multiVersion: { versions: [...rspressVersions], default: defaultVersion },
