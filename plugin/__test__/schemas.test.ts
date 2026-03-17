@@ -1,6 +1,12 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { OpenGraphImageConfig, OpenGraphImageMetadata, OpenGraphMetadata } from "../src/schemas/index.js";
+import {
+	OpenGraphImageConfig,
+	OpenGraphImageMetadata,
+	OpenGraphMetadata,
+	PerformanceConfig,
+	PerformanceThresholds,
+} from "../src/schemas/index.js";
 
 describe("OpenGraph schemas", () => {
 	it("decodes OpenGraphImageMetadata", () => {
@@ -48,5 +54,32 @@ describe("OpenGraph schemas", () => {
 		});
 		expect(result.siteUrl).toBe("https://example.com");
 		expect(result.tags).toHaveLength(2);
+	});
+});
+
+describe("Performance schemas", () => {
+	it("decodes PerformanceThresholds with defaults", () => {
+		const decode = Schema.decodeUnknownSync(PerformanceThresholds);
+		const result = decode({});
+		expect(result.slowCodeBlock).toBe(100);
+		expect(result.slowPageGeneration).toBe(500);
+		expect(result.slowApiLoad).toBe(1000);
+		expect(result.slowFileOperation).toBe(50);
+		expect(result.slowHttpRequest).toBe(2000);
+		expect(result.slowDbOperation).toBe(100);
+	});
+
+	it("decodes PerformanceThresholds with overrides", () => {
+		const decode = Schema.decodeUnknownSync(PerformanceThresholds);
+		const result = decode({ slowCodeBlock: 200 });
+		expect(result.slowCodeBlock).toBe(200);
+		expect(result.slowPageGeneration).toBe(500);
+	});
+
+	it("decodes PerformanceConfig with defaults", () => {
+		const decode = Schema.decodeUnknownSync(PerformanceConfig);
+		const result = decode({});
+		expect(result.showInsights).toBe(true);
+		expect(result.trackDetailedMetrics).toBe(false);
 	});
 });
