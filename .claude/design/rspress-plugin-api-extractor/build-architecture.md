@@ -3,12 +3,15 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-01-17
-last-synced: 2026-01-17
+updated: 2026-03-17
+last-synced: 2026-03-17
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
   - rspress-plugin-api-extractor/ssg-compatible-components.md
+  - rspress-plugin-api-extractor/snapshot-tracking-system.md
+  - rspress-plugin-api-extractor/page-generation-system.md
+  - rspress-plugin-api-extractor/performance-observability.md
 dependencies: []
 ---
 
@@ -17,42 +20,42 @@ dependencies: []
 ## Table of Contents
 
 - [Overview](#overview)
-- [Current State](#current-state)
-- [Rationale](#rationale)
-- [Implementation Details](#implementation-details)
-- [Build Configuration](#build-configuration)
+- [Dual-Bundle Architecture](#dual-bundle-architecture)
+- [Effect Service Layer](#effect-service-layer)
+- [Plugin Lifecycle](#plugin-lifecycle)
+- [Configuration System](#configuration-system)
+- [Build Tooling](#build-tooling)
 - [Development Workflow](#development-workflow)
 
 ## Overview
 
 The rspress-plugin-api-extractor uses a **dual-build architecture** that
-separates Node.js plugin code from React runtime components. This separation
-enables optimal bundling strategies for each environment and prevents
-runtime issues with CSS imports.
+separates Node.js plugin code from React runtime components, combined
+with an **Effect service layer** for doc generation orchestration.
 
-## Current State
+The plugin entry point (`plugin.ts`) is a thin RSPress adapter (252 lines)
+that wires Effect services and delegates all doc generation to
+`build-program.ts` and `build-stages.ts`.
 
-### Architecture Components
+## Dual-Bundle Architecture
 
-The plugin is split into two distinct bundles:
+### 1. Plugin Bundle (Node.js)
 
-#### 1. Plugin Bundle (Node.js)
-
-**Location:** `src/plugin.ts`, `src/markdown.ts`, `src/transformer.ts`
-**Output:** `dist/index.js` (117.5 kB)
+**Entry:** `src/index.ts` (re-exports `src/plugin.ts`)
+**Output:** `dist/index.js`
 **Environment:** Node.js (RSPress build process)
 
 **Purpose:**
 
-- Generates MDX files from API Extractor models
-- Configures RSPress markdown processing
-- Registers Shiki transformers for code block cross-linking
-- Manages external package type loading via `type-registry-effect`
+- RSPress plugin lifecycle hooks (config, beforeBuild, afterBuild)
+- Effect service layer initialization and runtime management
+- API documentation generation via build pipeline
+- Remark plugins for code block processing
 
-#### 2. Runtime Bundle (React/Browser)
+### 2. Runtime Bundle (React/Browser)
 
-**Location:** `src/runtime/`
-**Output:** `dist/runtime/index.js` (18.0 kB) + `dist/runtime/index.css` (21.7 kB)
+**Entry:** `src/runtime/index.tsx`
+**Output:** `dist/runtime/index.js` + `dist/runtime/index.css`
 **Environment:** Browser (RSPress SSG and client-side)
 
 **Purpose:**
@@ -64,246 +67,264 @@ The plugin is split into two distinct bundles:
 ### Build Tooling
 
 **Bundler:** Rslib (Rsbuild-based library bundler)
-**TypeScript:** tsgo (experimental native TypeScript compiler) via API Extractor
-**Module System:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`
+**Module System:** ESM with `"module": "esnext"` and
+`"moduleResolution": "bundler"`
 **CSS Processing:** Sass plugin with automatic import injection
 
-### Bundle Sizes
+## Effect Service Layer
+
+### Service Architecture
+
+The plugin uses Effect's Context/Layer/Tag pattern for dependency injection:
 
 ```text
-Plugin (Node.js): 117.5 kB JS + 14 KB types
-Runtime (React):  18.0 kB JS + 3.1 KB types + 21.7 kB CSS
-Total: ~175 kB (bundled and optimized)
+plugin.ts (RSPress adapter, 252 lines)
+  |
+  +-> EffectAppLayer (composed Layer stack)
+  |     |
+  |     +-> ConfigServiceLive
+  |     |     Resolves plugin options + RSPress config
+  |     |     into ResolvedBuildContext
+  |     |
+  |     +-> SnapshotServiceLive
+  |     |     SQLite via @effect/sql-sqlite-node
+  |     |     Managed migrations, WAL lifecycle
+  |     |
+  |     +-> TypeRegistryServiceLive
+  |     |     External package type loading
+  |     |
+  |     +-> PathDerivationServiceLive
+  |     |     Route and output path computation
+  |     |
+  |     +-> PluginLoggerLayer
+  |     |     Custom Effect Logger + log level
+  |     |
+  |     +-> NodeFileSystem.layer
+  |           @effect/platform cross-platform file I/O
+  |
+  +-> ManagedRuntime.make(EffectAppLayer)
+        Single runtime instance, shared across hooks
 ```
 
-## Rationale
+### Service Interfaces
 
-### Why Dual Bundles?
+| Service | Location | Purpose |
+| --- | --- | --- |
+| `ConfigService` | `services/ConfigService.ts` | Resolve options into build context |
+| `SnapshotService` | `services/SnapshotService.ts` | Incremental build tracking |
+| `TypeRegistryService` | `services/TypeRegistryService.ts` | External type loading |
+| `PathDerivationService` | `services/PathDerivationService.ts` | Path computation |
 
-**Environment Separation:**
-The plugin code runs in Node.js during the RSPress build process, while
-runtime components execute in the browser during SSG and client-side
-rendering. Separating these concerns allows:
+### Layer Implementations
 
-- **Optimized Dependencies:** Node.js-specific code (file system,
-  Effect-TS services) stays out of the browser bundle
-- **Smaller Client Bundle:** Runtime bundle contains only React components and styles
-- **Better Tree Shaking:** Build tools can eliminate unused code more effectively
+| Layer | Location | Key Dependencies |
+| --- | --- | --- |
+| `ConfigServiceLive` | `layers/ConfigServiceLive.ts` | PathDerivation, TypeRegistry |
+| `SnapshotServiceLive` | `layers/SnapshotServiceLive.ts` | `@effect/sql-sqlite-node` |
+| `TypeRegistryServiceLive` | `layers/TypeRegistryServiceLive.ts` | `type-registry-effect` |
+| `PathDerivationServiceLive` | `layers/PathDerivationServiceLive.ts` | (none) |
+| `PluginLoggerLayer` | `layers/ObservabilityLive.ts` | Effect Logger |
 
-**CSS Import Issues:**
-RSPress's `globalComponents` feature causes issues with CSS imports in
-the runtime bundle during SSG. The dual-bundle approach solves this by:
+### Schema Validation
 
-- Importing components directly in generated MDX files instead of global registration
-- Ensuring CSS is properly bundled and injected via Rslib plugins
-- Following RSPress's recommended pattern (see `@rspress/plugin-llms`)
+Plugin options are defined as Effect Schemas in `schemas/`:
 
-### Why Standalone tsconfig.json?
+- `schemas/config.ts` -- `PluginOptions`, `SingleApiConfig`,
+  `MultiApiConfig`, `CategoryConfig`, `ExternalPackageSpec`, etc.
+- `schemas/opengraph.ts` -- `OpenGraphImageConfig`
+- `schemas/performance.ts` -- `PerformanceConfig`
 
-The plugin requires a standalone `tsconfig.json` because:
+Options are decoded at plugin factory time:
 
-- **Root Config Incompatibility:** The monorepo root uses
-  `"module": "node20"` which is incompatible with API Extractor's
-  bundling requirements
-- **API Extractor Requirements:** Requires `"module": "esnext"` and
-  `"moduleResolution": "bundler"` for proper type bundling
-- **Build Tool Alignment:** Rslib expects modern ESM configuration for optimal bundling
+```typescript
+export function ApiExtractorPlugin(rawOptions: PluginOptions) {
+  const options = Schema.decodeUnknownSync(PluginOptions)(rawOptions);
+  // ...
+}
+```
 
-### Why Rslib?
+## Plugin Lifecycle
 
-**Rsbuild-Based Tooling:**
-Rslib is the recommended bundler for RSPress plugins, offering:
+### Hook Execution Order
 
-- **Framework Compatibility:** First-class support for React and Sass
-- **Type Bundling:** Integration with API Extractor for `.d.ts` generation
-- **Plugin Ecosystem:** Access to Rsbuild plugins for advanced features
-- **Performance:** Fast builds with modern bundling techniques
+```text
+1. ApiExtractorPlugin(rawOptions)  -- factory
+   - Decode options via Effect Schema
+   - Create ShikiCrossLinker instance
+   - Build Layer stack and ManagedRuntime
 
-**Alternative Considered:**
-We evaluated Rollup but chose Rslib for better alignment with the
-RSPress ecosystem and superior React/Sass integration.
+2. config(rspressConfig)  -- BEFORE route scanning
+   - Pre-create output directories
+   - Run Effect program:
+     - ConfigService.resolve() loads models, creates highlighter,
+       resolves types
+     - generateApiDocs() for each API config (concurrent)
+   - Register remark plugins (remarkWithApi, remarkApiCodeblocks)
 
-## Implementation Details
+3. beforeBuild()  -- intentionally empty
+   (doc generation happens in config() to fix cold-start issues)
+
+4. afterBuild(config, isProd)
+   - Log build summary (first build only, skip HMR)
+   - Dispose runtime in production (preserves it for dev HMR)
+```
+
+### Doc Generation Pipeline
+
+The `config()` hook runs the full doc generation as an Effect program:
+
+```typescript
+await effectRuntime.runPromise(
+  Effect.gen(function* () {
+    const configSvc = yield* ConfigService;
+    const buildContext = yield* configSvc.resolve(rspressConfigSubset);
+
+    yield* Effect.forEach(
+      buildContext.apiConfigs,
+      (apiConfig) => generateApiDocs(apiConfig, buildContext, fileContextMap),
+      { concurrency: 2 },
+    );
+  }).pipe(Effect.scoped),
+);
+```
+
+### Build Program (build-program.ts)
+
+`generateApiDocs` orchestrates the 5 build stages for a single API:
+
+1. **prepareWorkItems** -- Categorize items, build cross-link data
+2. **buildPipelineForApi** (Stream) -- Generate pages and write files
+3. **writeMetadata** -- Root _meta.json, index page, category_meta.json
+4. **cleanupAndCommit** -- Batch upsert snapshots, delete stale/orphans
+
+See `page-generation-system.md` for the Stream pipeline details.
+
+### Runtime Management
+
+The `ManagedRuntime` is created once at plugin initialization and shared
+across all hooks:
+
+- **Production builds:** Runtime disposed in `afterBuild`, triggering
+  scope finalizers (SQLite WAL checkpoint, resource cleanup)
+- **Dev mode:** Runtime stays alive for HMR rebuilds. Disposing would
+  destroy the DB connection and break subsequent builds.
+
+## Configuration System
+
+### ConfigService.resolve()
+
+The `ConfigServiceLive` (`layers/ConfigServiceLive.ts`, ~600 lines)
+resolves raw plugin options + RSPress config into a `ResolvedBuildContext`:
+
+**Inputs:**
+
+- `PluginOptions` (decoded at factory time)
+- `RspressConfigSubset` (extracted from RSPress UserConfig at config time)
+
+**Outputs (`ResolvedBuildContext`):**
+
+- `apiConfigs[]` -- Fully resolved config per API (model, paths, categories)
+- `combinedVfs` -- Merged type definitions for all external packages
+- `highlighter` -- Shared Shiki highlighter instance
+- `tsEnvCache` -- TypeScript environment cache per package
+- `ogResolver` -- Open Graph image resolver
+- `shikiCrossLinker` -- Cross-linker for type references
+- `hideCutTransformer` / `hideCutLinesTransformer` -- Shiki transformers
+- `twoslashTransformer` -- Twoslash transformer (or undefined if disabled)
+- `pageConcurrency` -- Parallel page generation limit
+
+### Schema Types
+
+Key config types defined via Effect Schema:
+
+- `PluginOptions` -- Top-level plugin config
+- `SingleApiConfig` -- Config for single-API mode (`api:`)
+- `MultiApiConfig` -- Config for multi-API mode (`apis:[]`)
+- `CategoryConfig` -- API category definition (display name, folder, kinds)
+- `ExternalPackageSpec` -- External package for type loading
+- `VersionConfig` -- Multi-version configuration
+
+## Build Tooling
 
 ### Rslib Configuration
 
 ```typescript
-// rslib.config.ts
-import { defineConfig } from "@rslib/core";
-import { pluginReact } from "@rsbuild/plugin-react";
-import { pluginSass } from "@rsbuild/plugin-sass";
-
+// rslib.config.ts (simplified)
 export default defineConfig({
- lib: [
-  // Runtime bundle (React components + CSS)
-  {
-   format: "esm",
-   syntax: "es2021",
-   dts: {
-    bundle: true,
-    distPath: "./dist/runtime",
-   },
-   source: {
-    entry: { index: "./src/runtime/index.tsx" },
-   },
-   output: {
-    distPath: { root: "./dist/runtime" },
-   },
-  },
-  // Plugin bundle (Node.js)
-  {
-   format: "esm",
-   syntax: "es2021",
-   dts: {
-    bundle: true,
-    distPath: "./dist",
-   },
-   source: {
-    entry: { index: "./src/plugin.ts" },
-   },
-   output: {
-    distPath: { root: "./dist" },
-   },
-  },
- ],
- plugins: [
-  pluginReact(),
-  pluginSass(),
- ],
+  lib: [
+    // Runtime bundle (React + CSS)
+    {
+      format: "esm",
+      syntax: "es2021",
+      source: { entry: { index: "./src/runtime/index.tsx" } },
+      output: { distPath: { root: "./dist/runtime" } },
+    },
+    // Plugin bundle (Node.js)
+    {
+      format: "esm",
+      syntax: "es2021",
+      source: { entry: { index: "./src/index.ts" } },
+      output: { distPath: { root: "./dist" } },
+    },
+  ],
+  plugins: [pluginReact(), pluginSass()],
 });
 ```
 
 ### TypeScript Configuration
 
-```json
-// tsconfig.json
-{
- "extends": "../tsconfig.base.json",
- "compilerOptions": {
-  "module": "esnext",
-  "moduleResolution": "bundler",
-  "jsx": "react-jsx",
-  "skipLibCheck": true,
-  "lib": ["es2021", "dom"]
- },
- "include": ["src/**/*"],
- "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
-}
-```
+The plugin uses a standalone `tsconfig.json` with
+`"module": "esnext"` and `"moduleResolution": "bundler"` because:
 
-### Component Registration Pattern
+- Root config uses `"module": "node20"` (incompatible with API Extractor)
+- API Extractor requires `"moduleResolution": "bundler"`
 
-**IMPORTANT:** Do NOT use RSPress's `globalComponents` feature. Instead,
-import components directly in generated MDX files.
+### Component Registration
+
+Components are imported directly in generated MDX files (NOT via
+RSPress `globalComponents`):
 
 ```typescript
-// src/markdown.ts - MDX file generation
-let content = generateFrontmatter(name, summary, singularName, apiName);
-content += `import { SourceCode } from "@rspress/core/theme";\n`;
-content += `import { MemberSignature, ParametersTable, SignatureBlock } from "rspress-plugin-api-extractor/runtime";\n\n`;
-```
-
-**Why This Works:**
-
-- All generated MDX files include component imports at the top
-- Components are available without global registration
-- CSS is properly bundled with the runtime module
-- Avoids SSG issues with global CSS imports
-
-## Build Configuration
-
-### Package.json Scripts
-
-```json
-{
- "scripts": {
-  "build": "rslib build && pnpm build:api",
-  "build:api": "api-extractor run --local --verbose",
-  "dev": "rslib build --watch"
- }
-}
-```
-
-### Build Order
-
-1. **Rslib Build:** Generates both plugin and runtime bundles with type definitions
-2. **API Extractor:** Bundles TypeScript types into `.api.json` and `.d.ts` files
-
-### CSS Bundling
-
-The Sass plugin automatically:
-
-- Compiles `.scss` files to CSS
-- Injects CSS imports via BannerPlugin
-- Bundles CSS into `dist/runtime/index.css`
-
-**Important:** Twoslash styles must be imported in the runtime entry point:
-
-```typescript
-// src/runtime/index.tsx
-import "./components/shared/_twoslash.scss";
-```
-
-**Note:** Biome may try to change `.scss` to `.js` - use `sed` to fix:
-
-```bash
-sed -i '' 's/_twoslash\.js/_twoslash.scss/' src/runtime/index.tsx
+import { SignatureBlock, ParametersTable }
+  from "rspress-plugin-api-extractor/runtime";
 ```
 
 ## Development Workflow
 
 ### Local Development
 
-1. **Edit component code** in `src/runtime/components/`
-
-2. **Build the plugin:**
-
-   ```bash
-   pnpm turbo run build --filter="rspress-plugin-api-extractor"
-   ```
-
-3. **Build the website** to test changes:
-
-   ```bash
-   pnpm turbo run build --filter="website"
-   ```
-
-4. **Preview locally:**
-
-   ```bash
-   cd website && NO_OPEN=1 pnpm preview
-   ```
+```bash
+pnpm run build          # Build plugin + modules
+pnpm dev                # Start basic site dev server
+```
 
 ### Watch Mode
 
 ```bash
-cd plugin
-pnpm dev  # Rebuilds on file changes
+cd plugin && pnpm dev   # Rebuilds on file changes
 ```
 
-### Verifying Build Output
+### Key Source Files
 
-After building, check bundle sizes:
-
-```bash
-ls -lh dist/
-# Plugin (Node.js): 117.5 kB JS + 14 KB types
-# Runtime (React):  18.0 kB JS + 3.1 KB types + 21.7 kB CSS
-```
-
-### Common Build Issues
-
-**Issue:** Type definitions not generated
-**Solution:** Ensure `api-extractor.json` is properly configured and run `pnpm build:api`
-
-**Issue:** CSS not bundled
-**Solution:** Verify SCSS imports in component files and `pluginSass()` in rslib.config.ts
-
-**Issue:** Module resolution errors
-**Solution:** Check `tsconfig.json` has `"moduleResolution": "bundler"`
+| File | Lines | Purpose |
+| --- | --- | --- |
+| `plugin.ts` | ~252 | RSPress adapter, runtime management |
+| `build-program.ts` | ~167 | Doc generation orchestration |
+| `build-stages.ts` | ~1120 | Stream pipeline, page gen, file writes |
+| `layers/ConfigServiceLive.ts` | ~600 | Config resolution, model loading |
+| `layers/SnapshotServiceLive.ts` | ~148 | SQLite snapshot implementation |
+| `layers/ObservabilityLive.ts` | ~147 | Metrics, logger, build summary |
+| `schemas/config.ts` | ~250 | Effect Schema definitions |
 
 ## Related Documentation
 
-- **Component Development:** `@./.claude/design/rspress-plugin-api-extractor/component-development.md`
-- **SSG-Compatible Components:** `@./ssg-compatible-components.md`
-- **Type Loading & VFS:** `@./type-loading-vfs.md`
+- **Component Development:**
+  `component-development.md`
+- **SSG-Compatible Components:**
+  `ssg-compatible-components.md`
+- **Page Generation System:**
+  `page-generation-system.md`
+- **Snapshot Tracking:**
+  `snapshot-tracking-system.md`
+- **Type Loading & VFS:**
+  `type-loading-vfs.md`
