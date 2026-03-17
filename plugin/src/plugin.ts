@@ -23,16 +23,6 @@ import { VfsRegistry } from "./vfs-registry.js";
 
 /**
  * Normalize theme configuration from user input to a consistent format.
- * Accepts:
- * - undefined: uses default themes (github-light/github-dark)
- * - string: uses the same theme for both light and dark
- * - { light, dark }: uses specified themes for each mode
- * - Custom object: treated as a single theme for both modes
- *
- * Theme values can be:
- * - Built-in theme names (e.g., "github-light", "nord", "dracula")
- * - Paths to theme JSON files
- * - Custom theme objects following Shiki's theme schema
  */
 function normalizeThemeConfig(
 	theme: string | { light: string; dark: string } | Record<string, unknown> | undefined,
@@ -40,18 +30,12 @@ function normalizeThemeConfig(
 	if (!theme) {
 		return { ...DEFAULT_SHIKI_THEMES };
 	}
-
 	if (typeof theme === "string") {
-		// Single theme name - use for both light and dark
 		return { light: theme, dark: theme };
 	}
-
 	if ("light" in theme && "dark" in theme && typeof theme.light === "string" && typeof theme.dark === "string") {
-		// Explicit light/dark configuration
 		return { light: theme.light, dark: theme.dark };
 	}
-
-	// Custom theme object - use for both modes
 	return { light: theme, dark: theme };
 }
 
@@ -68,8 +52,6 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	// Support LOG_LEVEL environment variable as override (useful for CI/debugging)
 	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
 	const logLevel = envLogLevel || options.logLevel || "info";
-	// Phase 1: Minimal Effect runtime with available services
-	// LogLevel "none" is not supported by PluginLoggerLayer, fall back to "info"
 	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
 	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
@@ -82,7 +64,7 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 
-	// File context map (reset in beforeBuild for each build)
+	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
 
 	// Verbose check helper
@@ -91,83 +73,16 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	// Capture RSPress root directory for OG image auto-detection
 	let docsRoot: string | undefined;
 
-	// Build start time for duration tracking
-	let buildStartTime: number = 0;
-
 	// Track first build to avoid repeating summary on HMR rebuilds
 	let isFirstBuild = true;
 
 	return {
 		name: "rspress-plugin-api-docs",
 
-		// Styles are now imported directly in components via SCSS
-
-		// Use beforeBuild hook to generate markdown files before the build starts
-		async beforeBuild(_config: UserConfig, _isProd: boolean): Promise<void> {
-			buildStartTime = performance.now();
-
-			// Clear VFS registry from previous builds to avoid stale configs
-			VfsRegistry.clear();
-			fileContextMap.clear();
-
-			if (isVerbose) {
-				console.log("🚀 RSPress API Extractor Plugin");
-			}
-
-			try {
-				// Extract RSPress config values for ConfigService
-				const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } })
-					.multiVersion;
-				const rspressLocales = (_config as { locales?: Array<{ lang: string }> }).locales?.map((l) => ({
-					lang: l.lang,
-				}));
-				const rspressLang = (_config as { lang?: string }).lang;
-
-				const rspressConfigSubset = {
-					...(rspressMultiVersion != null ? { multiVersion: rspressMultiVersion } : {}),
-					...(rspressLocales != null ? { locales: rspressLocales } : {}),
-					...(rspressLang != null ? { lang: rspressLang } : {}),
-					...(docsRoot != null ? { root: docsRoot } : {}),
-				};
-
-				// Run the entire build (resolve + generate) in a single scoped Effect.
-				// The Scope spans both operations so acquireRelease resources (SnapshotService DB)
-				// stay open during doc generation and are cleaned up when the scope closes.
-				await effectRuntime.runPromise(
-					Effect.gen(function* () {
-						// Resolve full build context
-						const configSvc = yield* ConfigService;
-						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
-
-						// Generate API documentation
-						yield* Effect.logInfo("Generating API documentation...");
-
-						yield* Effect.forEach(
-							buildContext.apiConfigs,
-							(apiConfig) =>
-								generateApiDocs(
-									{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
-									buildContext,
-									fileContextMap,
-								).pipe(
-									Effect.tap(() =>
-										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
-									),
-								),
-							{ concurrency: 2 },
-						);
-					}).pipe(Effect.scoped),
-				);
-
-				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
-				console.log(`✅ API documentation complete (${totalTime}s)`);
-			} catch (error) {
-				console.error(
-					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
-				);
-				throw error;
-			}
-		},
+		// beforeBuild is intentionally empty — doc generation happens in config()
+		// which runs BEFORE RSPress route scanning, ensuring generated files exist
+		// on disk when routes are built (fixes cold-start issues in dev mode).
+		async beforeBuild(_config: UserConfig, _isProd: boolean): Promise<void> {},
 
 		// Use afterBuild hook to log statistics
 		async afterBuild(_config: UserConfig, isProd: boolean): Promise<void> {
@@ -183,14 +98,17 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			// Only dispose the runtime in production builds.
 			// In dev mode, the runtime must stay alive for HMR rebuilds —
 			// disposing it would destroy the SnapshotService layer (DB connection)
-			// and subsequent beforeBuild calls would fail.
+			// and subsequent builds would fail.
 			if (isProd) {
 				await effectRuntime.dispose();
 			}
 		},
 
-		// Use config hook to modify RSPress configuration
-		config(_config: UserConfig): UserConfig {
+		// config() hook: runs BEFORE route scanning.
+		// We generate API docs here so files exist when RSPress builds its route table.
+		async config(_config: UserConfig): Promise<UserConfig> {
+			const buildStartTime = performance.now();
+
 			// Capture docs root for OG image auto-detection (resolve to absolute path)
 			if (_config.root) {
 				docsRoot = path.isAbsolute(_config.root) ? _config.root : path.resolve(process.cwd(), _config.root);
@@ -203,7 +121,6 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } }).multiVersion;
 
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
-			// This runs before beforeBuild, so directories must exist for _meta.json processing
 			if (options.api) {
 				const api = options.api;
 				const baseRoute = normalizeBaseRoute(api.baseRoute ?? "/");
@@ -240,11 +157,61 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				}
 			}
 
-			// Inject Shiki transformer for cross-linking type references in code blocks
+			// === Generate API documentation ===
+			// This runs in config() (before route scanning) so generated files
+			// are on disk when RSPress builds its route table.
+			VfsRegistry.clear();
+			fileContextMap.clear();
+
+			if (isVerbose) {
+				console.log("🚀 RSPress API Extractor Plugin");
+			}
+
+			try {
+				const rspressConfigSubset = {
+					...(rspressMultiVersion != null ? { multiVersion: rspressMultiVersion } : {}),
+					...(rspressLocales.length > 0 ? { locales: rspressLocales.map((lang) => ({ lang })) } : {}),
+					...(rspressLang != null ? { lang: rspressLang } : {}),
+					...(docsRoot != null ? { root: docsRoot } : {}),
+				};
+
+				await effectRuntime.runPromise(
+					Effect.gen(function* () {
+						const configSvc = yield* ConfigService;
+						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
+
+						yield* Effect.logInfo("Generating API documentation...");
+
+						yield* Effect.forEach(
+							buildContext.apiConfigs,
+							(apiConfig) =>
+								generateApiDocs(
+									{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
+									buildContext,
+									fileContextMap,
+								).pipe(
+									Effect.tap(() =>
+										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
+									),
+								),
+							{ concurrency: 2 },
+						);
+					}).pipe(Effect.scoped),
+				);
+
+				const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
+				console.log(`✅ API documentation complete (${totalTime}s)`);
+			} catch (error) {
+				console.error(
+					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				throw error;
+			}
+
+			// === RSPress configuration modifications ===
 			const updatedConfig = { ..._config };
 
 			// Ensure runtime components are included for proper module resolution
-			// This allows RSPress to bundle the runtime components in all environments
 			if (!updatedConfig.builderConfig) {
 				updatedConfig.builderConfig = {};
 			}
@@ -265,13 +232,9 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				updatedConfig.markdown.remarkPlugins = [];
 			}
 
-			// Extract theme from the first API config for user-authored markdown files
-			// (remarkWithApi runs globally, so we use the first API's theme as default)
 			const firstApiTheme = options.api?.theme ?? options.apis?.[0]?.theme;
 			const remarkTheme = normalizeThemeConfig(firstApiTheme);
 
-			// This enables users to write ```typescript with-api blocks in their markdown
-			// with full Twoslash support and cross-linking
 			updatedConfig.markdown.remarkPlugins.push([
 				remarkWithApi,
 				{
@@ -281,16 +244,7 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				},
 			]);
 
-			// Add remark plugin for on-demand API code block rendering (dev mode)
-			// This transforms raw code fences with api-signature/api-example metadata
-			// into rendered HAST components during MDX compilation
 			updatedConfig.markdown.remarkPlugins.push([remarkApiCodeblocks]);
-
-			// Note: Deferred rendering architecture:
-			// - Generated API docs output raw code fences with metadata (api-signature, api-example, etc.)
-			// - The remarkApiCodeblocks plugin transforms them during MDX compilation (both dev and prod)
-			// - This keeps MDX files clean and defers expensive Shiki/Twoslash processing to compile time
-			// - User-authored `with-api` code blocks are processed by remarkWithApi plugin
 
 			return updatedConfig;
 		},
