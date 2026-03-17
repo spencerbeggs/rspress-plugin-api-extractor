@@ -274,7 +274,7 @@ function renderMarkdownInline(markdown: string, context: string): ElementContent
  * 4. Results are rendered as HTML with interactive hover popups
  *
  * **VFS Integration:**
- * The VFS is populated by {@link TypeRegistryLoader} with:
+ * The VFS is populated by {@link TypeRegistryService} with:
  * - The documented package's own type definitions (from API Extractor)
  * - External package types (fetched via type-registry-effect)
  *
@@ -286,7 +286,7 @@ function renderMarkdownInline(markdown: string, context: string): ElementContent
  *
  * **Relationships:**
  * - Initialized by {@link ApiExtractorPlugin} in the beforeBuild hook
- * - Receives VFS from {@link TypeRegistryLoader}
+ * - Receives VFS from {@link TypeRegistryService}
  * - The transformer is used by page generators for rendering code blocks
  *
  * @example
@@ -298,7 +298,7 @@ function renderMarkdownInline(markdown: string, context: string): ElementContent
  * // Use transformer with Shiki highlighter
  * ```
  *
- * @see {@link TypeRegistryLoader} for VFS generation
+ * @see {@link TypeRegistryService} for VFS generation
  */
 export class TwoslashManager {
 	private static instance: TwoslashManager | null = null;

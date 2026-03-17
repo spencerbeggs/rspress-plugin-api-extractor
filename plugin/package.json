@@ -48,7 +48,7 @@
 		"prettier": "^3.8.1",
 		"react-markdown": "^10.1.0",
 		"semver": "^7.7.3",
-		"type-registry-effect": "^0.1.0",
+		"type-registry-effect": "^0.2.0",
 		"typescript": "^5.9.3"
 	},
 	"devDependencies": {

@@ -141,8 +141,8 @@ importers:
         specifier: ^7.7.3
         version: 7.7.4
       type-registry-effect:
-        specifier: ^0.1.0
-        version: 0.1.0(@effect/platform-node@0.105.0(@effect/cluster@0.56.4(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/workflow@0.16.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@typescript/vfs@1.6.4(typescript@5.9.3))(effect@3.20.0)(typescript@5.9.3)
+        specifier: ^0.2.0
+        version: 0.2.0(@effect/platform-node@0.105.0(@effect/cluster@0.56.4(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/workflow@0.16.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@typescript/vfs@1.6.4(typescript@5.9.3))(effect@3.20.0)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -4149,8 +4149,8 @@ packages:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
 
-  type-registry-effect@0.1.0:
-    resolution: {integrity: sha512-Dqmpl7WJFn9Dx5d0zDgDOky1+fxc4uEKEb6SzMYXP8FlF9qZdPbPqIgADAwCeWx7ZnXNR8JkLovThmH33bfP8g==}
+  type-registry-effect@0.2.0:
+    resolution: {integrity: sha512-ySzlvqLTEY4FP1JmJA81nULv+2jrsVNTWzA55LOJzBsvmDjSIzLqYO2VSzD9zLg4+LSFVzrTydgzLKmkV2wWxQ==}
     peerDependencies:
       '@effect/platform': ^0.94.1
       '@effect/platform-node': ^0.104.0
@@ -9015,7 +9015,7 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
 
-  type-registry-effect@0.1.0(@effect/platform-node@0.105.0(@effect/cluster@0.56.4(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/workflow@0.16.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@typescript/vfs@1.6.4(typescript@5.9.3))(effect@3.20.0)(typescript@5.9.3):
+  type-registry-effect@0.2.0(@effect/platform-node@0.105.0(@effect/cluster@0.56.4(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/workflow@0.16.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@effect/rpc@0.73.2(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/sql@0.50.0(@effect/experimental@0.58.0(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(effect@3.20.0))(effect@3.20.0))(@effect/platform@0.95.0(effect@3.20.0))(@typescript/vfs@1.6.4(typescript@5.9.3))(effect@3.20.0)(typescript@5.9.3):
     dependencies:
       '@effect/platform': 0.95.0(effect@3.20.0)
       effect: 3.20.0

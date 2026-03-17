@@ -27,6 +27,7 @@ import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
+import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
 import {
@@ -46,11 +47,11 @@ import { OpenGraphResolver } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
+import { TypeRegistryService } from "./services/TypeRegistryService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import { TypeReferenceExtractor } from "./type-reference-extractor.js";
-import { TypeRegistryLoader } from "./type-registry-loader.js";
 import type {
 	ApiExtractorPluginOptions,
 	CategoryConfig,
@@ -1139,7 +1140,11 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// Phase 1: Minimal Effect runtime with available services
 	// LogLevel "none" is not supported by PluginLoggerLayer, fall back to "info"
 	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
-	const EffectAppLayer = Layer.mergeAll(PathDerivationServiceLive, PluginLoggerLayer(effectLogLevel));
+	const EffectAppLayer = Layer.mergeAll(
+		PathDerivationServiceLive,
+		PluginLoggerLayer(effectLogLevel),
+		TypeRegistryServiceLive,
+	);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 
 	// File context map (reset in beforeBuild for each build)
@@ -1528,34 +1533,30 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				// Note: We ALWAYS create the TypeScript cache to ensure lib files are loaded,
 				// even if there are no external packages to fetch
 				let tsEnvCache: Map<string, VirtualTypeScriptEnvironment> | undefined;
-				const loader = new TypeRegistryLoader(undefined, 7 * 24 * 60 * 60 * 1000);
 
-				if (TypeRegistryLoader.hasPackages(allExternalPackages)) {
+				if (allExternalPackages.length > 0) {
 					const typesStart = performance.now();
 
-					const result = await loader.load(allExternalPackages, {
-						createTsCache: true,
-						compilerOptions: resolvedCompilerOptions,
+					const loadProgram = Effect.gen(function* () {
+						const registry = yield* TypeRegistryService;
+						const result = yield* registry.loadPackages(allExternalPackages);
+
+						// Create TypeScript cache with loaded packages
+						const cache = yield* registry.createTypeScriptCache(allExternalPackages, resolvedCompilerOptions);
+						return { vfs: result.vfs, cache };
 					});
 
+					const { vfs: externalVfs, cache } = await effectRuntime.runPromise(loadProgram);
+
 					// Merge external package VFS into combined VFS
-					for (const [path, content] of result.vfs.entries()) {
-						combinedVfs.set(path, content);
-					}
-
-					// Store TypeScript cache for Twoslash
-					tsEnvCache = result.tsCache;
-
-					// Log results
-					if (result.loaded.length > 0) {
-						console.log(`✅ Successfully loaded types for ${result.loaded.length} package(s)`);
-					}
-					if (result.failed.length > 0) {
-						console.warn(`⚠️  Failed to load types for ${result.failed.length} package(s):`);
-						for (const { package: pkg, error } of result.failed) {
-							console.warn(`   - ${pkg.name}@${pkg.version}: ${error}`);
+					if (combinedVfs) {
+						for (const [filePath, content] of externalVfs.entries()) {
+							combinedVfs.set(filePath, content);
 						}
 					}
+
+					tsEnvCache = cache;
+					console.log(`✅ Loaded types for ${allExternalPackages.length} package(s)`);
 
 					if (isVerbose) {
 						console.log(`⏱  Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`);
@@ -1563,11 +1564,11 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				} else {
 					// No external packages, but still create TypeScript cache to load lib files
 					// This ensures built-in types like Array, Promise, etc. are available in Twoslash
-					const result = await loader.load([], {
-						createTsCache: true,
-						compilerOptions: resolvedCompilerOptions,
+					const cacheProgram = Effect.gen(function* () {
+						const registry = yield* TypeRegistryService;
+						return yield* registry.createTypeScriptCache([], resolvedCompilerOptions);
 					});
-					tsEnvCache = result.tsCache;
+					tsEnvCache = await effectRuntime.runPromise(cacheProgram);
 					console.log("✅ Created TypeScript environment cache with lib files (no external packages)");
 				}
 
