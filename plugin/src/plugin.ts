@@ -26,7 +26,7 @@ import { CategoryResolver } from "./category-resolver.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
-import { BuildMetrics, PluginLoggerLayer } from "./layers/ObservabilityLive.js";
+import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
@@ -1880,26 +1880,18 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 		// Use afterBuild hook to log statistics
 		async afterBuild(): Promise<void> {
-			// Read code block metrics from Effect
-			const codeblockTotalCount = Effect.runSync(Metric.value(BuildMetrics.codeblockTotal)).count;
-			const codeblockSlowCount = Effect.runSync(Metric.value(BuildMetrics.codeblockSlow)).count;
-			// Twoslash and Prettier error counts are now tracked via Effect Metrics
-			const twoslashErrorCount = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors)).count;
-			const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
-
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
-				// Log code block performance warning if there are slow blocks
-				if (codeblockSlowCount > 0 && codeblockTotalCount > 0) {
-					const slowPercent = ((codeblockSlowCount / codeblockTotalCount) * 100).toFixed(1);
-					debugLogger.info(
-						`⚠️  Code block performance: ${codeblockSlowCount} of ${codeblockTotalCount} blocks were slow (${slowPercent}%, >100ms)`,
-					);
-				}
-				// NOTE: file stats summary deferred to logBuildSummary (wired in Task 7)
-				if (twoslashErrorCount > 0) {
-					debugLogger.info(`🔴 Twoslash errors: ${twoslashErrorCount} error(s) in code blocks`);
-				}
+				// Log build summary via Effect metrics
+				await effectRuntime.runPromise(logBuildSummary);
+
+				// Read metric values for debug logger events
+				const totalFiles = Effect.runSync(Metric.value(BuildMetrics.filesTotal)).count;
+				const twoslashErrorCount = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors)).count;
+				const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
+				const codeblockTotalCount = Effect.runSync(Metric.value(BuildMetrics.codeblockTotal)).count;
+				const codeblockSlowCount = Effect.runSync(Metric.value(BuildMetrics.codeblockSlow)).count;
+				const totalErrors = twoslashErrorCount + prettierErrorCount;
 
 				// Emit summary events to debug logger
 				debugLogger.codeBlockStatsSummary({
@@ -1919,9 +1911,9 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				debugLogger.buildComplete({
 					durationMs: performance.now() - buildStartTime,
 					summary: {
-						files: 0, // TODO: read from Effect Metrics in Task 7
-						pages: 0, // TODO: read from Effect Metrics in Task 7
-						errors: twoslashErrorCount + prettierErrorCount,
+						files: totalFiles,
+						pages: 0,
+						errors: totalErrors,
 					},
 				});
 
