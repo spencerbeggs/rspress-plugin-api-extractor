@@ -9,6 +9,7 @@ import type {
 	GenerateSinglePageContext,
 	GeneratedPageResult,
 	WorkItem,
+	WriteSingleFileContext,
 } from "../src/build-stages.js";
 import {
 	buildPipelineForApi,
@@ -18,6 +19,7 @@ import {
 	prepareWorkItems,
 	writeFiles,
 	writeMetadata,
+	writeSingleFile,
 } from "../src/build-stages.js";
 import { CategoryResolver } from "../src/category-resolver.js";
 import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
@@ -742,6 +744,97 @@ describe("generateSinglePage", () => {
 		if (!second) throw new Error("Expected second result to be non-null");
 		expect(second.isUnchanged).toBe(true);
 		expect(second.publishedTime).toBe("2025-01-01T00:00:00.000Z");
+	});
+});
+
+describe("writeSingleFile", () => {
+	it("writes a changed file to disk and returns correct result", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "write-single-"));
+
+		const page: GeneratedPageResult = {
+			workItem: {
+				item: { displayName: "Foo" } as GeneratedPageResult["workItem"]["item"],
+				categoryKey: "classes",
+				categoryConfig: {
+					folderName: "class",
+					displayName: "Classes",
+					singularName: "Class",
+				} as GeneratedPageResult["workItem"]["categoryConfig"],
+			},
+			content: "---\ntitle: Foo\n---\n# Foo\n",
+			bodyContent: "# Foo\n",
+			frontmatter: { title: "Foo" },
+			contentHash: "abc123",
+			frontmatterHash: "def456",
+			routePath: "/example-module/class/foo",
+			relativePathWithExt: "class/foo.mdx",
+			publishedTime: "2025-01-01T00:00:00.000Z",
+			modifiedTime: "2025-01-01T00:00:00.000Z",
+			isUnchanged: false,
+		};
+
+		const ctx: WriteSingleFileContext = {
+			resolvedOutputDir: tmpDir,
+			buildTime: new Date().toISOString(),
+		};
+
+		const result = await writeSingleFile(page, ctx);
+		expect(result.status).toBe("new");
+		expect(result.snapshot.contentHash).toBe("abc123");
+		expect(result.snapshot.frontmatterHash).toBe("def456");
+		expect(result.snapshot.filePath).toBe("class/foo.mdx");
+		expect(result.label).toBe("Foo");
+		expect(result.categoryKey).toBe("classes");
+
+		const exists = await fs.promises
+			.access(result.absolutePath)
+			.then(() => true)
+			.catch(() => false);
+		expect(exists).toBe(true);
+
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+
+	it("skips write for unchanged files", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "write-single-"));
+
+		const page: GeneratedPageResult = {
+			workItem: {
+				item: { displayName: "Bar" } as GeneratedPageResult["workItem"]["item"],
+				categoryKey: "classes",
+				categoryConfig: {
+					folderName: "class",
+					displayName: "Classes",
+					singularName: "Class",
+				} as GeneratedPageResult["workItem"]["categoryConfig"],
+			},
+			content: "---\ntitle: Bar\n---\n# Bar\n",
+			bodyContent: "# Bar\n",
+			frontmatter: { title: "Bar" },
+			contentHash: "abc",
+			frontmatterHash: "def",
+			routePath: "/example-module/class/bar",
+			relativePathWithExt: "class/bar.mdx",
+			publishedTime: "2025-01-01T00:00:00.000Z",
+			modifiedTime: "2025-01-01T00:00:00.000Z",
+			isUnchanged: true,
+		};
+
+		const ctx: WriteSingleFileContext = {
+			resolvedOutputDir: tmpDir,
+			buildTime: new Date().toISOString(),
+		};
+
+		const result = await writeSingleFile(page, ctx);
+		expect(result.status).toBe("unchanged");
+
+		const exists = await fs.promises
+			.access(result.absolutePath)
+			.then(() => true)
+			.catch(() => false);
+		expect(exists).toBe(false);
+
+		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
 
