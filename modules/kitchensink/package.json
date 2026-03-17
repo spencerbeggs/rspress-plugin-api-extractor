@@ -27,7 +27,7 @@
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.55.2",
-		"@rslib/core": "^0.19.3",
+		"@rslib/core": "^0.20.0",
 		"@savvy-web/rslib-builder": "^0.18.3",
 		"@types/node": "^25.1.0",
 		"@types/ws": "^8.18.1",
