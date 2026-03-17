@@ -885,3 +885,104 @@ describe("Stream pipeline", () => {
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
 });
+
+describe("Stream pipeline (native)", () => {
+	it("streams items through generate → write → fold", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+		});
+
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "native-stream-"));
+
+		const program = buildPipelineForApi({
+			workItems,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+			apiScope: "example-module",
+			buildTime: new Date().toISOString(),
+			resolvedOutputDir: tmpDir,
+			pageConcurrency: 2,
+			existingSnapshots: new Map(),
+		});
+
+		const results = await Effect.runPromise(program);
+
+		expect(results.length).toBe(workItems.length);
+		const written = results.filter((r) => r.status !== "unchanged");
+		expect(written.length).toBeGreaterThan(0);
+
+		for (const r of written) {
+			const exists = await fs.promises
+				.access(r.absolutePath)
+				.then(() => true)
+				.catch(() => false);
+			expect(exists).toBe(true);
+		}
+
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+
+	it("includes unchanged files in results when snapshots match", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/example-module",
+			packageName: "example-module",
+		});
+
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "native-stream-2-"));
+		const buildTime = new Date().toISOString();
+
+		// First run: all new
+		const firstResults = await Effect.runPromise(
+			buildPipelineForApi({
+				workItems,
+				baseRoute: "/example-module",
+				packageName: "example-module",
+				apiScope: "example-module",
+				buildTime,
+				resolvedOutputDir: tmpDir,
+				pageConcurrency: 2,
+				existingSnapshots: new Map(),
+			}),
+		);
+
+		// Build snapshot map
+		const snapshots = new Map<string, (typeof firstResults)[number]["snapshot"]>();
+		for (const r of firstResults) {
+			snapshots.set(r.snapshot.filePath, r.snapshot);
+		}
+
+		// Second run: all unchanged
+		const secondResults = await Effect.runPromise(
+			buildPipelineForApi({
+				workItems,
+				baseRoute: "/example-module",
+				packageName: "example-module",
+				apiScope: "example-module",
+				buildTime,
+				resolvedOutputDir: tmpDir,
+				pageConcurrency: 2,
+				existingSnapshots: snapshots,
+			}),
+		);
+
+		// ALL items must still appear (not filtered)
+		expect(secondResults.length).toBe(workItems.length);
+		const unchanged = secondResults.filter((r) => r.status === "unchanged");
+		expect(unchanged.length).toBe(workItems.length);
+
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
+});

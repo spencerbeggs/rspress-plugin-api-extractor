@@ -1149,46 +1149,45 @@ export interface BuildPipelineInput {
  * - fileContextMap (remark plugin Twoslash error attribution)
  * - _meta.json navigation entries
  *
- * Currently wraps the existing `generatePages` and `writeFiles` functions in
- * `Effect.promise`. The true per-item Stream conversion is deferred to a
- * future enhancement. This gives us the `Effect.Effect` return type needed
- * for `Effect.forEach` in the caller while preserving all existing behavior.
+ * The Stream.filter only removes nulls (unsupported ApiItemKind). All other
+ * items — including unchanged ones — flow through to the fold accumulator.
  */
 export function buildPipelineForApi(input: BuildPipelineInput): Effect.Effect<FileWriteResult[]> {
-	// Stream import documents intent for future per-item pipeline conversion
-	void Stream;
+	const generateCtx: GenerateSinglePageContext = {
+		existingSnapshots: input.existingSnapshots,
+		baseRoute: input.baseRoute,
+		packageName: input.packageName,
+		apiScope: input.apiScope,
+		apiName: input.apiName,
+		source: input.source,
+		buildTime: input.buildTime,
+		resolvedOutputDir: input.resolvedOutputDir,
+		suppressExampleErrors: input.suppressExampleErrors,
+		llmsPlugin: input.llmsPlugin,
+	};
 
-	return Effect.promise(async () => {
-		// Stage 1: Generate pages (uses parallelLimit internally)
-		const pageResults = await generatePages({
-			workItems: input.workItems,
-			existingSnapshots: input.existingSnapshots,
-			baseRoute: input.baseRoute,
-			packageName: input.packageName,
-			apiScope: input.apiScope,
-			apiName: input.apiName,
-			source: input.source,
-			buildTime: input.buildTime,
-			resolvedOutputDir: input.resolvedOutputDir,
-			pageConcurrency: input.pageConcurrency,
-			suppressExampleErrors: input.suppressExampleErrors,
-			llmsPlugin: input.llmsPlugin,
-		});
+	const writeCtx: WriteSingleFileContext = {
+		resolvedOutputDir: input.resolvedOutputDir,
+		buildTime: input.buildTime,
+		ogResolver: input.ogResolver,
+		siteUrl: input.siteUrl,
+		ogImage: input.ogImage,
+		packageName: input.packageName,
+		apiName: input.apiName,
+	};
 
-		// Stage 2: Write files (uses parallelLimit internally, no-op for unchanged)
-		const fileResults = await writeFiles({
-			pages: pageResults,
-			resolvedOutputDir: input.resolvedOutputDir,
-			baseRoute: input.baseRoute,
-			buildTime: input.buildTime,
-			pageConcurrency: input.pageConcurrency,
-			ogResolver: input.ogResolver,
-			siteUrl: input.siteUrl,
-			ogImage: input.ogImage,
-			packageName: input.packageName,
-			apiName: input.apiName,
-		});
-
-		return fileResults;
-	});
+	return Stream.fromIterable(input.workItems).pipe(
+		// Stage 1: Generate page content + hashes + timestamps
+		Stream.mapEffect((workItem) => Effect.promise(() => generateSinglePage(workItem, generateCtx)), {
+			concurrency: input.pageConcurrency,
+		}),
+		// Filter nulls (unsupported item kinds only)
+		Stream.filter((result): result is GeneratedPageResult => result !== null),
+		// Stage 2: Write file to disk (no-op for unchanged)
+		Stream.mapEffect((result) => Effect.promise(() => writeSingleFile(result, writeCtx)), {
+			concurrency: input.pageConcurrency,
+		}),
+		// Fold: accumulate ALL results (unchanged + written)
+		Stream.runFold([] as FileWriteResult[], (acc, result) => [...acc, result]),
+	);
 }
