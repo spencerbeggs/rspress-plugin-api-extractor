@@ -55,7 +55,7 @@
 		"@microsoft/api-extractor-model": "^7.32.2",
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rsbuild/plugin-react": "^1.4.3",
-		"@rslib/core": "^0.19.3",
+		"@rslib/core": "^0.20.0",
 		"@rspress/core": "^2.0.0",
 		"@rspress/plugin-llms": "^2.0.0",
 		"@types/hast": "^3.0.4",
