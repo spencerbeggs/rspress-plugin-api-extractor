@@ -5,13 +5,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ApiEntryPoint, ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
-import { Effect, Layer, ManagedRuntime, Metric } from "effect";
+import { Effect, Layer, ManagedRuntime, Metric, Schema } from "effect";
 import type { Highlighter, ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
-import type { CrossLinkData, WriteMetadataInput } from "./build-stages.js";
+import type { CrossLinkData } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { CategoryResolver } from "./category-resolver.js";
 import {
@@ -20,7 +20,6 @@ import {
 	mergeLlmsPluginConfig,
 	validateExternalPackages,
 } from "./config-utils.js";
-import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
 import type { LoadedModel, PackageJson, TypeResolutionCompilerOptions, TypeScriptConfig } from "./internal-types.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
@@ -41,18 +40,16 @@ import type {
 	LogLevel,
 	MultiApiConfig,
 	OpenGraphImageConfig,
-	PluginOptions,
 	SingleApiConfig,
 	SourceConfig,
 	VersionConfig,
 } from "./schemas/index.js";
-import { DEFAULT_CATEGORIES } from "./schemas/index.js";
+import { DEFAULT_CATEGORIES, PluginOptions } from "./schemas/index.js";
 import { TypeRegistryService } from "./services/TypeRegistryService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import { TypeReferenceExtractor } from "./type-reference-extractor.js";
-import type { ApiExtractorPluginOptions } from "./types.js";
 import { resolveTypeScriptConfig } from "./typescript-config.js";
 
 import type { VfsConfig } from "./vfs-registry.js";
@@ -275,7 +272,9 @@ async function generateApiDocs(
 /**
  * RSPress plugin for generating API documentation from API Extractor model files
  */
-export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
+export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
+	// Validate and decode options at factory time — catches structural issues via ParseError
+	const options = Schema.decodeUnknownSync(PluginOptions)(rawOptions);
 	// Create instances once at plugin initialization and reuse across all builds
 	const shikiCrossLinker = new ShikiCrossLinker();
 	// Use the singleton transformers for signature formatting
@@ -867,12 +866,6 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 
 		// Use config hook to modify RSPress configuration
 		config(_config: UserConfig): UserConfig {
-			// Validate plugin options against RSPress config
-			validatePluginOptions(
-				options as ApiExtractorPluginOptions,
-				_config as { multiVersion?: { default: string; versions: string[] } },
-			);
-
 			// Capture docs root for OG image auto-detection (resolve to absolute path)
 			if (_config.root) {
 				docsRoot = path.isAbsolute(_config.root) ? _config.root : path.resolve(process.cwd(), _config.root);
