@@ -616,7 +616,7 @@ describe("writeSingleFile", () => {
 			buildTime: new Date().toISOString(),
 		};
 
-		const result = await writeSingleFile(page, ctx);
+		const result = await Effect.runPromise(writeSingleFile(page, ctx).pipe(Effect.provide(NodeFileSystem.layer)));
 		expect(result.status).toBe("new");
 		expect(result.snapshot.contentHash).toBe("abc123");
 		expect(result.snapshot.frontmatterHash).toBe("def456");
@@ -663,7 +663,7 @@ describe("writeSingleFile", () => {
 			buildTime: new Date().toISOString(),
 		};
 
-		const result = await writeSingleFile(page, ctx);
+		const result = await Effect.runPromise(writeSingleFile(page, ctx).pipe(Effect.provide(NodeFileSystem.layer)));
 		expect(result.status).toBe("unchanged");
 
 		const exists = await fs.promises

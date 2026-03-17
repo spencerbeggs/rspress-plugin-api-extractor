@@ -18,6 +18,7 @@ import matter from "gray-matter";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { NamespaceMember } from "./loader.js";
 import { ApiParser } from "./loader.js";
+import { generateFrontmatter } from "./markdown/helpers.js";
 import {
 	ClassPageGenerator,
 	EnumPageGenerator,
@@ -28,6 +29,7 @@ import {
 	TypeAliasPageGenerator,
 	VariablePageGenerator,
 } from "./markdown/index.js";
+import { OpenGraphResolver } from "./og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 
@@ -546,122 +548,120 @@ export interface WriteSingleFileContext {
 /**
  * Write a single generated page to disk. No-op for unchanged pages.
  */
-export async function writeSingleFile(
+export function writeSingleFile(
 	result: GeneratedPageResult,
 	ctx: WriteSingleFileContext,
-): Promise<FileWriteResult> {
-	const { resolvedOutputDir, buildTime, ogResolver, siteUrl, ogImage, packageName, apiName } = ctx;
-	const {
-		workItem,
-		bodyContent,
-		frontmatter,
-		contentHash,
-		frontmatterHash,
-		publishedTime,
-		modifiedTime,
-		isUnchanged,
-		routePath,
-		relativePathWithExt,
-	} = result;
-	const { item, categoryKey, categoryConfig, namespaceMember } = workItem;
+): Effect.Effect<FileWriteResult, never, FileSystem.FileSystem> {
+	return Effect.gen(function* () {
+		const fileSystem = yield* FileSystem.FileSystem;
+		const { resolvedOutputDir, buildTime, ogResolver, siteUrl, ogImage, packageName, apiName } = ctx;
+		const {
+			workItem,
+			bodyContent,
+			frontmatter,
+			contentHash,
+			frontmatterHash,
+			publishedTime,
+			modifiedTime,
+			isUnchanged,
+			routePath,
+			relativePathWithExt,
+		} = result;
+		const { item, categoryKey, categoryConfig, namespaceMember } = workItem;
 
-	const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
+		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
 
-	// Use qualified name for namespace members
-	const label = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
+		// Use qualified name for namespace members
+		const label = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
 
-	const snapshot: FileSnapshot = {
-		outputDir: resolvedOutputDir,
-		filePath: relativePathWithExt,
-		publishedTime,
-		modifiedTime,
-		contentHash,
-		frontmatterHash,
-		buildTime,
-	};
+		const snapshot: FileSnapshot = {
+			outputDir: resolvedOutputDir,
+			filePath: relativePathWithExt,
+			publishedTime,
+			modifiedTime,
+			contentHash,
+			frontmatterHash,
+			buildTime,
+		};
 
-	// Handle unchanged files - skip write
-	if (isUnchanged) {
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
+		// Handle unchanged files - skip write
+		if (isUnchanged) {
+			yield* Metric.increment(BuildMetrics.filesTotal);
+			yield* Metric.increment(BuildMetrics.filesUnchanged);
+
+			return {
+				relativePathWithExt,
+				absolutePath,
+				status: "unchanged" as const,
+				snapshot,
+				categoryKey,
+				label,
+				routePath,
+			};
+		}
+
+		// Build final file content
+		let finalContent = matter.stringify(bodyContent, frontmatter);
+
+		if (ogResolver && siteUrl && packageName) {
+			// Resolve OG image metadata (auto-detect dimensions from local files if possible)
+			const ogImageMetadata = yield* Effect.promise(() => ogResolver.resolve(ogImage, packageName, apiName));
+
+			const ogMetadataOptions: Parameters<typeof OpenGraphResolver.createPageMetadata>[0] = {
+				siteUrl,
+				pageRoute: routePath,
+				description: frontmatter.description as string,
+				publishedTime,
+				modifiedTime,
+				section: categoryConfig.displayName,
+				packageName,
+			};
+			if (ogImageMetadata) {
+				ogMetadataOptions.ogImage = ogImageMetadata;
+			}
+			const ogMetadata = OpenGraphResolver.createPageMetadata(ogMetadataOptions);
+
+			// Regenerate frontmatter with OG metadata
+			const newFrontmatter = generateFrontmatter(
+				item.displayName,
+				frontmatter.description as string,
+				categoryConfig.singularName,
+				apiName,
+				ogMetadata,
+			);
+
+			// Combine new frontmatter with body content
+			finalContent = newFrontmatter + bodyContent;
+		}
+
+		// Check if file exists before writing to determine status
+		const fileExisted = yield* fileSystem.exists(absolutePath).pipe(Effect.orElseSucceed(() => false));
+
+		// Ensure directory exists and write the file
+		const dirPath = path.dirname(absolutePath);
+		yield* fileSystem.makeDirectory(dirPath, { recursive: true }).pipe(Effect.orDie);
+		yield* fileSystem.writeFileString(absolutePath, finalContent).pipe(Effect.orDie);
+
+		const status: "new" | "modified" = fileExisted ? "modified" : "new";
+
+		// Increment metrics
+		yield* Metric.increment(BuildMetrics.filesTotal);
+		if (status === "new") {
+			yield* Metric.increment(BuildMetrics.filesNew);
+		} else {
+			yield* Metric.increment(BuildMetrics.filesModified);
+		}
 
 		return {
 			relativePathWithExt,
 			absolutePath,
-			status: "unchanged",
+			status,
 			snapshot,
 			categoryKey,
 			label,
 			routePath,
 		};
-	}
-
-	// Build final file content
-	let finalContent = matter.stringify(bodyContent, frontmatter);
-
-	if (ogResolver && siteUrl && packageName) {
-		// Resolve OG image metadata (auto-detect dimensions from local files if possible)
-		const ogImageMetadata = await ogResolver.resolve(ogImage, packageName, apiName);
-
-		const { OpenGraphResolver } = await import("./og-resolver.js");
-		const ogMetadataOptions: Parameters<typeof OpenGraphResolver.createPageMetadata>[0] = {
-			siteUrl,
-			pageRoute: routePath,
-			description: frontmatter.description as string,
-			publishedTime,
-			modifiedTime,
-			section: categoryConfig.displayName,
-			packageName,
-		};
-		if (ogImageMetadata) {
-			ogMetadataOptions.ogImage = ogImageMetadata;
-		}
-		const ogMetadata = OpenGraphResolver.createPageMetadata(ogMetadataOptions);
-
-		// Regenerate frontmatter with OG metadata
-		const { generateFrontmatter } = await import("./markdown/helpers.js");
-		const newFrontmatter = generateFrontmatter(
-			item.displayName,
-			frontmatter.description as string,
-			categoryConfig.singularName,
-			apiName,
-			ogMetadata,
-		);
-
-		// Combine new frontmatter with body content
-		finalContent = newFrontmatter + bodyContent;
-	}
-
-	// Check if file exists before writing to determine status
-	const fileExisted = await fs.promises
-		.access(absolutePath)
-		.then(() => true)
-		.catch(() => false);
-
-	// Ensure directory exists and write the file
-	const dirPath = path.dirname(absolutePath);
-	await fs.promises.mkdir(dirPath, { recursive: true });
-	await fs.promises.writeFile(absolutePath, finalContent, "utf-8");
-
-	const status: "new" | "modified" = fileExisted ? "modified" : "new";
-
-	// Increment metrics
-	Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-	if (status === "new") {
-		Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-	} else {
-		Effect.runSync(Metric.increment(BuildMetrics.filesModified));
-	}
-
-	return {
-		relativePathWithExt,
-		absolutePath,
-		status,
-		snapshot,
-		categoryKey,
-		label,
-		routePath,
-	};
+	});
 }
 
 export interface WriteMetadataInput {
@@ -1110,7 +1110,7 @@ export function buildPipelineForApi(
 		// Filter nulls (unsupported item kinds only)
 		Stream.filter((result): result is GeneratedPageResult => result !== null),
 		// Stage 2: Write file to disk (no-op for unchanged)
-		Stream.mapEffect((result) => Effect.promise(() => writeSingleFile(result, writeCtx)), {
+		Stream.mapEffect((result) => writeSingleFile(result, writeCtx), {
 			concurrency: input.pageConcurrency,
 		}),
 		// Fold: accumulate ALL results (unchanged + written)
