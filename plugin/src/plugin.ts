@@ -23,7 +23,6 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
 import { CategoryResolver } from "./category-resolver.js";
-import { CodeBlockStatsCollector } from "./code-block-stats.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { DebugLogger } from "./debug-logger.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
@@ -1230,8 +1229,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 	// Support LOG_LEVEL environment variable as override (useful for CI/debugging)
 	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
 	const logLevel = envLogLevel || options.logLevel || "info";
-	const slowCodeBlockThreshold = options.performance?.thresholds?.slowCodeBlock ?? 100;
-
 	// Phase 1: Minimal Effect runtime with available services
 	// LogLevel "none" is not supported by PluginLoggerLayer, fall back to "info"
 	const effectLogLevel = logLevel === "none" ? "info" : logLevel;
@@ -1247,8 +1244,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 		logFile: options.logFile,
 	});
 
-	// Stats collectors with callbacks (initialized after debugLogger is available)
-	let statsCollector: CodeBlockStatsCollector;
 	// Shiki highlighter (initialized once in beforeBuild)
 	let shikiHighlighter: Highlighter | undefined;
 
@@ -1293,12 +1288,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 				debugLogger.verbose(`📊 Debug logging enabled (buildId: ${debugLogger.getBuildId()})`);
 			}
 
-			// Initialize stats collectors with callbacks to debugLogger
-			statsCollector = new CodeBlockStatsCollector({
-				slowThreshold: slowCodeBlockThreshold,
-				onSlowBlock: (data: { blockType: string; durationMs: number; file?: string; thresholdMs: number }): void =>
-					debugLogger.codeBlockSlow(data),
-			});
 			// Clear file context map for this build
 			fileContextMap.clear();
 
@@ -1891,23 +1880,36 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 
 		// Use afterBuild hook to log statistics
 		async afterBuild(): Promise<void> {
-			// Get summaries
-			const codeBlockSummary = statsCollector.getSummary();
+			// Read code block metrics from Effect
+			const codeblockTotalCount = Effect.runSync(Metric.value(BuildMetrics.codeblockTotal)).count;
+			const codeblockSlowCount = Effect.runSync(Metric.value(BuildMetrics.codeblockSlow)).count;
 			// Twoslash and Prettier error counts are now tracked via Effect Metrics
 			const twoslashErrorCount = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors)).count;
 			const prettierErrorCount = Effect.runSync(Metric.value(BuildMetrics.prettierErrors)).count;
 
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
-				// Log statistics summaries
+				// Log code block performance warning if there are slow blocks
+				if (codeblockSlowCount > 0 && codeblockTotalCount > 0) {
+					const slowPercent = ((codeblockSlowCount / codeblockTotalCount) * 100).toFixed(1);
+					debugLogger.info(
+						`⚠️  Code block performance: ${codeblockSlowCount} of ${codeblockTotalCount} blocks were slow (${slowPercent}%, >100ms)`,
+					);
+				}
 				// NOTE: file stats summary deferred to logBuildSummary (wired in Task 7)
-				statsCollector.logSummary(debugLogger);
 				if (twoslashErrorCount > 0) {
 					debugLogger.info(`🔴 Twoslash errors: ${twoslashErrorCount} error(s) in code blocks`);
 				}
 
 				// Emit summary events to debug logger
-				debugLogger.codeBlockStatsSummary(codeBlockSummary);
+				debugLogger.codeBlockStatsSummary({
+					total: codeblockTotalCount,
+					slow: codeblockSlowCount,
+					avgTimeMs: 0,
+					byType: {},
+					slowestMs: 0,
+					fastestMs: 0,
+				});
 				debugLogger.errorStatsSummary({
 					twoslash: { total: twoslashErrorCount },
 					prettier: { total: prettierErrorCount },
@@ -2028,7 +2030,6 @@ export function ApiExtractorPlugin(options: ApiExtractorPluginOptions): RspressP
 					shikiCrossLinker,
 					getTransformer: () => TwoslashManager.getInstance().getTransformer(),
 					logger: debugLogger,
-					statsCollector,
 					perfManager,
 					theme: remarkTheme,
 				},

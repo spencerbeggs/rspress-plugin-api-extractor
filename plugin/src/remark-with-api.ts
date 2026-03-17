@@ -1,11 +1,12 @@
+import { Effect, Metric } from "effect";
 import type { Code, Parent, Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import type { ShikiTransformer } from "shiki";
 import { codeToHast, hastToHtml } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import type { CodeBlockStatsCollector } from "./code-block-stats.js";
 import type { DebugLogger } from "./debug-logger.js";
+import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
@@ -48,7 +49,6 @@ interface RemarkWithApiOptions {
 	/** Getter for the shared Twoslash transformer from TwoslashManager */
 	getTransformer: () => ShikiTransformer | null;
 	logger?: DebugLogger;
-	statsCollector?: CodeBlockStatsCollector;
 	perfManager?: PerformanceManager;
 	/** Theme configuration for Shiki highlighting */
 	theme?: ShikiThemeConfig;
@@ -71,7 +71,7 @@ interface RemarkWithApiOptions {
  * 5. Renders to ApiExample component with pre-rendered Shiki HAST
  */
 export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: RemarkWithApiOptions) => {
-	const { shikiCrossLinker, getTransformer, logger, statsCollector, perfManager, theme } = options;
+	const { shikiCrossLinker, getTransformer, logger, perfManager, theme } = options;
 
 	// Resolve theme with defaults
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
@@ -174,9 +174,14 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 					);
 				}
 
-				// Track block stats if collector is provided
-				if (statsCollector) {
-					statsCollector.recordBlock(totalBlockTime, shikiTime, code.length, { blockType: "with-api" });
+				// Track block stats via Effect Metrics
+				Effect.runSync(Metric.increment(BuildMetrics.codeblockTotal));
+				Effect.runSync(Metric.update(BuildMetrics.codeblockDuration, totalBlockTime));
+				if (shikiTime > 0) {
+					Effect.runSync(Metric.update(BuildMetrics.codeblockShikiDuration, shikiTime));
+				}
+				if (totalBlockTime > 100) {
+					Effect.runSync(Metric.increment(BuildMetrics.codeblockSlow));
 				}
 
 				// Replace the code block with appropriate output based on build target
