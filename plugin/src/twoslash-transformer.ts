@@ -369,7 +369,7 @@ export class TwoslashManager {
 				renderMarkdownInline,
 			}),
 			// Pass TypeScript environment cache for reusing language services across code blocks
-			cache: tsEnvCache,
+			...(tsEnvCache != null ? { cache: tsEnvCache } : {}),
 			twoslashOptions: {
 				// Pass the virtual file system to Twoslash via extraFiles
 				extraFiles, // Provide all our type declaration files

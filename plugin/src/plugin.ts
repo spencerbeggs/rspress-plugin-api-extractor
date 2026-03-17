@@ -1,8 +1,9 @@
+import type { PathLike } from "node:fs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ApiEntryPoint, ApiPackage } from "@microsoft/api-extractor-model";
+import type { ApiEntryPoint, ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Metric } from "effect";
 import type { Highlighter, ShikiTransformer } from "shiki";
@@ -10,7 +11,7 @@ import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
-import type { CrossLinkData } from "./build-stages.js";
+import type { CrossLinkData, WriteMetadataInput } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { CategoryResolver } from "./category-resolver.js";
 import {
@@ -21,7 +22,7 @@ import {
 } from "./config-utils.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
-import type { PackageJson, TypeResolutionCompilerOptions } from "./internal-types.js";
+import type { LoadedModel, PackageJson, TypeResolutionCompilerOptions, TypeScriptConfig } from "./internal-types.js";
 import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
@@ -51,8 +52,10 @@ import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { SnapshotManager } from "./snapshot-manager.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
 import { TypeReferenceExtractor } from "./type-reference-extractor.js";
+import type { ApiExtractorPluginOptions } from "./types.js";
 import { resolveTypeScriptConfig } from "./typescript-config.js";
 
+import type { VfsConfig } from "./vfs-registry.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 const __filename: string = fileURLToPath(import.meta.url);
@@ -186,17 +189,18 @@ async function generateApiDocs(
 
 	// Register VFS config for the remark plugin
 	if (highlighter) {
-		VfsRegistry.register(apiScope, {
+		const vfsConfig: VfsConfig = {
 			vfs: new Map(),
 			highlighter,
-			twoslashTransformer,
 			crossLinker: shikiCrossLinker,
-			hideCutTransformer,
-			hideCutLinesTransformer,
 			packageName,
 			apiScope,
-			theme: config.theme,
-		});
+		};
+		if (twoslashTransformer != null) vfsConfig.twoslashTransformer = twoslashTransformer;
+		if (hideCutTransformer != null) vfsConfig.hideCutTransformer = hideCutTransformer;
+		if (hideCutLinesTransformer != null) vfsConfig.hideCutLinesTransformer = hideCutLinesTransformer;
+		if (config.theme != null) vfsConfig.theme = config.theme;
+		VfsRegistry.register(apiScope, vfsConfig);
 	}
 
 	// Calculate concurrency
@@ -213,17 +217,17 @@ async function generateApiDocs(
 			baseRoute,
 			packageName,
 			apiScope,
-			apiName,
-			source,
+			...(apiName != null ? { apiName } : {}),
+			...(source != null ? { source } : {}),
 			buildTime,
 			resolvedOutputDir,
 			pageConcurrency,
 			existingSnapshots,
-			suppressExampleErrors,
-			llmsPlugin,
-			ogResolver,
-			siteUrl,
-			ogImage,
+			...(suppressExampleErrors != null ? { suppressExampleErrors } : {}),
+			...(llmsPlugin != null ? { llmsPlugin } : {}),
+			...(ogResolver !== undefined ? { ogResolver } : {}),
+			...(siteUrl != null ? { siteUrl } : {}),
+			...(ogImage != null ? { ogImage } : {}),
 		}),
 	);
 	console.log(`✅ Generated ${fileResults.filter((r) => r.status !== "unchanged").length} pages`);
@@ -232,11 +236,12 @@ async function generateApiDocs(
 	const generatedFiles = new Set<string>();
 	for (const r of fileResults) {
 		generatedFiles.add(r.relativePathWithExt);
-		fileContextMap.set(r.absolutePath, {
-			api: apiName,
-			version: packageJson?.version,
+		const ctx: { api?: string; version?: string; file: string } = {
 			file: r.relativePathWithExt,
-		});
+		};
+		if (apiName != null) ctx.api = apiName;
+		if (packageJson?.version != null) ctx.version = packageJson.version;
+		fileContextMap.set(r.absolutePath, ctx);
 	}
 
 	// Phase 4: Write metadata (root _meta.json, main index, category _meta.json)
@@ -249,7 +254,7 @@ async function generateApiDocs(
 		buildTime,
 		baseRoute,
 		packageName,
-		apiName,
+		...(apiName != null ? { apiName } : {}),
 		generatedFiles,
 	});
 
@@ -344,7 +349,12 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 			const snapshotManager = new SnapshotManager(dbPath);
 
 			// Initialize OG resolver if siteUrl is configured
-			const ogResolver = options.siteUrl ? new OpenGraphResolver({ siteUrl: options.siteUrl, docsRoot }) : null;
+			const ogResolver = options.siteUrl
+				? new OpenGraphResolver({
+						siteUrl: options.siteUrl,
+						...(docsRoot != null ? { docsRoot } : {}),
+					})
+				: null;
 
 			// Collect virtual file systems for all APIs to enable Twoslash
 			combinedVfs = new Map<string, string>();
@@ -387,13 +397,17 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 					outputDir: string,
 					fullRoute: string,
 				) => {
-					const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(model);
+					const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(
+						model as PathLike | (() => Promise<ApiModel | LoadedModel>),
+					);
 					const resolvedCategories = categoryResolver.resolveCategoryConfig(pluginDefaults, api.categories);
 					const resolvedSource = categoryResolver.resolveSourceConfig(api.source, loaderSource);
 					const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin);
 
 					// Load package.json
-					const packageJson = api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined;
+					const packageJson = api.packageJson
+						? await ApiModelLoader.loadPackageJson(api.packageJson as PathLike | (() => Promise<PackageJson>))
+						: undefined;
 
 					// Validate that explicit externalPackages don't conflict with peerDependencies
 					validateExternalPackages(api.externalPackages, packageJson);
@@ -424,18 +438,18 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 						config: {
 							apiPackage,
 							packageName: api.packageName,
-							apiName: api.name,
+							...(api.name != null ? { apiName: api.name } : {}),
 							outputDir,
 							baseRoute: fullRoute,
 							categories: resolvedCategories,
-							source: resolvedSource,
-							packageJson,
-							llmsPlugin: resolvedLlms,
-							siteUrl: options.siteUrl,
-							ogImage: resolvedOgImage,
+							...(resolvedSource != null ? { source: resolvedSource } : {}),
+							...(packageJson != null ? { packageJson } : {}),
+							...(resolvedLlms != null ? { llmsPlugin: resolvedLlms } : {}),
+							...(options.siteUrl != null ? { siteUrl: options.siteUrl } : {}),
+							...(resolvedOgImage != null ? { ogImage: resolvedOgImage } : {}),
 							docsDir: path.dirname(outputDir),
-							docsRoot,
-							theme: resolvedTheme,
+							...(docsRoot != null ? { docsRoot } : {}),
+							...(resolvedTheme != null ? { theme: resolvedTheme } : {}),
 						},
 					};
 				};
@@ -481,7 +495,9 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 								// Load package.json (version config takes precedence, then package-level config)
 								const packageJson =
 									versionPackageJson ||
-									(api.packageJson ? await ApiModelLoader.loadPackageJson(api.packageJson) : undefined);
+									(api.packageJson
+										? await ApiModelLoader.loadPackageJson(api.packageJson as PathLike | (() => Promise<PackageJson>))
+										: undefined);
 
 								// Validate that explicit externalPackages don't conflict with peerDependencies
 								validateExternalPackages(versionExternalPackages || api.externalPackages, packageJson);
@@ -539,18 +555,18 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 									config: {
 										apiPackage,
 										packageName: `${api.packageName} (${version})`,
-										apiName: api.name,
+										...(api.name != null ? { apiName: api.name } : {}),
 										outputDir,
 										baseRoute: fullRoute,
 										categories: resolvedCategories,
-										source: resolvedSource,
-										packageJson,
-										llmsPlugin: resolvedLlms,
-										siteUrl: options.siteUrl,
-										ogImage: resolvedOgImage,
+										...(resolvedSource != null ? { source: resolvedSource } : {}),
+										...(packageJson != null ? { packageJson } : {}),
+										...(resolvedLlms != null ? { llmsPlugin: resolvedLlms } : {}),
+										...(options.siteUrl != null ? { siteUrl: options.siteUrl } : {}),
+										...(resolvedOgImage != null ? { ogImage: resolvedOgImage } : {}),
 										docsDir: path.dirname(outputDir),
-										docsRoot,
-										theme: resolvedTheme,
+										...(docsRoot != null ? { docsRoot } : {}),
+										...(resolvedTheme != null ? { theme: resolvedTheme } : {}),
 									},
 								};
 							}),
@@ -661,10 +677,14 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 				// Uses project root (cwd) for resolving tsconfig.json paths
 				const projectRoot = process.cwd();
 				// Construct TypeScriptConfig from API-level fields (tsconfig/compilerOptions now live on api/apis)
-				const globalTsConfig =
-					firstApiTsconfig || firstApiCompilerOptions
-						? { tsconfig: firstApiTsconfig, compilerOptions: firstApiCompilerOptions }
-						: undefined;
+				let globalTsConfig: TypeScriptConfig | undefined;
+				if (firstApiTsconfig || firstApiCompilerOptions) {
+					globalTsConfig = {};
+					if (firstApiTsconfig != null)
+						globalTsConfig.tsconfig = firstApiTsconfig as PathLike | (() => Promise<TypeResolutionCompilerOptions>);
+					if (firstApiCompilerOptions != null)
+						globalTsConfig.compilerOptions = firstApiCompilerOptions as TypeResolutionCompilerOptions;
+				}
 				const resolvedCompilerOptions: TypeResolutionCompilerOptions = await resolveTypeScriptConfig(
 					projectRoot,
 					globalTsConfig,
@@ -848,7 +868,10 @@ export function ApiExtractorPlugin(options: PluginOptions): RspressPlugin {
 		// Use config hook to modify RSPress configuration
 		config(_config: UserConfig): UserConfig {
 			// Validate plugin options against RSPress config
-			validatePluginOptions(options, _config as { multiVersion?: { default: string; versions: string[] } });
+			validatePluginOptions(
+				options as ApiExtractorPluginOptions,
+				_config as { multiVersion?: { default: string; versions: string[] } },
+			);
 
 			// Capture docs root for OG image auto-detection (resolve to absolute path)
 			if (_config.root) {

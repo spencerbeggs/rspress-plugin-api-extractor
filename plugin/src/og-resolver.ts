@@ -74,7 +74,9 @@ export class OpenGraphResolver {
 	 */
 	constructor(options: { siteUrl: string; docsRoot?: string }) {
 		this.siteUrl = options.siteUrl;
-		this.docsRoot = options.docsRoot;
+		if (options.docsRoot != null) {
+			this.docsRoot = options.docsRoot;
+		}
 	}
 
 	/**
@@ -266,7 +268,7 @@ export class OpenGraphResolver {
 			return {
 				width: dimensions.width,
 				height: dimensions.height,
-				type: mimeType,
+				...(mimeType != null ? { type: mimeType } : {}),
 			};
 		} catch (error) {
 			console.warn(`[og-resolver] Failed to read image dimensions from ${filePath}:`, (error as Error).message);
@@ -338,7 +340,7 @@ export class OpenGraphResolver {
 			modifiedTime: options.modifiedTime,
 			section: options.section,
 			tags: ["TypeScript", "API", options.packageName],
-			ogImage: options.ogImage,
+			...(options.ogImage != null ? { ogImage: options.ogImage } : {}),
 			ogType: "article",
 		};
 	}

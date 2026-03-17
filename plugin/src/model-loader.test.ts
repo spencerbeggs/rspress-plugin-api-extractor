@@ -287,12 +287,21 @@ describe("ApiModelLoader", () => {
 						displayName: "Custom",
 						singularName: "Custom",
 						folderName: "custom",
+						collapsible: true,
+						collapsed: true,
+						overviewHeaders: [2],
 					},
 				},
 				source: mockSource,
 				externalPackages: [{ name: "zod", version: "3.22.4" }],
 				ogImage: "/images/og.png",
-				llmsPlugin: { enabled: true },
+				llmsPlugin: {
+					enabled: true,
+					showCopyButton: true,
+					showViewOptions: true,
+					copyButtonText: "Copy",
+					viewOptions: ["chatgpt", "claude", "markdownLink"] as Array<"chatgpt" | "claude" | "markdownLink">,
+				},
 			};
 
 			const result = await ApiModelLoader.loadVersionModel(versionConfig);

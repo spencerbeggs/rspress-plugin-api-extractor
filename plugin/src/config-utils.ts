@@ -3,6 +3,7 @@
  * Handles dependency extraction, version conflict resolution, and config normalization.
  */
 
+import type { PathLike } from "node:fs";
 import type { ApiModel } from "@microsoft/api-extractor-model";
 import { Effect } from "effect";
 import { SemVer } from "semver-effect";
@@ -13,9 +14,15 @@ import type { AutoDetectDependencies, ExternalPackageSpec, LlmsPlugin, VersionCo
  * Type guard to check if version value is a full VersionConfig
  */
 export function isVersionConfig(
-	value: string | ((...args: Array<unknown>) => unknown) | URL | VersionConfig,
+	value: PathLike | ((...args: Array<unknown>) => unknown) | VersionConfig,
 ): value is VersionConfig {
-	return typeof value === "object" && value !== null && "model" in value;
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		!(value instanceof URL) &&
+		!Buffer.isBuffer(value) &&
+		"model" in value
+	);
 }
 
 /**

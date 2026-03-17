@@ -259,9 +259,10 @@ export class ApiParser {
 					const paramName = paramAny.parameterName || "";
 					const description = ApiParser.extractPlainText(paramAny.content);
 
+					const paramType = paramTypes.get(paramName);
 					paramList.push({
 						name: paramName,
-						type: paramTypes.get(paramName),
+						...(paramType != null ? { type: paramType } : {}),
 						description: description.replace(/\s+/g, " ").trim(),
 					});
 				}

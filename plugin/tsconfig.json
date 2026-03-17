@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"composite": true,
 		"declaration": true,
+		"exactOptionalPropertyTypes": true,
 		"jsx": "react-jsx",
 		"module": "esnext",
 		"moduleResolution": "bundler",

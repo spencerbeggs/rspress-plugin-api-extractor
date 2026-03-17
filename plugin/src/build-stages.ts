@@ -514,7 +514,7 @@ export interface WriteSingleFileContext {
 	readonly buildTime: string;
 	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
 	readonly siteUrl?: string;
-	readonly ogImage?: import("./types.js").OpenGraphImageConfig;
+	readonly ogImage?: import("./schemas/index.js").OpenGraphImageConfig;
 	readonly packageName?: string;
 	readonly apiName?: string;
 }
@@ -580,7 +580,7 @@ export async function writeSingleFile(
 		const ogImageMetadata = await ogResolver.resolve(ogImage, packageName, apiName);
 
 		const { OpenGraphResolver } = await import("./og-resolver.js");
-		const ogMetadata = OpenGraphResolver.createPageMetadata({
+		const ogMetadataOptions: Parameters<typeof OpenGraphResolver.createPageMetadata>[0] = {
 			siteUrl,
 			pageRoute: routePath,
 			description: frontmatter.description as string,
@@ -588,8 +588,11 @@ export async function writeSingleFile(
 			modifiedTime,
 			section: categoryConfig.displayName,
 			packageName,
-			ogImage: ogImageMetadata,
-		});
+		};
+		if (ogImageMetadata) {
+			ogMetadataOptions.ogImage = ogImageMetadata;
+		}
+		const ogMetadata = OpenGraphResolver.createPageMetadata(ogMetadataOptions);
 
 		// Regenerate frontmatter with OG metadata
 		const { generateFrontmatter } = await import("./markdown/helpers.js");
@@ -1033,7 +1036,7 @@ export interface BuildPipelineInput {
 	readonly llmsPlugin?: LlmsPlugin;
 	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
 	readonly siteUrl?: string;
-	readonly ogImage?: import("./types.js").OpenGraphImageConfig;
+	readonly ogImage?: import("./schemas/index.js").OpenGraphImageConfig;
 }
 
 /**
@@ -1055,22 +1058,22 @@ export function buildPipelineForApi(input: BuildPipelineInput): Effect.Effect<Fi
 		baseRoute: input.baseRoute,
 		packageName: input.packageName,
 		apiScope: input.apiScope,
-		apiName: input.apiName,
-		source: input.source,
+		...(input.apiName != null ? { apiName: input.apiName } : {}),
+		...(input.source != null ? { source: input.source } : {}),
 		buildTime: input.buildTime,
 		resolvedOutputDir: input.resolvedOutputDir,
-		suppressExampleErrors: input.suppressExampleErrors,
-		llmsPlugin: input.llmsPlugin,
+		...(input.suppressExampleErrors != null ? { suppressExampleErrors: input.suppressExampleErrors } : {}),
+		...(input.llmsPlugin != null ? { llmsPlugin: input.llmsPlugin } : {}),
 	};
 
 	const writeCtx: WriteSingleFileContext = {
 		resolvedOutputDir: input.resolvedOutputDir,
 		buildTime: input.buildTime,
-		ogResolver: input.ogResolver,
-		siteUrl: input.siteUrl,
-		ogImage: input.ogImage,
-		packageName: input.packageName,
-		apiName: input.apiName,
+		...(input.ogResolver !== undefined ? { ogResolver: input.ogResolver } : {}),
+		...(input.siteUrl != null ? { siteUrl: input.siteUrl } : {}),
+		...(input.ogImage != null ? { ogImage: input.ogImage } : {}),
+		...(input.packageName != null ? { packageName: input.packageName } : {}),
+		...(input.apiName != null ? { apiName: input.apiName } : {}),
 	};
 
 	return Stream.fromIterable(input.workItems).pipe(

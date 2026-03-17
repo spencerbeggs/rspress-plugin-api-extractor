@@ -209,7 +209,7 @@ export function generateFrontmatter(
 	description: string,
 	singularName: string,
 	apiName?: string,
-	ogMetadata?: import("../types.js").OpenGraphMetadata,
+	ogMetadata?: import("../schemas/index.js").OpenGraphMetadata,
 ): string {
 	const title = buildPageTitle(entityName, singularName, apiName);
 
