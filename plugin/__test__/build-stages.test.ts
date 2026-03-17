@@ -21,9 +21,9 @@ import {
 import { CategoryResolver } from "../src/category-resolver.js";
 import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
 import { ApiModelLoader } from "../src/model-loader.js";
+import type { CategoryConfig } from "../src/schemas/index.js";
+import { DEFAULT_CATEGORIES } from "../src/schemas/index.js";
 import { SnapshotManager } from "../src/snapshot-manager.js";
-import type { CategoryConfig } from "../src/types.js";
-import { DEFAULT_CATEGORIES } from "../src/types.js";
 
 describe("build-stages types", () => {
 	it("WorkItem has required fields", () => {
