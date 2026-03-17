@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { NodeFileSystem } from "@effect/platform-node";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Schema } from "effect";
 import type { CrossLinkData } from "./build-stages.js";
@@ -233,6 +234,7 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 		PathDerivationServiceLive,
 		PluginLoggerLayer(effectLogLevel),
 		TypeRegistryServiceLive,
+		NodeFileSystem.layer,
 	);
 	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
