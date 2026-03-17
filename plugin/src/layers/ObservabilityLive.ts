@@ -1,5 +1,5 @@
 import type { HashMap } from "effect";
-import { Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effect";
+import { Effect, Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effect";
 
 /**
  * All build metrics as named counters/histograms.
@@ -93,3 +93,54 @@ export function PluginLoggerLayer(
 
 	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLogLevel));
 }
+
+/**
+ * Log a build summary by reading all metric snapshots.
+ * Replaces the 4 separate logSummary() calls in afterBuild.
+ */
+export const logBuildSummary = Effect.gen(function* () {
+	const filesTotal = yield* Metric.value(BuildMetrics.filesTotal);
+	const filesNew = yield* Metric.value(BuildMetrics.filesNew);
+	const filesModified = yield* Metric.value(BuildMetrics.filesModified);
+	const filesUnchanged = yield* Metric.value(BuildMetrics.filesUnchanged);
+	const twoslashErrors = yield* Metric.value(BuildMetrics.twoslashErrors);
+	const prettierErrors = yield* Metric.value(BuildMetrics.prettierErrors);
+	const codeblockTotal = yield* Metric.value(BuildMetrics.codeblockTotal);
+	const codeblockSlow = yield* Metric.value(BuildMetrics.codeblockSlow);
+
+	const total = filesTotal.count;
+	const newCount = filesNew.count;
+	const modified = filesModified.count;
+	const unchanged = filesUnchanged.count;
+	const tsErrors = twoslashErrors.count;
+	const prErrors = prettierErrors.count;
+	const blocks = codeblockTotal.count;
+	const slowBlocks = codeblockSlow.count;
+
+	// File summary
+	if (total === 0) {
+		yield* Effect.log("📝 No files generated");
+	} else if (newCount === 0 && modified === 0) {
+		yield* Effect.log(`📝 ${total} files (all unchanged)`);
+	} else {
+		const parts: string[] = [];
+		if (newCount > 0) parts.push(`${newCount} new`);
+		if (modified > 0) parts.push(`${modified} modified`);
+		if (unchanged > 0) parts.push(`${unchanged} unchanged`);
+		yield* Effect.log(`📝 ${total} files (${parts.join(", ")})`);
+	}
+
+	// Code block summary
+	if (blocks > 0 && slowBlocks > 0) {
+		yield* Effect.logWarning(`⚠️  Code block performance: ${slowBlocks} of ${blocks} blocks were slow (>${100}ms)`);
+	}
+
+	// Error summary
+	const totalErrors = tsErrors + prErrors;
+	if (totalErrors > 0) {
+		const errorParts: string[] = [];
+		if (tsErrors > 0) errorParts.push(`${tsErrors} Twoslash`);
+		if (prErrors > 0) errorParts.push(`${prErrors} Prettier`);
+		yield* Effect.logWarning(`🔴 ${totalErrors} error(s) in code blocks (${errorParts.join(", ")})`);
+	}
+});
