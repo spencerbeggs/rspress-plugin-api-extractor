@@ -187,18 +187,20 @@ async function generateApiDocs(
 	}
 
 	// Phase 4: Write metadata (root _meta.json, main index, category _meta.json)
-	await writeMetadata({
-		fileResults,
-		categories,
-		resolvedOutputDir,
-		snapshotManager,
-		existingSnapshots,
-		buildTime,
-		baseRoute,
-		packageName,
-		...(apiName != null ? { apiName } : {}),
-		generatedFiles,
-	});
+	await Effect.runPromise(
+		writeMetadata({
+			fileResults,
+			categories,
+			resolvedOutputDir,
+			snapshotManager,
+			existingSnapshots,
+			buildTime,
+			baseRoute,
+			packageName,
+			...(apiName != null ? { apiName } : {}),
+			generatedFiles,
+		}).pipe(Effect.provide(NodeFileSystem.layer)),
+	);
 
 	// Phase 5: Cleanup and commit snapshots
 	await cleanupAndCommit({

@@ -691,256 +691,263 @@ export interface WriteMetadataInput {
  * The `generatedFiles` Set is mutated — entries are added for each metadata file
  * written. This is required for stale file cleanup by the caller.
  */
-export async function writeMetadata(input: WriteMetadataInput): Promise<void> {
-	const {
-		fileResults,
-		categories,
-		resolvedOutputDir,
-		snapshotManager,
-		existingSnapshots,
-		buildTime,
-		baseRoute,
-		packageName,
-		generatedFiles,
-	} = input;
+export function writeMetadata(input: WriteMetadataInput): Effect.Effect<void, never, FileSystem.FileSystem> {
+	return Effect.gen(function* () {
+		const fileSystem = yield* FileSystem.FileSystem;
+		const {
+			fileResults,
+			categories,
+			resolvedOutputDir,
+			snapshotManager,
+			existingSnapshots,
+			buildTime,
+			baseRoute,
+			packageName,
+			generatedFiles,
+		} = input;
 
-	// ── 1. Root _meta.json ────────────────────────────────────────────────────
+		// ── 1. Root _meta.json ────────────────────────────────────────────────────
 
-	// Derive which categories have items from fileResults
-	const categoriesWithItems = new Set<string>();
-	for (const result of fileResults) {
-		categoriesWithItems.add(result.categoryKey);
-	}
-
-	const apiMetaEntries: Array<{
-		type: string;
-		name: string;
-		label: string;
-		collapsible: boolean;
-		collapsed: boolean;
-		overviewHeaders: number[];
-	}> = [];
-
-	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
-		if (categoriesWithItems.has(categoryKey)) {
-			apiMetaEntries.push({
-				type: "dir",
-				name: categoryConfig.folderName,
-				label: categoryConfig.displayName,
-				collapsible: categoryConfig.collapsible ?? true,
-				collapsed: categoryConfig.collapsed ?? true,
-				overviewHeaders: categoryConfig.overviewHeaders ?? [2],
-			});
+		// Derive which categories have items from fileResults
+		const categoriesWithItems = new Set<string>();
+		for (const result of fileResults) {
+			categoriesWithItems.add(result.categoryKey);
 		}
-	}
 
-	const apiMetaJsonPath = path.join(resolvedOutputDir, "_meta.json");
-	const apiMetaJsonRelPath = "_meta.json";
-	const apiMetaJsonContent = JSON.stringify(apiMetaEntries, null, "\t");
-	const apiMetaContentHash = SnapshotManager.hashContent(apiMetaJsonContent);
-	const apiMetaOldSnapshot = existingSnapshots.get(apiMetaJsonRelPath);
+		const apiMetaEntries: Array<{
+			type: string;
+			name: string;
+			label: string;
+			collapsible: boolean;
+			collapsed: boolean;
+			overviewHeaders: number[];
+		}> = [];
 
-	let apiMetaUnchanged = false;
-	let apiMetaPublished: string;
-	let apiMetaModified: string;
+		for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
+			if (categoriesWithItems.has(categoryKey)) {
+				apiMetaEntries.push({
+					type: "dir",
+					name: categoryConfig.folderName,
+					label: categoryConfig.displayName,
+					collapsible: categoryConfig.collapsible ?? true,
+					collapsed: categoryConfig.collapsed ?? true,
+					overviewHeaders: categoryConfig.overviewHeaders ?? [2],
+				});
+			}
+		}
 
-	const apiMetaFileExists = await fs.promises
-		.access(apiMetaJsonPath)
-		.then(() => true)
-		.catch(() => false);
+		const apiMetaJsonPath = path.join(resolvedOutputDir, "_meta.json");
+		const apiMetaJsonRelPath = "_meta.json";
+		const apiMetaJsonContent = JSON.stringify(apiMetaEntries, null, "\t");
+		const apiMetaContentHash = SnapshotManager.hashContent(apiMetaJsonContent);
+		const apiMetaOldSnapshot = existingSnapshots.get(apiMetaJsonRelPath);
 
-	if (!apiMetaFileExists) {
-		apiMetaPublished = apiMetaOldSnapshot?.publishedTime || buildTime;
-		apiMetaModified = buildTime;
-		apiMetaUnchanged = false;
-	} else if (!apiMetaOldSnapshot) {
-		const existingContent = await fs.promises.readFile(apiMetaJsonPath, "utf-8");
-		const existingData = JSON.parse(existingContent);
-		const normalizedExisting = JSON.stringify(existingData, null, "\t");
+		let apiMetaUnchanged = false;
+		let apiMetaPublished: string;
+		let apiMetaModified: string;
 
-		if (normalizedExisting === apiMetaJsonContent) {
-			apiMetaPublished = "2024-01-01T00:00:00.000Z";
-			apiMetaModified = "2024-01-01T00:00:00.000Z";
+		const apiMetaFileExists = yield* fileSystem.exists(apiMetaJsonPath).pipe(Effect.orElseSucceed(() => false));
+
+		if (!apiMetaFileExists) {
+			apiMetaPublished = apiMetaOldSnapshot?.publishedTime || buildTime;
+			apiMetaModified = buildTime;
+			apiMetaUnchanged = false;
+		} else if (!apiMetaOldSnapshot) {
+			const existingContent = yield* fileSystem
+				.readFileString(apiMetaJsonPath)
+				.pipe(Effect.orElseSucceed(() => null as string | null));
+			const existingData = existingContent
+				? yield* Effect.try(() => JSON.parse(existingContent) as unknown).pipe(Effect.orElseSucceed(() => null))
+				: null;
+			const normalizedExisting = existingData ? JSON.stringify(existingData, null, "\t") : null;
+
+			if (normalizedExisting === apiMetaJsonContent) {
+				apiMetaPublished = "2024-01-01T00:00:00.000Z";
+				apiMetaModified = "2024-01-01T00:00:00.000Z";
+				apiMetaUnchanged = true;
+			} else {
+				apiMetaPublished = "2024-01-01T00:00:00.000Z";
+				apiMetaModified = buildTime;
+			}
+		} else if (apiMetaOldSnapshot.contentHash === apiMetaContentHash) {
+			apiMetaPublished = apiMetaOldSnapshot.publishedTime;
+			apiMetaModified = apiMetaOldSnapshot.modifiedTime;
 			apiMetaUnchanged = true;
 		} else {
-			apiMetaPublished = "2024-01-01T00:00:00.000Z";
+			apiMetaPublished = apiMetaOldSnapshot.publishedTime;
 			apiMetaModified = buildTime;
 		}
-	} else if (apiMetaOldSnapshot.contentHash === apiMetaContentHash) {
-		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
-		apiMetaModified = apiMetaOldSnapshot.modifiedTime;
-		apiMetaUnchanged = true;
-	} else {
-		apiMetaPublished = apiMetaOldSnapshot.publishedTime;
-		apiMetaModified = buildTime;
-	}
 
-	if (!apiMetaUnchanged) {
-		await fs.promises.writeFile(apiMetaJsonPath, apiMetaJsonContent, "utf-8");
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		if (apiMetaOldSnapshot) {
-			Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+		if (!apiMetaUnchanged) {
+			yield* fileSystem.writeFileString(apiMetaJsonPath, apiMetaJsonContent).pipe(Effect.orDie);
+			yield* Metric.increment(BuildMetrics.filesTotal);
+			if (apiMetaOldSnapshot) {
+				yield* Metric.increment(BuildMetrics.filesModified);
+			} else {
+				yield* Metric.increment(BuildMetrics.filesNew);
+			}
 		} else {
-			Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+			yield* Metric.increment(BuildMetrics.filesTotal);
+			yield* Metric.increment(BuildMetrics.filesUnchanged);
 		}
-	} else {
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-	}
 
-	snapshotManager.upsertSnapshot({
-		outputDir: resolvedOutputDir,
-		filePath: apiMetaJsonRelPath,
-		publishedTime: apiMetaPublished,
-		modifiedTime: apiMetaModified,
-		contentHash: apiMetaContentHash,
-		frontmatterHash: "",
-		buildTime,
-	});
-
-	generatedFiles.add(apiMetaJsonRelPath);
-
-	// ── 2. Main index page ────────────────────────────────────────────────────
-
-	const categoryCounts: Record<string, number> = {};
-	for (const result of fileResults) {
-		categoryCounts[result.categoryKey] = (categoryCounts[result.categoryKey] || 0) + 1;
-	}
-
-	const mainIndexGenerator = new MainIndexPageGenerator();
-	const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
-
-	// routePath is e.g. "/api/index" → relative path "index.mdx"
-	const indexRelativePath = `${mainIndex.routePath.replace(baseRoute, "").replace(/^\//, "")}.mdx`;
-	const indexAbsolutePath = path.join(resolvedOutputDir, indexRelativePath);
-
-	const indexFileExists = await fs.promises
-		.access(indexAbsolutePath)
-		.then(() => true)
-		.catch(() => false);
-
-	if (!indexFileExists) {
-		const indexDirPath = path.dirname(indexAbsolutePath);
-		await fs.promises.mkdir(indexDirPath, { recursive: true });
-		await fs.promises.writeFile(indexAbsolutePath, mainIndex.content, "utf-8");
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-	} else {
-		Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-		Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-	}
-
-	generatedFiles.add("index.mdx");
-
-	// ── 3. Category _meta.json files ──────────────────────────────────────────
-
-	// Group fileResults by categoryKey
-	const categoryMetaEntriesMap = new Map<string, Array<{ name: string; label: string }>>();
-	for (const result of fileResults) {
-		// Derive name: filename without extension from relativePathWithExt
-		// e.g. "class/foo.mdx" → "foo"
-		const baseName = path.basename(result.relativePathWithExt, ".mdx");
-		const entries = categoryMetaEntriesMap.get(result.categoryKey) || [];
-		entries.push({ name: baseName, label: result.label });
-		categoryMetaEntriesMap.set(result.categoryKey, entries);
-	}
-
-	// Build and write each category _meta.json
-	const metaSnapshots = await Promise.all(
-		Array.from(categoryMetaEntriesMap.entries()).map(async ([categoryKey, entries]) => {
-			const categoryConfig = categories[categoryKey];
-			if (!categoryConfig || entries.length === 0) return null;
-
-			// Sort alphabetically by label
-			entries.sort((a, b) => a.label.localeCompare(b.label));
-
-			const categoryMeta = entries.map((entry) => ({
-				type: "file",
-				name: entry.name,
-				label: entry.label,
-			}));
-
-			const categoryMetaPath = path.join(resolvedOutputDir, categoryConfig.folderName, "_meta.json");
-			const relPath = path.join(categoryConfig.folderName, "_meta.json");
-			const content = JSON.stringify(categoryMeta, null, "\t");
-			const contentHash = SnapshotManager.hashContent(content);
-			const oldSnapshot = existingSnapshots.get(relPath);
-
-			let isUnchanged = false;
-			let publishedTime: string;
-			let modifiedTime: string;
-
-			const fileExists = await fs.promises
-				.access(categoryMetaPath)
-				.then(() => true)
-				.catch(() => false);
-
-			if (!fileExists) {
-				publishedTime = oldSnapshot?.publishedTime || buildTime;
-				modifiedTime = buildTime;
-				isUnchanged = false;
-			} else if (!oldSnapshot) {
-				const existingContent = await fs.promises.readFile(categoryMetaPath, "utf-8");
-				const existingData = JSON.parse(existingContent);
-				const normalizedExisting = JSON.stringify(existingData, null, "\t");
-
-				if (normalizedExisting === content) {
-					publishedTime = "2024-01-01T00:00:00.000Z";
-					modifiedTime = "2024-01-01T00:00:00.000Z";
-					isUnchanged = true;
-				} else {
-					publishedTime = "2024-01-01T00:00:00.000Z";
-					modifiedTime = buildTime;
-				}
-			} else if (oldSnapshot.contentHash === contentHash) {
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = oldSnapshot.modifiedTime;
-				isUnchanged = true;
-			} else {
-				publishedTime = oldSnapshot.publishedTime;
-				modifiedTime = buildTime;
-			}
-
-			if (!isUnchanged) {
-				const categoryDir = path.dirname(categoryMetaPath);
-				await fs.promises.mkdir(categoryDir, { recursive: true });
-				await fs.promises.writeFile(categoryMetaPath, content, "utf-8");
-				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-				if (oldSnapshot) {
-					Effect.runSync(Metric.increment(BuildMetrics.filesModified));
-				} else {
-					Effect.runSync(Metric.increment(BuildMetrics.filesNew));
-				}
-			} else {
-				Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
-				Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
-			}
-
-			generatedFiles.add(relPath);
-
-			if (isUnchanged) {
-				return null;
-			}
-
-			return {
+		yield* Effect.sync(() =>
+			snapshotManager.upsertSnapshot({
 				outputDir: resolvedOutputDir,
-				filePath: relPath,
-				publishedTime,
-				modifiedTime,
-				contentHash,
+				filePath: apiMetaJsonRelPath,
+				publishedTime: apiMetaPublished,
+				modifiedTime: apiMetaModified,
+				contentHash: apiMetaContentHash,
 				frontmatterHash: "",
 				buildTime,
-			};
-		}),
-	);
+			}),
+		);
 
-	// Batch-update all category _meta.json snapshots (filter out nulls for unchanged files)
-	const metaSnapshotsToUpdate = metaSnapshots.filter(
-		(s): s is import("./snapshot-manager.js").FileSnapshot => s !== null,
-	);
-	if (metaSnapshotsToUpdate.length > 0) {
-		snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate);
-	}
+		generatedFiles.add(apiMetaJsonRelPath);
+
+		// ── 2. Main index page ────────────────────────────────────────────────────
+
+		const categoryCounts: Record<string, number> = {};
+		for (const result of fileResults) {
+			categoryCounts[result.categoryKey] = (categoryCounts[result.categoryKey] || 0) + 1;
+		}
+
+		const mainIndexGenerator = new MainIndexPageGenerator();
+		const mainIndex = mainIndexGenerator.generate(packageName, baseRoute, categoryCounts);
+
+		// routePath is e.g. "/api/index" → relative path "index.mdx"
+		const indexRelativePath = `${mainIndex.routePath.replace(baseRoute, "").replace(/^\//, "")}.mdx`;
+		const indexAbsolutePath = path.join(resolvedOutputDir, indexRelativePath);
+
+		const indexFileExists = yield* fileSystem.exists(indexAbsolutePath).pipe(Effect.orElseSucceed(() => false));
+
+		if (!indexFileExists) {
+			const indexDirPath = path.dirname(indexAbsolutePath);
+			yield* fileSystem.makeDirectory(indexDirPath, { recursive: true }).pipe(Effect.orDie);
+			yield* fileSystem.writeFileString(indexAbsolutePath, mainIndex.content).pipe(Effect.orDie);
+			yield* Metric.increment(BuildMetrics.filesTotal);
+			yield* Metric.increment(BuildMetrics.filesNew);
+		} else {
+			yield* Metric.increment(BuildMetrics.filesTotal);
+			yield* Metric.increment(BuildMetrics.filesUnchanged);
+		}
+
+		generatedFiles.add("index.mdx");
+
+		// ── 3. Category _meta.json files ──────────────────────────────────────────
+
+		// Group fileResults by categoryKey
+		const categoryMetaEntriesMap = new Map<string, Array<{ name: string; label: string }>>();
+		for (const result of fileResults) {
+			// Derive name: filename without extension from relativePathWithExt
+			// e.g. "class/foo.mdx" → "foo"
+			const baseName = path.basename(result.relativePathWithExt, ".mdx");
+			const entries = categoryMetaEntriesMap.get(result.categoryKey) || [];
+			entries.push({ name: baseName, label: result.label });
+			categoryMetaEntriesMap.set(result.categoryKey, entries);
+		}
+
+		// Build and write each category _meta.json
+		const metaSnapshots = yield* Effect.forEach(
+			Array.from(categoryMetaEntriesMap.entries()),
+			([categoryKey, entries]) =>
+				Effect.gen(function* () {
+					const categoryConfig = categories[categoryKey];
+					if (!categoryConfig || entries.length === 0) return null;
+
+					// Sort alphabetically by label
+					entries.sort((a, b) => a.label.localeCompare(b.label));
+
+					const categoryMeta = entries.map((entry) => ({
+						type: "file",
+						name: entry.name,
+						label: entry.label,
+					}));
+
+					const categoryMetaPath = path.join(resolvedOutputDir, categoryConfig.folderName, "_meta.json");
+					const relPath = path.join(categoryConfig.folderName, "_meta.json");
+					const content = JSON.stringify(categoryMeta, null, "\t");
+					const contentHash = SnapshotManager.hashContent(content);
+					const oldSnapshot = existingSnapshots.get(relPath);
+
+					let isUnchanged = false;
+					let publishedTime: string;
+					let modifiedTime: string;
+
+					const fileExists = yield* fileSystem.exists(categoryMetaPath).pipe(Effect.orElseSucceed(() => false));
+
+					if (!fileExists) {
+						publishedTime = oldSnapshot?.publishedTime || buildTime;
+						modifiedTime = buildTime;
+						isUnchanged = false;
+					} else if (!oldSnapshot) {
+						const existingContent = yield* fileSystem
+							.readFileString(categoryMetaPath)
+							.pipe(Effect.orElseSucceed(() => null as string | null));
+						const existingData = existingContent
+							? yield* Effect.try(() => JSON.parse(existingContent) as unknown).pipe(Effect.orElseSucceed(() => null))
+							: null;
+						const normalizedExisting = existingData ? JSON.stringify(existingData, null, "\t") : null;
+
+						if (normalizedExisting === content) {
+							publishedTime = "2024-01-01T00:00:00.000Z";
+							modifiedTime = "2024-01-01T00:00:00.000Z";
+							isUnchanged = true;
+						} else {
+							publishedTime = "2024-01-01T00:00:00.000Z";
+							modifiedTime = buildTime;
+						}
+					} else if (oldSnapshot.contentHash === contentHash) {
+						publishedTime = oldSnapshot.publishedTime;
+						modifiedTime = oldSnapshot.modifiedTime;
+						isUnchanged = true;
+					} else {
+						publishedTime = oldSnapshot.publishedTime;
+						modifiedTime = buildTime;
+					}
+
+					if (!isUnchanged) {
+						const categoryDir = path.dirname(categoryMetaPath);
+						yield* fileSystem.makeDirectory(categoryDir, { recursive: true }).pipe(Effect.orDie);
+						yield* fileSystem.writeFileString(categoryMetaPath, content).pipe(Effect.orDie);
+						yield* Metric.increment(BuildMetrics.filesTotal);
+						if (oldSnapshot) {
+							yield* Metric.increment(BuildMetrics.filesModified);
+						} else {
+							yield* Metric.increment(BuildMetrics.filesNew);
+						}
+					} else {
+						yield* Metric.increment(BuildMetrics.filesTotal);
+						yield* Metric.increment(BuildMetrics.filesUnchanged);
+					}
+
+					generatedFiles.add(relPath);
+
+					if (isUnchanged) {
+						return null;
+					}
+
+					return {
+						outputDir: resolvedOutputDir,
+						filePath: relPath,
+						publishedTime,
+						modifiedTime,
+						contentHash,
+						frontmatterHash: "",
+						buildTime,
+					};
+				}),
+			{ concurrency: "unbounded" },
+		);
+
+		// Batch-update all category _meta.json snapshots (filter out nulls for unchanged files)
+		const metaSnapshotsToUpdate = metaSnapshots.filter(
+			(s): s is import("./snapshot-manager.js").FileSnapshot => s !== null,
+		);
+		if (metaSnapshotsToUpdate.length > 0) {
+			yield* Effect.sync(() => snapshotManager.batchUpsertSnapshots(metaSnapshotsToUpdate));
+		}
+	});
 }
 
 export interface CleanupAndCommitInput {

@@ -158,17 +158,19 @@ describe("writeMetadata", () => {
 			},
 		];
 
-		await writeMetadata({
-			fileResults: results,
-			categories,
-			resolvedOutputDir: tmpDir,
-			snapshotManager,
-			existingSnapshots: new Map(),
-			buildTime: new Date().toISOString(),
-			baseRoute: "/api",
-			packageName: "test-package",
-			generatedFiles,
-		});
+		await Effect.runPromise(
+			writeMetadata({
+				fileResults: results,
+				categories,
+				resolvedOutputDir: tmpDir,
+				snapshotManager,
+				existingSnapshots: new Map(),
+				buildTime: new Date().toISOString(),
+				baseRoute: "/api",
+				packageName: "test-package",
+				generatedFiles,
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		// Category _meta.json should exist with sorted entries
 		const metaPath = path.join(tmpDir, "class/_meta.json");
@@ -240,17 +242,19 @@ describe("writeMetadata", () => {
 
 		// First write — creates the files
 		const generatedFiles1 = new Set<string>();
-		await writeMetadata({
-			fileResults: results,
-			categories,
-			resolvedOutputDir: tmpDir,
-			snapshotManager,
-			existingSnapshots: new Map(),
-			buildTime: new Date().toISOString(),
-			baseRoute: "/api",
-			packageName: "test-package",
-			generatedFiles: generatedFiles1,
-		});
+		await Effect.runPromise(
+			writeMetadata({
+				fileResults: results,
+				categories,
+				resolvedOutputDir: tmpDir,
+				snapshotManager,
+				existingSnapshots: new Map(),
+				buildTime: new Date().toISOString(),
+				baseRoute: "/api",
+				packageName: "test-package",
+				generatedFiles: generatedFiles1,
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		const metaPath = path.join(tmpDir, "class/_meta.json");
 		const statBefore = await fs.promises.stat(metaPath);
@@ -261,17 +265,19 @@ describe("writeMetadata", () => {
 
 		// Second write — should be unchanged, file mtime should not change
 		const generatedFiles2 = new Set<string>();
-		await writeMetadata({
-			fileResults: results,
-			categories,
-			resolvedOutputDir: tmpDir,
-			snapshotManager,
-			existingSnapshots,
-			buildTime: new Date().toISOString(),
-			baseRoute: "/api",
-			packageName: "test-package",
-			generatedFiles: generatedFiles2,
-		});
+		await Effect.runPromise(
+			writeMetadata({
+				fileResults: results,
+				categories,
+				resolvedOutputDir: tmpDir,
+				snapshotManager,
+				existingSnapshots,
+				buildTime: new Date().toISOString(),
+				baseRoute: "/api",
+				packageName: "test-package",
+				generatedFiles: generatedFiles2,
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		const statAfter = await fs.promises.stat(metaPath);
 		// File should not have been rewritten (mtime unchanged)
@@ -327,17 +333,19 @@ describe("writeMetadata", () => {
 			},
 		];
 
-		await writeMetadata({
-			fileResults: results,
-			categories,
-			resolvedOutputDir: tmpDir,
-			snapshotManager,
-			existingSnapshots: new Map(),
-			buildTime: new Date().toISOString(),
-			baseRoute: "/api",
-			packageName: "test-package",
-			generatedFiles,
-		});
+		await Effect.runPromise(
+			writeMetadata({
+				fileResults: results,
+				categories,
+				resolvedOutputDir: tmpDir,
+				snapshotManager,
+				existingSnapshots: new Map(),
+				buildTime: new Date().toISOString(),
+				baseRoute: "/api",
+				packageName: "test-package",
+				generatedFiles,
+			}).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
 
 		const rootMeta = JSON.parse(await fs.promises.readFile(path.join(tmpDir, "_meta.json"), "utf-8"));
 		// Only "class" should appear — "interface" has no items
