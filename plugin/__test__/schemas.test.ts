@@ -1,11 +1,19 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
+	AutoDetectDependencies,
+	CategoryConfig,
+	DEFAULT_CATEGORIES,
+	ErrorConfig,
+	ExternalPackageSpec,
+	LlmsPlugin,
+	LogLevel,
 	OpenGraphImageConfig,
 	OpenGraphImageMetadata,
 	OpenGraphMetadata,
 	PerformanceConfig,
 	PerformanceThresholds,
+	SourceConfig,
 } from "../src/schemas/index.js";
 
 describe("OpenGraph schemas", () => {
@@ -81,5 +89,133 @@ describe("Performance schemas", () => {
 		const result = decode({});
 		expect(result.showInsights).toBe(true);
 		expect(result.trackDetailedMetrics).toBe(false);
+	});
+});
+
+describe("Config leaf schemas", () => {
+	it("decodes LogLevel literals", () => {
+		const decode = Schema.decodeUnknownSync(LogLevel);
+		expect(decode("info")).toBe("info");
+		expect(decode("debug")).toBe("debug");
+		expect(decode("verbose")).toBe("verbose");
+		expect(decode("none")).toBe("none");
+		expect(() => decode("invalid")).toThrow();
+	});
+
+	it("decodes ExternalPackageSpec", () => {
+		const decode = Schema.decodeUnknownSync(ExternalPackageSpec);
+		const result = decode({ name: "zod", version: "^3.22.4" });
+		expect(result.name).toBe("zod");
+		expect(result.version).toBe("^3.22.4");
+	});
+
+	it("decodes ExternalPackageSpec with tsconfig string", () => {
+		const decode = Schema.decodeUnknownSync(ExternalPackageSpec);
+		const result = decode({ name: "zod", version: "3.0.0", tsconfig: "tsconfig.json" });
+		expect(result.tsconfig).toBe("tsconfig.json");
+	});
+
+	it("decodes ExternalPackageSpec with tsconfig function", () => {
+		const decode = Schema.decodeUnknownSync(ExternalPackageSpec);
+		const fn = async () => ({ target: 9 });
+		const result = decode({ name: "zod", version: "3.0.0", tsconfig: fn });
+		expect(typeof result.tsconfig).toBe("function");
+	});
+
+	it("rejects ExternalPackageSpec with tsconfig number", () => {
+		const decode = Schema.decodeUnknownSync(ExternalPackageSpec);
+		expect(() => decode({ name: "zod", version: "3.0.0", tsconfig: 42 })).toThrow();
+	});
+
+	it("decodes AutoDetectDependencies with defaults", () => {
+		const decode = Schema.decodeUnknownSync(AutoDetectDependencies);
+		const result = decode({});
+		expect(result.dependencies).toBe(false);
+		expect(result.devDependencies).toBe(false);
+		expect(result.peerDependencies).toBe(true);
+		expect(result.autoDependencies).toBe(true);
+	});
+
+	it("decodes AutoDetectDependencies with overrides", () => {
+		const decode = Schema.decodeUnknownSync(AutoDetectDependencies);
+		const result = decode({ dependencies: true, peerDependencies: false });
+		expect(result.dependencies).toBe(true);
+		expect(result.peerDependencies).toBe(false);
+	});
+
+	it("decodes ErrorConfig", () => {
+		const decode = Schema.decodeUnknownSync(ErrorConfig);
+		expect(decode({ example: "suppress" }).example).toBe("suppress");
+		expect(decode({ example: "show" }).example).toBe("show");
+		expect(decode({}).example).toBeUndefined();
+		expect(() => decode({ example: "invalid" })).toThrow();
+	});
+
+	it("decodes LlmsPlugin with defaults", () => {
+		const decode = Schema.decodeUnknownSync(LlmsPlugin);
+		const result = decode({});
+		expect(result.enabled).toBe(false);
+		expect(result.showCopyButton).toBe(true);
+		expect(result.showViewOptions).toBe(true);
+		expect(result.copyButtonText).toBe("Copy Markdown");
+		expect(result.viewOptions).toEqual(["markdownLink", "chatgpt", "claude"]);
+	});
+
+	it("decodes LlmsPlugin with overrides", () => {
+		const decode = Schema.decodeUnknownSync(LlmsPlugin);
+		const result = decode({ enabled: true, copyButtonText: "Copy" });
+		expect(result.enabled).toBe(true);
+		expect(result.copyButtonText).toBe("Copy");
+	});
+
+	it("decodes CategoryConfig with defaults", () => {
+		const decode = Schema.decodeUnknownSync(CategoryConfig);
+		const result = decode({ displayName: "Classes", singularName: "Class", folderName: "class" });
+		expect(result.collapsible).toBe(true);
+		expect(result.collapsed).toBe(true);
+		expect(result.overviewHeaders).toEqual([2]);
+		expect(result.itemKinds).toBeUndefined();
+		expect(result.tsdocModifier).toBeUndefined();
+	});
+
+	it("decodes CategoryConfig with all fields", () => {
+		const decode = Schema.decodeUnknownSync(CategoryConfig);
+		const result = decode({
+			displayName: "Classes",
+			singularName: "Class",
+			folderName: "class",
+			itemKinds: [1, 2],
+			tsdocModifier: "@public",
+			collapsible: false,
+			collapsed: false,
+			overviewHeaders: [2, 3],
+		});
+		expect(result.itemKinds).toEqual([1, 2]);
+		expect(result.tsdocModifier).toBe("@public");
+		expect(result.collapsible).toBe(false);
+	});
+
+	it("decodes SourceConfig", () => {
+		const decode = Schema.decodeUnknownSync(SourceConfig);
+		const result = decode({ url: "https://github.com/org/repo" });
+		expect(result.url).toBe("https://github.com/org/repo");
+		expect(result.ref).toBeUndefined();
+	});
+
+	it("decodes SourceConfig with ref", () => {
+		const decode = Schema.decodeUnknownSync(SourceConfig);
+		const result = decode({ url: "https://github.com/org/repo", ref: "main" });
+		expect(result.ref).toBe("main");
+	});
+
+	it("DEFAULT_CATEGORIES has 7 categories", () => {
+		expect(Object.keys(DEFAULT_CATEGORIES)).toHaveLength(7);
+		expect(DEFAULT_CATEGORIES.classes.folderName).toBe("class");
+		expect(DEFAULT_CATEGORIES.interfaces.folderName).toBe("interface");
+		expect(DEFAULT_CATEGORIES.functions.folderName).toBe("function");
+		expect(DEFAULT_CATEGORIES.types.folderName).toBe("type");
+		expect(DEFAULT_CATEGORIES.enums.folderName).toBe("enum");
+		expect(DEFAULT_CATEGORIES.variables.folderName).toBe("variable");
+		expect(DEFAULT_CATEGORIES.namespaces.folderName).toBe("namespace");
 	});
 });
