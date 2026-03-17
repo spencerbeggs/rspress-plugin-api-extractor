@@ -79,8 +79,18 @@ export class PrettierErrorStatsCollector {
 
 	/**
 	 * Record a Prettier formatting error
+	 *
+	 * When `context` is provided it takes precedence over the shared
+	 * `this.currentContext`. This allows parallel workers to pass their
+	 * own per-item context without clobbering the singleton state.
 	 */
-	recordError(error: unknown, code: string, language: string): void {
+	recordError(
+		error: unknown,
+		code: string,
+		language: string,
+		context?: { file?: string; api?: string; version?: string; blockType?: BlockType },
+	): void {
+		const effectiveContext = context ?? this.currentContext;
 		const errorMsg = error instanceof Error ? error.message : String(error);
 
 		// Try to extract line/column from Prettier error message
@@ -90,10 +100,10 @@ export class PrettierErrorStatsCollector {
 		const errorColumn = locationMatch ? Number.parseInt(locationMatch[2], 10) : undefined;
 
 		const prettierError: PrettierError = {
-			file: this.currentContext?.file,
-			api: this.currentContext?.api,
-			version: this.currentContext?.version,
-			blockType: this.currentContext?.blockType,
+			file: effectiveContext?.file,
+			api: effectiveContext?.api,
+			version: effectiveContext?.version,
+			blockType: effectiveContext?.blockType,
 			language,
 			errorMessage: errorMsg,
 			errorLine,
@@ -110,32 +120,32 @@ export class PrettierErrorStatsCollector {
 		this.languageStats.set(language, langStats);
 
 		// Track by file
-		if (this.currentContext?.file) {
-			const stats = this.fileStats.get(this.currentContext.file) || { count: 0, errors: [] };
+		if (effectiveContext?.file) {
+			const stats = this.fileStats.get(effectiveContext.file) || { count: 0, errors: [] };
 			stats.count++;
 			stats.errors.push(prettierError);
-			this.fileStats.set(this.currentContext.file, stats);
+			this.fileStats.set(effectiveContext.file, stats);
 		}
 
 		// Track by API
-		if (this.currentContext?.api) {
-			const stats = this.apiStats.get(this.currentContext.api) || { count: 0, errors: [] };
+		if (effectiveContext?.api) {
+			const stats = this.apiStats.get(effectiveContext.api) || { count: 0, errors: [] };
 			stats.count++;
 			stats.errors.push(prettierError);
-			this.apiStats.set(this.currentContext.api, stats);
+			this.apiStats.set(effectiveContext.api, stats);
 		}
 
 		// Track by block type
-		if (this.currentContext?.blockType) {
-			const stats = this.blockTypeStats.get(this.currentContext.blockType) || { count: 0, errors: [] };
+		if (effectiveContext?.blockType) {
+			const stats = this.blockTypeStats.get(effectiveContext.blockType) || { count: 0, errors: [] };
 			stats.count++;
 			stats.errors.push(prettierError);
-			this.blockTypeStats.set(this.currentContext.blockType, stats);
+			this.blockTypeStats.set(effectiveContext.blockType, stats);
 		}
 
 		// Fire callback for error tracking
 		this.onError?.({
-			file: this.currentContext?.file,
+			file: effectiveContext?.file,
 			language,
 			errorMessage: errorMsg,
 			location:

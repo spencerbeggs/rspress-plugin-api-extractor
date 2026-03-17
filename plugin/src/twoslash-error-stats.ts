@@ -73,8 +73,17 @@ export class TwoslashErrorStatsCollector {
 
 	/**
 	 * Record a Twoslash error (called from onTwoslashError callback)
+	 *
+	 * When `context` is provided it takes precedence over the shared
+	 * `this.currentContext`. This allows parallel workers to pass their
+	 * own per-item context without clobbering the singleton state.
 	 */
-	recordError(error: unknown, code: string): void {
+	recordError(
+		error: unknown,
+		code: string,
+		context?: { file?: string; api?: string; version?: string; blockType?: BlockType },
+	): void {
+		const effectiveContext = context ?? this.currentContext;
 		const errorMsg = error instanceof Error ? error.message : String(error);
 		const stack = error instanceof Error ? error.stack : undefined;
 
@@ -83,10 +92,10 @@ export class TwoslashErrorStatsCollector {
 		const errorCode = errorCodeMatch?.[1];
 
 		const twoslashError: TwoslashError = {
-			file: this.currentContext?.file,
-			api: this.currentContext?.api,
-			version: this.currentContext?.version,
-			blockType: this.currentContext?.blockType,
+			file: effectiveContext?.file,
+			api: effectiveContext?.api,
+			version: effectiveContext?.version,
+			blockType: effectiveContext?.blockType,
 			errorMessage: errorMsg,
 			errorCode,
 			codeSnippet: code.substring(0, 200).replace(/\n/g, " "),
@@ -104,25 +113,25 @@ export class TwoslashErrorStatsCollector {
 		}
 
 		// Track by file
-		if (this.currentContext?.file) {
-			const stats = this.fileStats.get(this.currentContext.file) || { count: 0, errors: [] };
+		if (effectiveContext?.file) {
+			const stats = this.fileStats.get(effectiveContext.file) || { count: 0, errors: [] };
 			stats.count++;
 			stats.errors.push(twoslashError);
-			this.fileStats.set(this.currentContext.file, stats);
+			this.fileStats.set(effectiveContext.file, stats);
 		}
 
 		// Track by API
-		if (this.currentContext?.api) {
-			const stats = this.apiStats.get(this.currentContext.api) || { count: 0, errors: [] };
+		if (effectiveContext?.api) {
+			const stats = this.apiStats.get(effectiveContext.api) || { count: 0, errors: [] };
 			stats.count++;
 			stats.errors.push(twoslashError);
-			this.apiStats.set(this.currentContext.api, stats);
+			this.apiStats.set(effectiveContext.api, stats);
 		}
 
 		// Track by API version
-		if (this.currentContext?.api && this.currentContext?.version) {
-			const api = this.currentContext.api;
-			const version = this.currentContext.version;
+		if (effectiveContext?.api && effectiveContext?.version) {
+			const api = effectiveContext.api;
+			const version = effectiveContext.version;
 
 			// Get or create version map for this API
 			let apiVersionMap = this.versionStats.get(api);
@@ -140,7 +149,7 @@ export class TwoslashErrorStatsCollector {
 
 		// Fire callback for error tracking
 		this.onError?.({
-			file: this.currentContext?.file,
+			file: effectiveContext?.file,
 			errorCode,
 			errorMessage: errorMsg,
 			codeSnippet: code.substring(0, 200).replace(/\n/g, " "),

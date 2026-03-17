@@ -573,7 +573,10 @@ async function generateApiDocs(
 			// Use qualified name for namespace members, otherwise use display name
 			const itemName = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
 
-			// Set Twoslash error context for this page (may interleave with other items but errors are rare)
+			// Set error context for this page. Note: this uses shared mutable state on the
+			// stats collector, which can interleave with other parallel workers. However,
+			// the onTwoslashError callback in the transformer reads this.currentContext
+			// and cannot receive per-worker context directly. Errors are rare in practice.
 			const pageFilePath = `${categoryConfig.folderName}/${itemName}.mdx`;
 			twoslashErrorStats.setContext({
 				file: pageFilePath,
@@ -1024,9 +1027,6 @@ async function generateApiDocs(
 			fileCount++;
 		}
 	}
-
-	// Clear Twoslash error context after processing
-	twoslashErrorStats.clearContext();
 
 	// Build category _meta.json writes
 	for (const [categoryKey, categoryMetaEntries] of categoryMetaEntriesMap) {
