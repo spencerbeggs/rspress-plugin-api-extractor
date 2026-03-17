@@ -11,7 +11,7 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "./api-extracted-package.js";
 import type { CrossLinkData } from "./build-stages.js";
-import { cleanupAndCommit, generatePages, prepareWorkItems, writeFiles, writeMetadata } from "./build-stages.js";
+import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { CategoryResolver } from "./category-resolver.js";
 import { validatePluginOptions } from "./config-validation.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "./hide-cut-transformer.js";
@@ -204,39 +204,30 @@ async function generateApiDocs(
 	const cpuCores = os.cpus().length;
 	const pageConcurrency = Math.max(cpuCores > 4 ? cpuCores - 1 : cpuCores, 2);
 
-	// Phase 2: Generate pages
+	// Phase 2+3: Generate pages and write files via Stream pipeline
 	console.log(
 		`📝 Generating ${workItems.length} pages across ${Object.keys(categories).length} categories in parallel`,
 	);
-	const pageResults = await generatePages({
-		workItems,
-		existingSnapshots,
-		baseRoute,
-		packageName,
-		apiScope,
-		apiName,
-		source,
-		buildTime,
-		resolvedOutputDir,
-		pageConcurrency,
-		suppressExampleErrors,
-		llmsPlugin,
-	});
-	console.log(`✅ Generated ${pageResults.filter((r) => r !== null).length} pages in parallel`);
-
-	// Phase 3: Write files
-	const fileResults = await writeFiles({
-		pages: pageResults,
-		resolvedOutputDir,
-		baseRoute,
-		buildTime,
-		pageConcurrency,
-		ogResolver,
-		siteUrl,
-		ogImage,
-		packageName,
-		apiName,
-	});
+	const fileResults = await Effect.runPromise(
+		buildPipelineForApi({
+			workItems,
+			baseRoute,
+			packageName,
+			apiScope,
+			apiName,
+			source,
+			buildTime,
+			resolvedOutputDir,
+			pageConcurrency,
+			existingSnapshots,
+			suppressExampleErrors,
+			llmsPlugin,
+			ogResolver,
+			siteUrl,
+			ogImage,
+		}),
+	);
+	console.log(`✅ Generated ${fileResults.filter((r) => r.status !== "unchanged").length} pages`);
 
 	// Track generated files and file context
 	const generatedFiles = new Set<string>();
