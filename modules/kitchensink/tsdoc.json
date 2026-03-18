@@ -1,7 +1,7 @@
 {
 	"$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
 	"noStandardTags": false,
-	"reportUnsupportedHtmlElements": false,
+	"reportUnsupportedHtmlElements": true,
 	"supportForTags": {
 		"@deprecated": true,
 		"@label": true,
