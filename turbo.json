@@ -56,10 +56,13 @@
 		},
 		"dev": {
 			"cache": false,
+			"dependsOn": ["^build"],
+			"interactive": true,
 			"persistent": true
 		},
 		"preview": {
 			"cache": false,
+			"dependsOn": ["build"],
 			"persistent": true
 		},
 		"types:check": {
@@ -77,5 +80,6 @@
 			"outputLogs": "errors-only",
 			"outputs": []
 		}
-	}
+	},
+	"ui": "tui"
 }
