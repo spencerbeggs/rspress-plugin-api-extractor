@@ -6,7 +6,7 @@
  * for common tasks like preparing Twoslash examples, generating frontmatter,
  * escaping special characters, and sanitizing IDs.
  *
- * @module helpers
+ * @packageDocumentation
  */
 
 import { formatCode } from "../prettier-formatter.js";

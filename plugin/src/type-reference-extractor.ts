@@ -12,8 +12,8 @@ export interface TypeReference {
 	symbolName: string;
 
 	/**
-	 * The package name (e.g., "zod", "@effect/schema")
-	 * Empty string for built-in TypeScript types
+	 * The package name (e.g., "zod", "\@effect/schema").
+	 * Empty string for built-in TypeScript types.
 	 */
 	packageName: string;
 

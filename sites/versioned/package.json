@@ -16,8 +16,9 @@
 	},
 	"devDependencies": {
 		"@rspress/core": "^2.0.0",
+		"@savvy-web/rslib-builder": "^0.19.0",
 		"@types/react": "^19.2.10",
-		"@typescript/native-preview": "7.0.0-dev.20260128.1",
+		"@typescript/native-preview": "catalog:silk",
 		"open": "^11.0.0",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"

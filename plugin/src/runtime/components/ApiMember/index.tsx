@@ -27,18 +27,10 @@ export interface ApiMemberProps {
  * Replaces MemberSignatureWrapper with a simpler component that takes plain
  * string props. The `code` prop contains only the member signature (not
  * wrapped in a class skeleton), and `summary` is plain markdown-compatible
- * text (not HTML with `<a>` tags, not base64-encoded).
+ * text (not HTML with anchor tags, not base64-encoded).
  *
- * SSG-MD output:
- * ```markdown
- * ### addTransport(transport)
- *
- * Register a [LogTransport](/api/type/logtransport) to receive future log entries.
- *
- * ```typescript
- * addTransport(transport: LogTransport): void
- * ```
- * ```
+ * In SSG-MD mode, renders a heading with member name, summary text,
+ * and a plain code block with the member signature.
  */
 export function ApiMember({ code, memberName, summary, id, hast, hasParameters }: ApiMemberProps): ReactElement {
 	const parsedHast = useMemo(() => decodeHast(hast, "ApiMember"), [hast]);

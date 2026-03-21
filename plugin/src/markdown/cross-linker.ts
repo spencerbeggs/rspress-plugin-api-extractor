@@ -27,7 +27,7 @@ export interface CrossLinkableItem {
  *
  * **Link Formats:**
  * - Markdown: `[TypeName](/path/to/type)` - for use in .mdx content
- * - HTML: `<a href="/path/to/type">TypeName</a>` - for use in JSX/components
+ * - HTML: anchor tags with href - for use in JSX/components
  *
  * @example Initialization
  * ```ts
@@ -47,7 +47,7 @@ export interface CrossLinkableItem {
  *
  * // HTML format (for JSX)
  * const html = crossLinker.addCrossLinksHtml("Returns a MyClass instance");
- * // Result: "Returns a <a href=\"/api/my-package/class/myclass\">MyClass</a> instance"
+ * // Result: "Returns a anchor-linked MyClass instance"
  * ```
  *
  * @see {@link ShikiCrossLinker} for code block cross-linking

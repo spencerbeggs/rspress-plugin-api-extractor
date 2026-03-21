@@ -1,20 +1,4 @@
 {
-	"$schema": "https://json.schemastore.org/tsconfig.json",
-	"compilerOptions": {
-		"composite": true,
-		"declaration": true,
-		"exactOptionalPropertyTypes": true,
-		"jsx": "react-jsx",
-		"module": "esnext",
-		"moduleResolution": "bundler",
-		"outDir": "./dist",
-		"resolveJsonModule": true,
-		"rootDir": "./src",
-		"skipLibCheck": true,
-		"strict": true,
-		"strictNullChecks": true,
-		"target": "es2023"
-	},
-	"exclude": ["node_modules", "dist"],
-	"include": ["src/**/*.ts", "types/**/*.ts", "src/**/*.tsx", "src/**/*.mdx", "src/**/*.mts", "src/**/*.cts"]
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "@savvy-web/rslib-builder/tsconfig/rspress/plugin.json"
 }

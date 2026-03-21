@@ -7,7 +7,7 @@
  * `source` and `apiScope` props, runs Shiki with appropriate transformers, and
  * injects the resulting HAST as a base64-encoded prop for browser rendering.
  *
- * @module remark-api-codeblocks
+ * @packageDocumentation
  */
 
 import type { Root } from "mdast";

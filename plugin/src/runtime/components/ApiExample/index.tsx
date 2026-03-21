@@ -4,7 +4,7 @@ import { decodeHast } from "../../utils/decode-hast.js";
 import * as RuntimeComponents from "../ExampleBlock/index.js";
 
 export interface ApiExampleProps {
-	/** Example code (no // @noErrors, no Twoslash directives) */
+	/** Example code (no Twoslash directives) */
 	code: string;
 	/**
 	 * Pre-generated HAST tree from Shiki (base64-encoded JSON string).
@@ -20,13 +20,7 @@ export interface ApiExampleProps {
  * code string (no base64, no HAST for code). The code should already have
  * Twoslash directives stripped.
  *
- * SSG-MD output:
- * ```markdown
- * ```typescript
- * import { Logger } from "example-module";
- * const logger = new Logger();
- * ```
- * ```
+ * In SSG-MD mode, renders a plain code block with the example code.
  */
 export function ApiExample({ code, hast }: ApiExampleProps): ReactElement {
 	const parsedHast = useMemo(() => decodeHast(hast, "ApiExample"), [hast]);

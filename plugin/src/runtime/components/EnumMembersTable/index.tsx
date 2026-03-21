@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { MarkdownContent } from "../MarkdownContent/index.js";
 import styles from "./index.module.css";
 
-interface EnumMember {
+export interface EnumMember {
 	name: string;
 	value?: string;
 	description: string;

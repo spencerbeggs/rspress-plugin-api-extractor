@@ -65,11 +65,11 @@ export class OpenGraphResolver {
 	/**
 	 * Creates a new OpenGraphResolver instance.
 	 *
-	 * @param options - Configuration options for the resolver
-	 * @param options.siteUrl - Base URL for the website (e.g., "https://example.com").
-	 *   Used to construct absolute URLs from relative paths.
-	 * @param options.docsRoot - Optional root directory for documentation files.
-	 *   When provided, enables auto-detection of image dimensions for local files
+	 * @param options - Configuration options for the resolver.
+	 *   `siteUrl`: Base URL for the website (e.g., "https://example.com"),
+	 *   used to construct absolute URLs from relative paths.
+	 *   `docsRoot`: Optional root directory for documentation files;
+	 *   when provided, enables auto-detection of image dimensions for local files
 	 *   by looking in the `public` subdirectory.
 	 */
 	constructor(options: { siteUrl: string; docsRoot?: string }) {
@@ -297,15 +297,9 @@ export class OpenGraphResolver {
 	 * suitable for inclusion in page frontmatter, combining resolved image
 	 * metadata with article-specific information.
 	 *
-	 * @param options - Configuration for the OG metadata
-	 * @param options.siteUrl - Base URL for the website
-	 * @param options.pageRoute - Route path for this page (e.g., "/api/classes/foo")
-	 * @param options.description - Page description for `og:description`
-	 * @param options.publishedTime - ISO 8601 timestamp when page was first created
-	 * @param options.modifiedTime - ISO 8601 timestamp when page was last modified
-	 * @param options.section - Category display name (e.g., "Classes", "Functions")
-	 * @param options.packageName - Package name for tags
-	 * @param options.ogImage - Optional resolved OG image metadata
+	 * @param options - Configuration for the OG metadata.
+	 *   Includes `siteUrl`, `pageRoute`, `description`, `publishedTime`,
+	 *   `modifiedTime`, `section`, `packageName`, and optional `ogImage`.
 	 * @returns Complete Open Graph metadata object
 	 *
 	 * @example

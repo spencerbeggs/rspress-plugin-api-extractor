@@ -29,14 +29,8 @@ export interface ApiSignatureProps {
  * that RSPress converts to LLM-readable markdown in SSG-MD mode, and renders
  * interactive Shiki-highlighted code in browser mode.
  *
- * SSG-MD output:
- * ```markdown
- * ## Signature
- *
- * ```typescript
- * class Logger { ... }
- * ```
- * ```
+ * In SSG-MD mode, renders a "Signature" heading followed by a plain
+ * code block with the type signature.
  */
 export function ApiSignature({
 	code,

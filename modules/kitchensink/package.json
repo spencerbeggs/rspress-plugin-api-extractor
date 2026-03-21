@@ -28,10 +28,10 @@
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.55.2",
 		"@rslib/core": "^0.20.0",
-		"@savvy-web/rslib-builder": "^0.18.3",
+		"@savvy-web/rslib-builder": "^0.19.0",
 		"@types/node": "catalog:silk",
 		"@types/ws": "^8.18.1",
 		"@typescript/native-preview": "catalog:silk",
-		"vitest": "^4.0.18"
+		"vitest": "^4.1.0"
 	}
 }

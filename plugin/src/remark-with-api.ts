@@ -24,7 +24,7 @@ const SUPPORTED_LANGUAGES: Set<string> = new Set(["typescript", "ts", "javascrip
 
 /**
  * Infer API scope from file path
- * Path structure: docs/en/{api}/**\/*.mdx
+ * Path structure: docs/en/api-name/rest-of-path.mdx
  */
 function inferApiScope(filePath: string): string | undefined {
 	const normalized = filePath.replace(/\\/g, "/");

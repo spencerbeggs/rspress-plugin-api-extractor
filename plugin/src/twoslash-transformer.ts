@@ -13,22 +13,22 @@ import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
 
 /**
- * Module-level type routes map for resolving {@link ...} references.
+ * Module-level type routes map for resolving link references.
  * This is set by TwoslashManager.setTypeRoutes() before initialization.
  */
 let typeRoutes: Map<string, string> = new Map();
 
 /**
- * Transform TSDoc {@link ...} syntax to markdown links or plain text.
+ * Transform TSDoc link tag syntax to markdown links or plain text.
  *
  * Handles various TSDoc link formats:
- * - `{@link TypeName}` - simple type reference
- * - `{@link TypeName | display text}` - type with pipe-separated display text
- * - `{@link TypeName display text}` - type with space-separated display text
+ * - Simple type reference
+ * - Type with pipe-separated display text
+ * - Type with space-separated display text
  *
  * Also handles multiline links where the content may be split across lines.
  *
- * @param text - Text containing {@link ...} references
+ * @param text - Text containing TSDoc link references
  * @returns Text with links transformed to markdown or plain text
  */
 function transformTsDocLinks(text: string): string {
@@ -82,12 +82,12 @@ function transformTsDocLinks(text: string): string {
  * Process TSDoc documentation content for display in Twoslash hover popups.
  *
  * This function:
- * - Transforms {@link TypeName} references to markdown links or plain text
+ * - Transforms TSDoc link references to markdown links or plain text
  * - Normalizes whitespace around links for proper inline display
- * - Removes @example blocks (including their code content)
- * - Removes the @remarks tag while keeping the body text
- * - Removes modifier tags (@public, @internal, @private, etc.)
- * - Removes @see, @param, @returns, @throws tags (these are rendered separately)
+ * - Removes example blocks (including their code content)
+ * - Removes the remarks tag while keeping the body text
+ * - Removes modifier tags (public, internal, private, etc.)
+ * - Removes see, param, returns, throws tags (these are rendered separately)
  *
  * @param docs - Raw TSDoc documentation string
  * @returns Cleaned documentation string ready for markdown rendering
@@ -159,7 +159,7 @@ function addLinkClasses(node: ElementContent): void {
  * that can be rendered in Twoslash hover popups. It uses mdast-util-from-markdown
  * to parse the markdown and mdast-util-to-hast to convert to HAST.
  *
- * TSDoc {@link ...} references are transformed to markdown links before parsing.
+ * TSDoc link references are transformed to markdown links before parsing.
  * Whitespace is normalized for proper inline display.
  * Links are given the rp-link class for RSPress styling.
  *
@@ -423,7 +423,7 @@ export class TwoslashManager {
 	}
 
 	/**
-	 * Set the type routes map for resolving {@link ...} references in hover docs.
+	 * Set the type routes map for resolving link references in hover docs.
 	 * This should be called before initialize() to enable type linking.
 	 *
 	 * @param routes - Map of type names to their documentation URLs

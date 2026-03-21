@@ -5,7 +5,7 @@
  * It is populated during the `beforeBuild` hook and accessed by the remark plugin
  * during MDX compilation for on-demand Twoslash rendering in development mode.
  *
- * @module vfs-registry
+ * @packageDocumentation
  */
 
 import type { Highlighter, ShikiTransformer } from "shiki";
@@ -50,7 +50,7 @@ export interface VfsConfig {
  */
 class VfsRegistryImpl {
 	/**
-	 * Map of API scope -> VFS configuration
+	 * Map of API scope to VFS configuration
 	 */
 	private readonly configs = new Map<string, VfsConfig>();
 
@@ -95,8 +95,8 @@ class VfsRegistryImpl {
 	 * Extract the API scope from a file path.
 	 *
 	 * Path patterns:
-	 * - docs/en/{api}/**\/*.mdx
-	 * - website/docs/en/{api}/**\/*.mdx
+	 * - `docs/en/api-scope/rest.mdx`
+	 * - `website/docs/en/api-scope/rest.mdx`
 	 *
 	 * @param filePath - The file path to extract from
 	 * @returns The API scope, or undefined if not matched

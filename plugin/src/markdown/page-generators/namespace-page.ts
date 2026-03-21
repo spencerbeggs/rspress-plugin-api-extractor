@@ -378,7 +378,7 @@ export class NamespacePageGenerator {
 
 	/**
 	 * Abbreviate a full declaration to just its header
-	 * For example, "class Foo extends Bar implements Baz { ... }" -> "class Foo extends Bar implements Baz"
+	 * For example, `class Foo extends Bar implements Baz \{ ... \}` becomes `class Foo extends Bar implements Baz`
 	 */
 	private abbreviateDeclaration(signature: string, _keyword: string): string {
 		// Find the position where the body starts (opening brace)

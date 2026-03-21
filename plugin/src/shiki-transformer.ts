@@ -12,7 +12,7 @@ import type { ShikiTransformer } from "shiki";
  * **How it works:**
  * 1. The transformer is initialized with route and kind maps from {@link MarkdownCrossLinker}
  * 2. During Shiki rendering, it walks the HAST tree looking for type names
- * 3. When a match is found, it wraps the text node in an `<a>` tag with the route
+ * 3. When a match is found, it wraps the text node in an anchor tag with the route
  * 4. Semantic CSS classes are added based on the API item kind (class, interface, etc.)
  *
  * **API Scoping:**
@@ -50,19 +50,13 @@ import type { ShikiTransformer } from "shiki";
  * @see {@link TwoslashManager} for type-aware documentation features
  */
 export class ShikiCrossLinker {
-	/**
-	 * Map of API scopes to their route maps (API item name -> route)
-	 */
+	/** Map of API scopes to their route maps (API item name to route) */
 	private readonly apiItemRoutesByScope: Map<string, Map<string, string>> = new Map();
 
-	/**
-	 * Map of API scopes to their kind maps (API item name -> kind)
-	 */
+	/** Map of API scopes to their kind maps (API item name to kind) */
 	private readonly apiItemKindsByScope: Map<string, Map<string, string>> = new Map();
 
-	/**
-	 * Map of API scopes to their class members maps (class name -> member names[])
-	 */
+	/** Map of API scopes to their class members maps (class name to member names) */
 	private readonly classMembersMapByScope: Map<string, Map<string, string[]>> = new Map();
 
 	/**
@@ -941,7 +935,7 @@ export class ShikiCrossLinker {
 
 	/**
 	 * Helper to extract text content from potentially Twoslash-wrapped elements
-	 * Twoslash wraps identifiers in: <span class="twoslash-hover"><span class="twoslash-popup-container">...</span>text</span>
+	 * Twoslash wraps identifiers in: `<span class="twoslash-hover"><span class="twoslash-popup-container">...</span>text</span>`
 	 */
 	private extractTextFromTwoslash(element: ElementContent): string | null {
 		if (element.type !== "element") return null;
@@ -1003,8 +997,8 @@ export class ShikiCrossLinker {
 	}
 
 	/**
-	 * Helper to extract class and method information from Twoslash tooltip
-	 * Returns { className, methodName } if found, null otherwise
+	 * Helper to extract class and method information from Twoslash tooltip.
+	 * Returns an object with className and methodName if found, null otherwise.
 	 */
 	private extractMethodInfoFromTwoslashTooltip(element: Element): { className: string; methodName: string } | null {
 		// Check if this is a twoslash-hover span

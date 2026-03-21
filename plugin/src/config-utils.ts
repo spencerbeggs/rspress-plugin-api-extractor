@@ -46,8 +46,8 @@ export function normalizeLlmsPluginConfig(config: boolean | LlmsPlugin | undefin
 }
 
 /**
- * Merge LLM plugin configurations with precedence: version > API > global
- * Returns merged config with sensible defaults
+ * Merge LLM plugin configurations with precedence: version, then API, then global.
+ * Returns merged config with sensible defaults.
  */
 export function mergeLlmsPluginConfig(
 	globalConfig?: boolean | LlmsPlugin,
@@ -247,7 +247,7 @@ export function resolvePackageVersionConflicts(packages: ExternalPackageSpec[]):
 }
 
 /**
- * Strip range prefixes (^, ~, >=, etc.) from a version string to get a clean semver.
+ * Strip range prefixes from a version string to get a clean semver.
  */
 function stripRangePrefix(version: string): string {
 	return version.replace(/^[~^>=<]+\s*/, "");
@@ -255,7 +255,7 @@ function stripRangePrefix(version: string): string {
 
 /**
  * Find the highest version from a list of version specifiers using semver-effect.
- * Handles version ranges (^, ~, >, <, etc.) and exact versions.
+ * Handles version ranges and exact versions.
  *
  * @param versions - Array of version strings (can be ranges or exact versions)
  * @returns The highest version specifier

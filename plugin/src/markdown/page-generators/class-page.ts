@@ -343,8 +343,8 @@ export class ClassPageGenerator {
 	}
 
 	/**
-	 * Detect naming conflicts between class members and return prefixes to apply
-	 * Returns a Map of sanitized name -> prefix (empty string if no conflict)
+	 * Detect naming conflicts between class members and return prefixes to apply.
+	 * Returns a Map of sanitized name to prefix (empty string if no conflict).
 	 */
 	private detectMemberConflicts(
 		staticProps: { displayName: string }[],

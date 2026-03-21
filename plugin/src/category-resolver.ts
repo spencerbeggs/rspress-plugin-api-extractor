@@ -53,8 +53,8 @@ export class CategoryResolver {
 	}
 
 	/**
-	 * Resolve final category config for a specific API/version
-	 * Precedence: built-in defaults < plugin defaults < package categories < version categories
+	 * Resolve final category config for a specific API/version.
+	 * Precedence: built-in defaults, then plugin defaults, then package categories, then version categories.
 	 */
 	public resolveCategoryConfig(
 		pluginDefaults: Record<string, CategoryConfig>,
@@ -65,9 +65,9 @@ export class CategoryResolver {
 	}
 
 	/**
-	 * Resolve final source config for a specific API/version
-	 * Precedence: package source < version source < loader source (highest)
-	 * Loader source is passed in as versionSource since it's already been extracted
+	 * Resolve final source config for a specific API/version.
+	 * Precedence: package source, then version source, then loader source (highest).
+	 * Loader source is passed in as versionSource since it's already been extracted.
 	 */
 	public resolveSourceConfig(packageSource?: SourceConfig, versionSource?: SourceConfig): SourceConfig | undefined {
 		// Version source (or loader source) takes precedence
