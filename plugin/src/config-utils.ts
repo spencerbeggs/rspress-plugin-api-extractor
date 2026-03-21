@@ -268,11 +268,11 @@ function stripRangePrefix(version: string): string {
  */
 function findHighestVersion(versions: string[]): string {
 	// Parse all versions to get their base versions
-	const parsedVersions: Array<{ original: string; version: SemVer.SemVer }> = [];
+	const parsedVersions: Array<{ original: string; version: SemVer }> = [];
 
 	for (const version of versions) {
 		const cleaned = stripRangePrefix(version);
-		const result = Effect.runSyncExit(SemVer.fromString(cleaned));
+		const result = Effect.runSyncExit(SemVer.parse(cleaned));
 		if (result._tag === "Success") {
 			parsedVersions.push({ original: version, version: result.value });
 		}
