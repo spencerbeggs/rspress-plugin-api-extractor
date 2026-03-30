@@ -15,8 +15,8 @@
 		"versioned-v2": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.0",
-		"@savvy-web/rslib-builder": "^0.19.0",
+		"@rspress/core": "^2.0.7",
+		"@savvy-web/rslib-builder": "^0.19.1",
 		"@types/react": "^19.2.10",
 		"@typescript/native-preview": "catalog:silk",
 		"open": "^11.0.0",

@@ -26,8 +26,8 @@
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.57.7",
-		"@rslib/core": "^0.20.0",
-		"@savvy-web/rslib-builder": "^0.19.0",
+		"@rslib/core": "^0.20.1",
+		"@savvy-web/rslib-builder": "^0.19.1",
 		"@types/node": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk"
 	}
