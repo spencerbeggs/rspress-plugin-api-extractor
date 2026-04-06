@@ -26,9 +26,9 @@
 		"types:check": "tsgo --noEmit"
 	},
 	"devDependencies": {
-		"@microsoft/api-extractor": "^7.57.7",
-		"@rslib/core": "^0.20.0",
-		"@savvy-web/rslib-builder": "^0.19.0",
+		"@microsoft/api-extractor": "^7.58.1",
+		"@rslib/core": "^0.20.3",
+		"@savvy-web/rslib-builder": "^0.19.1",
 		"@types/node": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk"
 	}
