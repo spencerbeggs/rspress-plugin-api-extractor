@@ -27,6 +27,7 @@ vi.mock("../helpers.js", () => ({
 		const title = apiName ? `${name} | ${singularName} | ${apiName}` : `${name} | ${singularName}`;
 		return `---\ntitle: "${title}"\ndescription: ${summary}\n---\n\n`;
 	}),
+	generateAvailableFrom: vi.fn(() => ""),
 	escapeMdxGenerics: vi.fn((text: string) => text),
 	prepareExampleCode: vi.fn(
 		(example: { language: string; code: string }, _name: string, _pkg: string, _suppress: boolean) => ({
@@ -35,6 +36,7 @@ vi.mock("../helpers.js", () => ({
 			language: example.language,
 		}),
 	),
+	prependHiddenImports: vi.fn((code: string) => code),
 	stripTwoslashDirectives: vi.fn((code: string) => code),
 	formatExampleCode: vi.fn(async (code: string) => code),
 }));

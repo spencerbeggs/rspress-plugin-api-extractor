@@ -1,0 +1,66 @@
+---
+title: Transforms
+---
+
+A `Transform<In, Out>` is a callable interface that converts a value from one
+type to another. Transforms are the core building block of a pipeline stage and
+can be composed using the `Filters` namespace helpers.
+
+## Basic Transform
+
+Any function matching `(input: In) => Out` satisfies `Transform<In, Out>`.
+Hover over the variable to confirm the inferred type.
+
+```typescript with-api
+import type { Transform } from "kitchensink";
+
+const stringify: Transform<number, string> = (n) => String(n);
+//    ^?
+
+const double: Transform<number, number> = (n) => n * 2;
+//    ^?
+```
+
+## Composing Transforms with Filters
+
+`Filters.where` and `Filters.take` return `Transform<T[], T[]>` values that
+filter arrays. Use them directly or compose them into a pipeline stage.
+
+```typescript with-api
+import { Filters, Pipeline, JsonSource } from "kitchensink";
+
+const onlyPositive = Filters.where<number>((n) => n > 0);
+//    ^?
+
+const firstFive = Filters.take<number>(5);
+//    ^?
+
+// Apply directly to an array
+const filtered = onlyPositive([-1, 2, -3, 4, 5]);
+console.log(filtered); // [2, 4, 5]
+```
+
+## Using Middleware with Transforms
+
+`Middleware<T>` wraps a transform to intercept or modify execution. Below is a
+pattern for building a middleware chain. `// @noErrors` is used here because the
+example is intentionally partial.
+
+```typescript with-api
+// @noErrors
+import type { Middleware, Transform } from "kitchensink";
+
+function withLogging<T, O>(transform: Transform<T, O>): Transform<T, O> {
+ return (input) => {
+  console.log("input:", input);
+  const output = transform(input);
+  //    ^?
+  console.log("output:", output);
+  return output;
+ };
+}
+
+const loggedDouble = withLogging<number, number>((n) => n * 2);
+const result = loggedDouble(21);
+//    ^?
+```

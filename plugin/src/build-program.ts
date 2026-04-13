@@ -3,7 +3,6 @@ import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import type { CrossLinkData } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
-import { ApiParser } from "./loader.js";
 import { markdownCrossLinker } from "./markdown/index.js";
 import type { ResolvedApiConfig, ResolvedBuildContext } from "./services/ConfigService.js";
 import { SnapshotService } from "./services/SnapshotService.js";
@@ -77,7 +76,9 @@ export function generateApiDocs(
 		});
 
 		// Initialize cross-linkers with the prepared data
-		markdownCrossLinker.initialize(ApiParser.categorizeApiItems(apiPackage, categories), baseRoute, categories);
+		// Use crossLinkData.routes directly so both cross-linkers share the same
+		// routes (including entryPointSegment for collision cases)
+		markdownCrossLinker.setRoutes(crossLinkData.routes);
 		// API scope is derived from baseRoute to match file path inference in remark plugins
 		// e.g., baseRoute "/example-module" -> scope "example-module"
 		// When baseRoute is "/" (single-API mode), fall back to packageName to ensure a non-empty scope

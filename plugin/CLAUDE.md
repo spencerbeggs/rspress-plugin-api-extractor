@@ -57,6 +57,7 @@ which the global biome rule would rewrite to `.js`.
 - `src/plugin.ts` — RSPress adapter (~252 lines), runtime management
 - `src/build-program.ts` — doc generation orchestration (5-stage pipeline)
 - `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1120 lines)
+- `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection
 - `src/content-hash.ts` — SHA-256 hashing (pure, standalone)
 - `src/schemas/` — Effect Schema definitions (config, opengraph, performance)
 - `src/services/` — Effect service interfaces (Context.Tag)
@@ -78,6 +79,46 @@ pnpm vitest run plugin/src/        # Run colocated source tests
 ```
 
 Fixtures in `src/__fixtures__/`. Mock layers in `__test__/utils/layers.ts`.
+
+## Interactive Frontend Debugging
+
+For CSS and component debugging with Playwright MCP browser inspection:
+
+```bash
+# 1. Build plugin + modules first
+pnpm run build
+
+# 2. Start the basic site dev server (suppresses browser auto-open)
+NO_OPEN=1 pnpm dev:basic
+
+# 3. Use Playwright MCP to navigate to http://localhost:4173/api/...
+```
+
+**Iteration loop for CSS/component changes:**
+
+1. Edit CSS in `src/runtime/components/`
+2. Rebuild plugin: `pnpm --filter rspress-plugin-api-extractor run build:dev`
+3. Kill and restart the dev server (the RSPress dev server does NOT
+   hot-reload when the plugin's dist files change — it must be restarted)
+4. Navigate in Playwright to verify
+
+**Key patterns:**
+
+- Twoslash popup CSS is global (not CSS modules) in
+  `src/runtime/components/shared/_twoslash.css` — targets Shiki-generated
+  class names
+- SignatureCode CSS is a CSS module in
+  `src/runtime/components/SignatureCode/index.module.css` — CSS module
+  selectors have higher specificity than global selectors; use
+  `.twoslash .twoslash-popup-container .twoslash-popup-docs` (3 classes)
+  to beat `.code-xxx code` (1 class + 1 element)
+- Twoslash popups use `position: fixed` when visible (escapes scroll
+  containers); JS in `SignatureCode/index.tsx` sets `--popup-top`,
+  `--popup-left`, `--popup-max-width` CSS custom properties on hover
+- Hidden popups collapse to `width: 0; height: 0; overflow: hidden` to
+  avoid expanding the `<pre>` scroll area
+- The `<pre>` element uses `overflow-x: auto` for horizontal code
+  scrolling; per CSS spec this forces `overflow-y: auto` too
 
 ## Design Docs
 
@@ -101,8 +142,8 @@ SSG-MD rendering:
 - @./.claude/design/rspress-plugin-api-extractor/component-development.md
 - @./.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
 
-**Type loading & VFS** — load when modifying Twoslash, external package
-types, or VFS generation:
+**Type loading, VFS & multi-entry points** — load when modifying Twoslash,
+external package types, VFS generation, or multi-entry point resolution:
 
 - @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
 - @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md

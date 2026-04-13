@@ -1,0 +1,67 @@
+---
+title: Getting Started
+---
+
+The kitchensink library provides a typed data-pipeline API for composing sources,
+transforms, and sinks. This guide walks through the core workflow: creating a
+pipeline, executing it, and inspecting its status.
+
+## Creating a Pipeline
+
+Use the `Pipeline.create` static factory to construct a pipeline from a
+`JsonSource` and a transform function. TypeScript infers the generic parameters
+from the arguments.
+
+```typescript with-api
+import { Pipeline, JsonSource } from "kitchensink";
+
+const source = new JsonSource("./data/records.json");
+//    ^?
+const pipeline = Pipeline.create(source, (record: Record<string, unknown>) => ({
+ ...record,
+ processed: true,
+}));
+//  ^?
+```
+
+## Executing and Checking Status
+
+After executing the pipeline, the `status` getter reflects the current
+lifecycle state. Hover over `PipelineStatus` to navigate to the enum docs.
+
+```typescript with-api
+import { Pipeline, JsonSource, PipelineStatus } from "kitchensink";
+
+const pipeline = Pipeline.create(
+ new JsonSource("./data/records.json"),
+ (record: Record<string, unknown>) => ({ ...record, processed: true }),
+);
+
+const result = await pipeline.execute({ id: 1, name: "example" });
+//    ^?
+
+console.log(pipeline.status === PipelineStatus.Completed); // true
+```
+
+## Configuring Pipeline Options
+
+Pass `PipelineOptions` as the third argument to control batch size, retry
+count, and timeout. The `batchSize` getter/setter lets you adjust it after
+construction.
+
+```typescript with-api
+import { Pipeline, JsonSource } from "kitchensink";
+import type { PipelineOptions } from "kitchensink";
+
+const opts: PipelineOptions = { batchSize: 50, retryCount: 2, timeout: 5000 };
+//    ^?
+
+const pipeline = Pipeline.create(
+ new JsonSource("./data/items.json"),
+ (item: string) => item.toUpperCase(),
+ opts,
+);
+
+pipeline.batchSize = 25;
+console.log(pipeline.batchSize); // 25
+```

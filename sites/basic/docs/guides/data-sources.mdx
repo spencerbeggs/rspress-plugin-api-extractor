@@ -1,0 +1,75 @@
+---
+title: Data Sources
+---
+
+`DataSource` is the abstract base class for all pipeline inputs. `JsonSource`
+is the built-in concrete implementation that reads JSON files. You can also
+extend `DataSource` directly to connect any data resource.
+
+## Using JsonSource
+
+`JsonSource` is a sealed class that connects to a JSON file and fetches its
+contents as a typed array. Hover over `JsonSource` below to see its full
+signature.
+
+```typescript with-api
+import { JsonSource } from "kitchensink";
+
+const source = new JsonSource("./data/users.json");
+//    ^?
+
+await source.connect();
+const records = await source.fetch();
+//    ^?
+
+source.disconnect();
+```
+
+## Reading Data Through a Pipeline
+
+In practice you compose a source with a `Pipeline` rather than calling
+`connect` and `fetch` manually. The pipeline manages the source lifecycle.
+
+```typescript with-api
+// ---cut---
+import { Pipeline, JsonSource } from "kitchensink";
+
+const source = new JsonSource("./data/products.json");
+const pipeline = Pipeline.create(
+ source,
+ (product: { id: number; price: number }) => ({
+  ...product,
+  discounted: product.price * 0.9,
+ }),
+);
+
+const result = await pipeline.execute({ id: 42, price: 100 });
+//    ^?
+```
+
+## Implementing a Custom DataSource
+
+Extend the abstract `DataSource<T>` class and implement `connect` and `fetch`.
+The `name` property appears in logs and error messages.
+
+```typescript with-api
+import { DataSource } from "kitchensink";
+
+class NumberSource extends DataSource<number> {
+ readonly name = "NumberSource";
+ //       ^?
+
+ async connect(): Promise<void> {
+  // establish connection to underlying resource
+ }
+
+ async fetch(): Promise<number[]> {
+  return [1, 2, 3, 4, 5];
+ }
+}
+
+const src = new NumberSource();
+await src.connect();
+const data = await src.fetch();
+//    ^?
+```

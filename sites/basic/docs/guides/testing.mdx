@@ -1,0 +1,69 @@
+---
+title: Testing
+---
+
+The `kitchensink/testing` entry point provides in-memory test doubles and
+assertion helpers: `MockSource`, `TestPipeline`, `createMockData`, and
+`createTestSink`.
+
+## MockSource
+
+`MockSource` extends `DataSource` with an in-memory data array. It requires no
+external connections and resolves immediately.
+
+```typescript with-api
+import { MockSource } from "kitchensink/testing";
+
+const source = new MockSource("users", [
+ { id: 1, name: "Alice" },
+ { id: 2, name: "Bob" },
+]);
+//  ^?
+
+await source.connect();
+const records = await source.fetch();
+//    ^?
+source.disconnect();
+```
+
+## createMockData Overloads
+
+`createMockData` has two overloads: one that generates empty objects and one
+that generates copies of a template. Hover over each call to see which overload
+TypeScript resolves.
+
+```typescript with-api
+import { createMockData } from "kitchensink/testing";
+
+// Overload 1: generate N empty objects cast to T
+const blanks = createMockData<{ id: number }>(3);
+//    ^?
+
+// Overload 2: generate N copies of a template
+const users = createMockData(3, { id: 0, active: true });
+//    ^?
+```
+
+## createTestSink and TestPipeline
+
+`createTestSink` returns a `DataSink` augmented with a `captured` array for
+asserting on written records. `TestPipeline` extends `Pipeline` with execution
+logging.
+
+```typescript with-api
+import { MockSource, TestPipeline, createMockData, createTestSink } from "kitchensink/testing";
+import { Pipeline } from "kitchensink";
+
+const data = createMockData(5, { id: 0, value: "x" });
+const source = new MockSource("fixture", data);
+const sink = createTestSink<{ id: number; value: string }>();
+//    ^?
+
+const base = Pipeline.create(source, (item) => item);
+const tp = new TestPipeline(base);
+//    ^?
+
+await tp.execute({ id: 1, value: "hello" });
+console.log(sink.captured.length);
+//                ^?
+```

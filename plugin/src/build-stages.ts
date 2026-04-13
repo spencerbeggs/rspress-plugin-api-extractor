@@ -29,6 +29,8 @@ import {
 	TypeAliasPageGenerator,
 	VariablePageGenerator,
 } from "./markdown/index.js";
+import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
+import { resolveEntryPoints } from "./multi-entry-resolver.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import type { FileSnapshot } from "./services/SnapshotService.js";
@@ -41,6 +43,10 @@ export interface WorkItem {
 	readonly categoryKey: string;
 	readonly categoryConfig: CategoryConfig;
 	readonly namespaceMember?: NamespaceMember;
+	/** Entry points this item is available from */
+	readonly availableFrom?: string[];
+	/** Entry point URL segment, set only when displayName collides */
+	readonly entryPointSegment?: string;
 }
 
 export interface GeneratedPageResult {
@@ -112,8 +118,18 @@ function sanitizeId(displayName: string): string {
 export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItemsResult {
 	const { apiPackage, categories, baseRoute } = input;
 
-	// 1. Categorize API items by category key
-	const items = ApiParser.categorizeApiItems(apiPackage, categories);
+	// 0. Resolve entry points into deduplicated items with collision metadata
+	const resolvedItems = resolveEntryPoints(apiPackage);
+
+	// Build a lookup map from "displayName::kind" to ResolvedEntryItem
+	const resolvedLookup = new Map<string, ResolvedEntryItem>();
+	for (const resolved of resolvedItems) {
+		const key = `${resolved.item.displayName}::${resolved.item.kind}`;
+		resolvedLookup.set(key, resolved);
+	}
+
+	// 1. Categorize API items by category key (pass resolved items)
+	const items = ApiParser.categorizeApiItems(resolvedItems, categories);
 
 	// 2. Build cross-link routes and kinds maps directly
 	//    (mirrors MarkdownCrossLinker.initialize() logic)
@@ -123,7 +139,13 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
 		const categoryItems = items[categoryKey] || [];
 		for (const item of categoryItems) {
-			const itemRoute = `${baseRoute}/${categoryConfig.folderName}/${item.displayName.toLowerCase()}`;
+			const lookupKey = `${item.displayName}::${item.kind}`;
+			const resolved = resolvedLookup.get(lookupKey);
+			const segment = resolved?.hasCollision ? resolved.definingEntryPoint : undefined;
+
+			const itemRoute = segment
+				? `${baseRoute}/${categoryConfig.folderName}/${segment}/${item.displayName.toLowerCase()}`
+				: `${baseRoute}/${categoryConfig.folderName}/${item.displayName.toLowerCase()}`;
 			routes.set(item.displayName, itemRoute);
 			kinds.set(item.displayName, item.kind);
 
@@ -143,7 +165,7 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	}
 
 	// 3. Extract namespace members and add their routes with collision detection
-	const namespaceMembers = ApiParser.extractNamespaceMembers(apiPackage);
+	const namespaceMembers = ApiParser.extractNamespaceMembers(resolvedItems);
 
 	// Track unqualified names to detect collisions across namespaces
 	const unqualifiedNameCounts = new Map<string, number>();
@@ -180,7 +202,15 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
 		const categoryItems = items[categoryKey] || [];
 		for (const item of categoryItems) {
-			workItems.push({ item, categoryKey, categoryConfig });
+			const lookupKey = `${item.displayName}::${item.kind}`;
+			const resolved = resolvedLookup.get(lookupKey);
+			workItems.push({
+				item,
+				categoryKey,
+				categoryConfig,
+				...(resolved?.availableFrom != null ? { availableFrom: resolved.availableFrom } : {}),
+				...(resolved?.hasCollision ? { entryPointSegment: resolved.definingEntryPoint } : {}),
+			});
 		}
 	}
 
@@ -279,6 +309,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -300,6 +331,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -321,6 +353,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -342,6 +375,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -363,6 +397,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -384,6 +419,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -405,6 +441,7 @@ export function generateSinglePage(
 						source,
 						suppressExampleErrors,
 						llmsPlugin,
+						workItem.availableFrom,
 					),
 				);
 				page = {
@@ -414,7 +451,7 @@ export function generateSinglePage(
 				break;
 			}
 			default: {
-				console.warn(
+				yield* Effect.logDebug(
 					`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
 				);
 				return null;
@@ -431,6 +468,16 @@ export function generateSinglePage(
 			const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
 			page = {
 				routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
+				content: page.content,
+			};
+		}
+
+		// For colliding entry-point items, insert the entry point segment into the route
+		if (workItem.entryPointSegment) {
+			const folderName = workItem.categoryConfig.folderName;
+			const segmentInsertion = `/${folderName}/${workItem.entryPointSegment}/`;
+			page = {
+				routePath: page.routePath.replace(`/${folderName}/`, segmentInsertion),
 				content: page.content,
 			};
 		}
@@ -564,8 +611,9 @@ export function writeSingleFile(
 
 		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
 
-		// Use qualified name for namespace members
-		const label = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
+		// Use qualified name for namespace members, scoped label for colliding entry-point items
+		const baseLabel = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
+		const label = workItem.entryPointSegment ? `${baseLabel} (${workItem.entryPointSegment})` : baseLabel;
 
 		const snapshot: FileSnapshot = {
 			outputDir: resolvedOutputDir,

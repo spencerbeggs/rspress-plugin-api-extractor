@@ -8,6 +8,7 @@ import { markdownCrossLinker } from "../cross-linker.js";
 import {
 	escapeMdxGenerics,
 	formatExampleCode,
+	generateAvailableFrom,
 	generateFrontmatter,
 	prepareExampleCode,
 	prependHiddenImports,
@@ -92,6 +93,7 @@ export class ClassPageGenerator {
 		sourceConfig?: SourceConfig,
 		suppressExampleErrors?: boolean,
 		llmsPlugin?: LlmsPlugin,
+		availableFrom?: string[],
 	): Promise<{ routePath: string; content: string }> {
 		const shouldSuppressErrors = suppressExampleErrors ?? true;
 		const name = apiClass.displayName;
@@ -119,6 +121,9 @@ export class ClassPageGenerator {
 
 		// Add summary
 		content += `${summary}\n\n`;
+
+		// Add "Available from" for multi-entry items
+		content += generateAvailableFrom(packageName, availableFrom);
 
 		// Add toolbar with source code badge
 		const sourceLink = ApiParser.getSourceLink(apiClass, sourceConfig);

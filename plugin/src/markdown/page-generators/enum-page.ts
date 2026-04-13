@@ -5,6 +5,7 @@ import { markdownCrossLinker } from "../cross-linker.js";
 import {
 	escapeMdxGenerics,
 	formatExampleCode,
+	generateAvailableFrom,
 	generateFrontmatter,
 	prepareExampleCode,
 	stripTwoslashDirectives,
@@ -53,6 +54,7 @@ export class EnumPageGenerator {
 		sourceConfig?: SourceConfig,
 		suppressExampleErrors?: boolean,
 		llmsPlugin?: LlmsPlugin,
+		availableFrom?: string[],
 	): Promise<{ routePath: string; content: string }> {
 		const shouldSuppressErrors = suppressExampleErrors ?? true;
 		const name = apiEnum.displayName;
@@ -80,6 +82,9 @@ export class EnumPageGenerator {
 
 		// Add summary
 		content += `${summary}\n\n`;
+
+		// Add "Available from" for multi-entry items
+		content += generateAvailableFrom(packageName, availableFrom);
 
 		// Add toolbar with source code badge
 		const sourceLink = ApiParser.getSourceLink(apiEnum, sourceConfig);

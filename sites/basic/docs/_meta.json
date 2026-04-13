@@ -1,0 +1,17 @@
+[
+	{ "type": "file", "name": "index", "label": "Home" },
+	{
+		"type": "dir",
+		"name": "guides",
+		"label": "Guides",
+		"collapsible": true,
+		"collapsed": false
+	},
+	{
+		"type": "dir",
+		"name": "api",
+		"label": "API Reference",
+		"collapsible": true,
+		"collapsed": true
+	}
+]

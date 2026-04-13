@@ -59,23 +59,35 @@ html.rp-dark {
 .twoslash {
 	/* --- Popup Container (base — hidden by default) --- */
 	& .twoslash-popup-container {
-		max-width: 75cqi;
 		position: absolute;
 		left: 0;
-		opacity: 0;
 		display: flex;
 		flex-direction: column;
 		transform: translateY(1.1em);
 		background: var(--twoslash-popup-bg);
 		color: var(--twoslash-popup-color);
 		border: 1px solid var(--twoslash-border-color);
-		transition: opacity 0.3s;
 		border-radius: 4px;
-		pointer-events: none;
 		z-index: 1000;
 		user-select: none;
 		text-align: left;
 		box-shadow: var(--twoslash-popup-shadow);
+		/* Reset inherited code block properties */
+		white-space: normal;
+		overflow-wrap: normal;
+		word-break: normal;
+		/* Hidden: collapsed to prevent scroll area expansion */
+		opacity: 0;
+		pointer-events: none;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+		border-width: 0;
+		/* Delayed collapse: wait for fade-out before shrinking */
+		transition:
+			opacity 0.3s,
+			width 0s 0.3s,
+			height 0s 0.3s;
 
 		&:hover {
 			user-select: auto;
@@ -92,7 +104,9 @@ html.rp-dark {
 	& .twoslash-popup-code {
 		font-family: var(--twoslash-code-font);
 		font-size: var(--twoslash-code-font-size);
-		display: inline;
+		display: block;
+		white-space: pre-wrap;
+		overflow-wrap: break-word;
 	}
 
 	& .twoslash-popup-docs {
@@ -156,17 +170,35 @@ html.rp-dark {
 	& .twoslash-query-line .twoslash-popup-container {
 		opacity: 1;
 		pointer-events: auto;
+		/* Expand from collapsed hidden state */
+		width: max-content;
+		max-width: var(--popup-max-width, 75cqi);
+		min-width: 200px;
+		height: auto;
+		overflow: visible;
+		border-width: 1px;
+		/* Fixed positioning to escape scroll container clipping */
+		position: fixed;
+		left: var(--popup-left, 0px);
+		top: var(--popup-top, 0px);
+		transform: none;
+		/* No delay on expand — instant size, fade in opacity */
+		transition: opacity 0.3s;
 	}
 
-	/* --- Query Persisted Position --- */
+	/* --- Query Persisted Position (// ^? annotations, always visible inline) --- */
 	& .twoslash-query-persisted .twoslash-popup-container {
+		position: absolute;
+		left: 0;
 		z-index: 999;
 		transform: translateY(1.5em);
 	}
 
-	/* --- Query Line Position --- */
+	/* --- Query Line Position (// ^? annotations on their own line) --- */
 	& .twoslash-query-line .twoslash-popup-container {
 		position: relative;
+		left: auto;
+		top: auto;
 		margin-bottom: 1.4em;
 		transform: translateY(0.6em);
 	}
@@ -331,6 +363,84 @@ html.rp-dark {
 	display: none;
 }
 
+/* --- Param-like tag badge layout (@param, @typeParam, @returns, @throws, @defaultValue) --- */
+
+/* Shared layout for all param-like tags */
+.twoslash-popup-docs-tag:has(.twoslash-tag-param),
+.twoslash-popup-docs-tag:has(.twoslash-tag-typeParam),
+.twoslash-popup-docs-tag:has(.twoslash-tag-returns),
+.twoslash-popup-docs-tag:has(.twoslash-tag-throws),
+.twoslash-popup-docs-tag:has(.twoslash-tag-defaultValue) {
+	display: flex;
+	align-items: first baseline;
+	gap: 0.5em;
+	padding: 0.35em 8px;
+	margin: 0 -8px;
+	border-bottom: 1px solid var(--twoslash-border-color);
+	color: var(--twoslash-docs-color);
+}
+
+/* Hide the literal @tagName text for param-like tags */
+.twoslash-popup-docs-tag:has(.twoslash-tag-param) > .twoslash-popup-docs-tag-name,
+.twoslash-popup-docs-tag:has(.twoslash-tag-typeParam) > .twoslash-popup-docs-tag-name,
+.twoslash-popup-docs-tag:has(.twoslash-tag-returns) > .twoslash-popup-docs-tag-name,
+.twoslash-popup-docs-tag:has(.twoslash-tag-throws) > .twoslash-popup-docs-tag-name,
+.twoslash-popup-docs-tag:has(.twoslash-tag-defaultValue) > .twoslash-popup-docs-tag-name {
+	font-size: 0;
+	width: 0;
+	overflow: hidden;
+	padding: 0;
+	margin: 0;
+}
+
+/* Shared badge base style (via ::before on the tag container) */
+.twoslash-popup-docs-tag:has(.twoslash-tag-param)::before,
+.twoslash-popup-docs-tag:has(.twoslash-tag-typeParam)::before,
+.twoslash-popup-docs-tag:has(.twoslash-tag-returns)::before,
+.twoslash-popup-docs-tag:has(.twoslash-tag-throws)::before,
+.twoslash-popup-docs-tag:has(.twoslash-tag-defaultValue)::before {
+	display: inline-block;
+	font-size: 0.65rem;
+	font-weight: 600;
+	font-family: var(--twoslash-code-font);
+	padding: 1px 5px;
+	border-radius: 3px;
+	white-space: nowrap;
+	flex-shrink: 0;
+	line-height: 1.4;
+}
+
+/* Badge text and color per tag type */
+.twoslash-popup-docs-tag:has(.twoslash-tag-typeParam)::before {
+	content: "type";
+	background: var(--twoslash-tag-bg);
+	color: var(--twoslash-tag-color);
+}
+
+.twoslash-popup-docs-tag:has(.twoslash-tag-param)::before {
+	content: "param";
+	background: var(--twoslash-tag-bg);
+	color: var(--twoslash-tag-color);
+}
+
+.twoslash-popup-docs-tag:has(.twoslash-tag-returns)::before {
+	content: "returns";
+	background: var(--twoslash-tag-annotate-bg);
+	color: var(--twoslash-tag-annotate-color);
+}
+
+.twoslash-popup-docs-tag:has(.twoslash-tag-throws)::before {
+	content: "throws";
+	background: var(--twoslash-warn-bg);
+	color: var(--twoslash-warn-color);
+}
+
+.twoslash-popup-docs-tag:has(.twoslash-tag-defaultValue)::before {
+	content: "default";
+	background: var(--twoslash-highlighted-bg);
+	color: var(--twoslash-docs-color);
+}
+
 /* Style remarks content to flow naturally after the main description */
 .twoslash-tag-remarks {
 	display: block;
@@ -356,6 +466,16 @@ html.rp-dark {
 
 /* ===== Hover Popup Content Styling ===== */
 
+/* Override CSS module code styling inside popup docs (needs higher specificity) */
+.twoslash .twoslash-popup-container .twoslash-popup-docs code {
+	display: inline;
+	padding: 1px 4px;
+	font-size: 0.85em;
+	border-radius: 3px;
+	background-color: var(--twoslash-popup-bg);
+	border: 1px solid var(--twoslash-border-color);
+}
+
 .twoslash-popup-docs p {
 	text-wrap: auto;
 	font-size: 0.9rem;
@@ -380,6 +500,7 @@ html.rp-dark {
 	margin: 0.5em 0;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: intentional — targets docs list items, not completions list items */
 .twoslash-popup-docs li {
 	margin: 0.25em 0;
 }
@@ -394,6 +515,7 @@ html.rp-dark {
 	text-underline-offset: 2px;
 	transition: all 0.2s ease;
 
+	/* biome-ignore lint/style/noDescendingSpecificity: intentional — this :hover is for api-type-link, not popup-container */
 	&:hover {
 		text-decoration-style: solid;
 		text-decoration-thickness: 2px;

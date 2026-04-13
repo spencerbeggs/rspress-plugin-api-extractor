@@ -167,7 +167,7 @@ function addLinkClasses(node: ElementContent): void {
  * @returns Array of HAST ElementContent nodes
  */
 function renderMarkdown(markdown: string): ElementContent[] {
-	if (!markdown || !markdown.trim()) {
+	if (!markdown?.trim()) {
 		return [];
 	}
 
@@ -397,7 +397,7 @@ export class TwoslashManager {
 			},
 		});
 
-		console.log(`✅ Twoslash transformer initialized with ${vfs.size} type definition files`);
+		// Logged via Effect logger in ConfigServiceLive; no console output here
 	}
 
 	/**

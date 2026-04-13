@@ -1,6 +1,7 @@
 import { RSPressPluginBuilder } from "@savvy-web/rslib-builder";
 
 export default RSPressPluginBuilder.create({
+	dtsBundledPackages: ["@rspress/core"],
 	apiModel: {
 		suppressWarnings: [{ messageId: "ae-forgotten-export", pattern: "_base" }],
 	},

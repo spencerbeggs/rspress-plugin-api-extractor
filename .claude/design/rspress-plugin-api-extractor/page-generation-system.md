@@ -3,14 +3,15 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
-completeness: 80
+updated: 2026-04-09
+last-synced: 2026-04-09
+completeness: 85
 related:
   - rspress-plugin-api-extractor/build-architecture.md
   - rspress-plugin-api-extractor/snapshot-tracking-system.md
   - rspress-plugin-api-extractor/cross-linking-architecture.md
   - rspress-plugin-api-extractor/component-development.md
+  - rspress-plugin-api-extractor/multi-entry-point-support.md
 dependencies: []
 ---
 
@@ -38,6 +39,8 @@ class-based generators for each API item category.
 
 - **Effect Stream pipeline** for concurrent page generation and writing
 - **5-stage build process** orchestrated by `build-program.ts`
+- **Multi-entry point resolution** via `MultiEntryResolver` for
+  deduplication and collision detection
 - **Class-based generators** for each API category (class, interface,
   function, type alias, enum, variable, namespace)
 - **Snapshot-tracked writes** for incremental builds
@@ -85,6 +88,10 @@ interface WorkItem {
   categoryKey: string;
   categoryConfig: CategoryConfig;
   namespaceMember?: NamespaceMember;
+  /** Entry points this item is available from */
+  availableFrom?: string[];
+  /** Entry point URL segment, set only when displayName collides */
+  entryPointSegment?: string;
 }
 
 interface GeneratedPageResult {
@@ -120,11 +127,19 @@ interface FileWriteResult {
 
 Runs before the Stream pipeline. Produces:
 
-1. **Categorized items** -- API items grouped by category key
-2. **Cross-link routes** -- Map of type name to route path
-3. **Cross-link kinds** -- Map of type name to API item kind
-4. **Namespace member extraction** with collision detection
-5. **Flat WorkItem array** for the pipeline
+1. **Multi-entry resolution** -- `resolveEntryPoints()` from
+   `multi-entry-resolver.ts` deduplicates re-exports across entry
+   points and detects name collisions (same displayName, different
+   kind). Each item receives `availableFrom` and collision metadata.
+2. **Categorized items** -- API items grouped by category key via
+   `ApiParser.categorizeApiItems()`, which accepts
+   `ResolvedEntryItem[]` (multi-entry) or `ApiPackage` (legacy)
+3. **Cross-link routes** -- Map of type name to route path; routes
+   include an extra entry-point segment for colliding items
+4. **Cross-link kinds** -- Map of type name to API item kind
+5. **Namespace member extraction** with collision detection
+6. **Flat WorkItem array** -- Each item carries `availableFrom` and
+   optionally `entryPointSegment` (set only for collisions)
 
 ### Stage 1: generateSinglePage (Effect)
 
@@ -213,9 +228,15 @@ class XxxPageGenerator {
     source?: SourceConfig,
     suppressExampleErrors?: boolean,
     llmsPlugin?: LlmsPlugin,
+    availableFrom?: string[],
   ): Promise<{ routePath: string; content: string }>
 }
 ```
+
+The `availableFrom` parameter is passed from `WorkItem.availableFrom`.
+When the item is exported from multiple entry points, the generator
+calls `generateAvailableFrom()` to emit an "Available from" line
+listing all entry point import paths.
 
 The generators are called via `Effect.promise()` in `generateSinglePage`
 since they use async operations (Shiki highlighting, Prettier formatting)
@@ -243,6 +264,8 @@ import { SignatureBlock, ParametersTable }
 
 # ItemName
 
+Available from: `package-name`, `package-name/testing`
+
 Summary text.
 
 ## Signature
@@ -255,10 +278,15 @@ Summary text.
 ...
 ```
 
+The "Available from" line appears only when the item is exported from
+more than one entry point.
+
 ### Helper Functions
 
 **Location:** `markdown/helpers.ts`
 
+- `generateAvailableFrom()` -- Renders "Available from" line for
+  multi-entry items (returns empty string for single-entry)
 - `generateFrontmatter()` -- YAML frontmatter with OG tags
 - `prepareExampleCode()` -- Adds imports and `// @noErrors` for Twoslash
 - `stripTwoslashDirectives()` -- Removes directives for copy button
@@ -313,7 +341,9 @@ left padding from line 1.
 ]
 ```
 
-Entries are sorted alphabetically by label.
+Entries are sorted alphabetically by label. When an item has
+`entryPointSegment` set (name collision across entry points), the label
+includes the qualifier: `"MyClass (testing)"`.
 
 ## Integration Points
 
@@ -359,6 +389,9 @@ Both use the VfsRegistry to access the highlighter and transformers.
 
 - **Build Architecture:**
   `build-architecture.md` -- Plugin structure and service layer
+- **Multi-Entry Point Support:**
+  `multi-entry-point-support.md` -- Entry point resolution,
+  deduplication, collision detection, and VFS generation
 - **Snapshot Tracking System:**
   `snapshot-tracking-system.md` -- Incremental build tracking
 - **Cross-Linking Architecture:**

@@ -1,0 +1,77 @@
+---
+title: Advanced
+---
+
+This guide covers the advanced features of the kitchensink library: the `Codecs`
+and `Filters` namespaces, the `BatchProcessor` class, and staged APIs marked
+`@alpha` or `@beta`.
+
+## Codecs Namespace
+
+`Codecs.json` serialises any value to a JSON string. `Codecs.binary` encodes
+to a `Uint8Array`. `Codecs.streaming` is an `@alpha` async iterable API — hover
+over it to see the stability notice.
+
+```typescript with-api
+import { Codecs, JsonSource } from "kitchensink";
+
+const jsonStr = Codecs.json({ id: 1, name: "Alice" });
+//    ^?
+
+const bytes = Codecs.binary({ id: 1, name: "Alice" });
+//    ^?
+
+// Codecs.streaming is @alpha — interface may change
+const source = new JsonSource("./data/records.json");
+const stream = Codecs.streaming(source);
+//    ^?
+```
+
+## Filters Namespace
+
+`Filters.where` and `Filters.take` compose into a pipeline stage.
+`Filters.fuzzy` is `@beta` — its interface may change in a future minor release.
+
+```typescript with-api
+import { Filters } from "kitchensink";
+
+const onlyActive = Filters.where<{ id: number; active: boolean }>(
+ (item) => item.active,
+);
+// @highlight
+const firstThree = Filters.take<{ id: number; active: boolean }>(3);
+
+const fuzzySearch = Filters.fuzzy<{ id: number; name: string }>("Ali", "name");
+//    ^?
+
+const items = [
+ { id: 1, active: true, name: "Alice" },
+ { id: 2, active: false, name: "Bob" },
+ { id: 3, active: true, name: "Alicia" },
+];
+
+const result = firstThree(onlyActive(items));
+//    ^?
+```
+
+## BatchProcessor with Decorator Reference
+
+`BatchProcessor` is documented with a `@decorator` reference to `logged`, which
+instruments all public methods with structured logging. Hover over
+`BatchProcessor` to see the decorator note.
+
+```typescript with-api
+import { BatchProcessor, Pipeline, JsonSource } from "kitchensink";
+
+const pipeline = Pipeline.create(
+ new JsonSource("./data/numbers.json"),
+ (n: number) => n * 10,
+);
+
+const processor = new BatchProcessor(pipeline, { batchSize: 25 });
+//    ^?
+
+const results = await processor.processBatch([1, 2, 3, 4, 5]);
+//    ^?
+console.log(results); // [10, 20, 30, 40, 50]
+```

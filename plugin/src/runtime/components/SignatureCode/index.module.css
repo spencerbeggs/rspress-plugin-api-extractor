@@ -6,7 +6,6 @@
 .code {
 	container-type: inline-size;
 	position: relative;
-	overflow: visible;
 	border-bottom-left-radius: var(--api-border-radius);
 	border-bottom-right-radius: var(--api-border-radius);
 }
@@ -16,7 +15,7 @@
 	height: auto;
 	margin: 0;
 	padding: var(--api-spacing-lg);
-	overflow: visible;
+	overflow-x: auto;
 	background-color: var(--shiki-light-bg);
 	border-radius: 0 0 var(--api-border-radius) var(--api-border-radius);
 }
@@ -51,7 +50,6 @@ html.rp-dark .code :global(code span) {
 
 /* Wrapped state */
 .wrapped :global(pre) {
-	overflow: visible;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
 }

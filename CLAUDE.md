@@ -48,6 +48,7 @@ libraries. Each produces dual outputs:
 
 **kitchensink** — Comprehensive module exercising all API Extractor item kinds
 (classes, interfaces, enums, functions, type aliases, variables, namespaces).
+Exports a `./testing` entry point for multi-entry point documentation testing.
 
 **versioned-v1 / versioned-v2** — Paired modules for testing multiVersion
 documentation. v1 provides a baseline API; v2 introduces breaking changes.
@@ -104,8 +105,9 @@ SSG-MD dual-mode rendering:
 - @./.claude/design/rspress-plugin-api-extractor/component-development.md
 - @./.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
 
-**Type loading & VFS** — load when modifying Twoslash, external package
-types, or virtual file system generation:
+**Type loading, VFS & multi-entry points** — load when modifying Twoslash,
+external package types, virtual file system generation, or multi-entry point
+resolution in the doc generation pipeline:
 
 - @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
 - @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md

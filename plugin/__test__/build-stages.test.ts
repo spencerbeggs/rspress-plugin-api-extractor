@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, LogLevel, Logger } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
 	FileWriteResult,
@@ -543,7 +543,9 @@ describe("generateSinglePage", () => {
 		};
 
 		const result = await Effect.runPromise(
-			generateSinglePage(workItem, ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+			generateSinglePage(workItem, ctx).pipe(
+				Effect.provide(Layer.mergeAll(NodeFileSystem.layer, Logger.minimumLogLevel(LogLevel.None))),
+			),
 		);
 		expect(result).toBeNull();
 	});
