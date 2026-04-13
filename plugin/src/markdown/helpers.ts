@@ -15,6 +15,20 @@ import type { ImportStatement } from "../type-reference-extractor.js";
 import { TypeReferenceExtractor } from "../type-reference-extractor.js";
 
 /**
+ * Generate an "Available from" line for items exported from multiple entry points.
+ * Returns empty string if only one entry point or none provided.
+ */
+export function generateAvailableFrom(packageName: string, availableFrom?: string[]): string {
+	if (!availableFrom || availableFrom.length <= 1) {
+		return "";
+	}
+	const paths = availableFrom
+		.map((ep) => (ep === "default" ? `\`${packageName}\`` : `\`${packageName}/${ep}\``))
+		.join(", ");
+	return `Available from: ${paths}\n\n`;
+}
+
+/**
  * Prepare example code for Twoslash rendering.
  *
  * Prepares the code with imports and error directives but does NOT render HTML.
@@ -144,13 +158,24 @@ export function escapeYamlString(value: string): string {
  * ```ts
  * escapeMdxGenerics("Returns Promise<T>");        // "Returns Promise`<T>`"
  * escapeMdxGenerics("Map<K, V> extends...");      // "Map`<K, V>` extends..."
+ * escapeMdxGenerics("`Pipeline<I, O>`");           // "`Pipeline<I, O>`" (unchanged)
  * ```
  */
 export function escapeMdxGenerics(text: string): string {
-	return text.replace(
-		/<([A-Z][A-Za-z0-9_]*(?:\s+extends\s+[^>]+)?(?:,\s*[A-Z][A-Za-z0-9_]*(?:\s+extends\s+[^>]+)?)*)>/g,
-		"`<$1>`",
-	);
+	// Split on backtick code spans so we only escape generics in plain text
+	const parts = text.split(/(`[^`]+`)/g);
+	return parts
+		.map((part) => {
+			// Parts matching the capture group are code spans — leave them alone
+			if (part.startsWith("`") && part.endsWith("`")) {
+				return part;
+			}
+			return part.replace(
+				/<([A-Z][A-Za-z0-9_]*(?:\s+extends\s+[^>]+)?(?:,\s*[A-Z][A-Za-z0-9_]*(?:\s+extends\s+[^>]+)?)*)>/g,
+				"`<$1>`",
+			);
+		})
+		.join("");
 }
 
 /**

@@ -1,158 +1,446 @@
 ---
-status: draft
+status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
-completeness: 25
+updated: 2026-04-13
+last-synced: 2026-04-13
+completeness: 90
 related:
   - rspress-plugin-api-extractor/page-generation-system.md
   - rspress-plugin-api-extractor/build-architecture.md
+  - rspress-plugin-api-extractor/ssg-compatible-components.md
+  - rspress-plugin-api-extractor/import-generation-system.md
 dependencies: []
 ---
 
 # Cross-Linking Architecture
 
-**Status:** Stub - Needs Implementation
+**Status:** Production-ready
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [MarkdownCrossLinker](#markdowncrosslinker)
+- [ShikiCrossLinker](#shikicrosslinker)
+- [URL Generation](#url-generation)
+- [Type Matching Algorithm](#type-matching-algorithm)
+- [Backtick Code Span Safety](#backtick-code-span-safety)
+- [Integration Points](#integration-points)
+- [VfsRegistry](#vfsregistry)
+- [Testing](#testing)
+- [File Locations](#file-locations)
+
+---
 
 ## Overview
 
-The cross-linking system provides bidirectional linking between API
-documentation pages. It enables users to click on type references in
-code blocks and navigate directly to the corresponding API documentation
-page.
+The cross-linking system turns type references into clickable links
+throughout generated API documentation. It operates at two levels:
 
-**Key Features:**
+1. **Markdown text** -- `MarkdownCrossLinker` replaces type names in
+   prose descriptions with `[TypeName](/route)` links during page
+   generation.
+2. **Code blocks** -- `ShikiCrossLinker` post-processes Shiki HAST
+   output to wrap type identifiers in `<a>` tags, including inside
+   Twoslash hover tooltips.
 
-- **Code block cross-linking** via ShikiCrossLinker
-- **Markdown text cross-linking** via MarkdownCrossLinker
-- **URL generation** for API items
-- **Scope-aware linking** (package-relative, external packages)
-- **Singleton pattern** for shared state across build
+Both cross-linkers use module-level singleton instances, initialized
+once per API scope during the build, and shared across all page
+generators and remark plugins.
 
-## Components
+### Key Design Decisions
 
-### 1. ShikiCrossLinker
+- **Scope-based isolation** -- Routes are stored per API scope in Maps,
+  enabling multi-API builds without cross-contamination.
+- **Longest-first matching** -- Names are sorted descending by length
+  so "HookEvent" matches before "Hook".
+- **Post-processing over inline transformation** -- The ShikiCrossLinker
+  transforms HAST after Shiki/Twoslash rendering (not during), to avoid
+  interfering with Twoslash popup positioning.
+- **Backtick-aware filtering** -- Both cross-linkers and the MDX
+  generics escaper detect backtick code spans and skip processing
+  inside them.
 
-**Location:** `src/shiki-transformer.ts`
+---
 
-**Purpose:** Transform type references in code blocks into clickable
-links during Shiki syntax highlighting.
+## Architecture
 
-**Key Methods:**
-
-- `registerApiItem()` - Register an API item for linking
-- `getTransformer()` - Get Shiki transformer for code blocks
-- `shouldLinkType()` - Determine if type should be linked
-- `generateUrl()` - Generate URL for API item
-
-**Workflow:**
+### Data Flow
 
 ```text
-Code Block Rendering:
-  ├─> Shiki highlights syntax
-  ├─> ShikiCrossLinker transformer processes tokens
-  ├─> Type identifiers matched against registry
-  ├─> Matching types wrapped in <a> tags
-  └─> HTML output with clickable type links
+prepareWorkItems (build-stages.ts)
+  ├─> resolveEntryPoints() for multi-entry deduplication
+  ├─> Build routes Map: typeName → routePath
+  ├─> Build kinds Map: typeName → apiItemKind
+  └─> Return crossLinkData: { routes, kinds }
+         │
+         ├─> markdownCrossLinker.initialize(categorizedItems, baseRoute, categories)
+         │     Builds its own apiItemRoutes map from category structure
+         │
+         ├─> shikiCrossLinker.reinitialize(routes, kinds, apiScope)
+         │     Stores routes/kinds per scope, builds classMembersMap
+         │
+         └─> VfsRegistry.register(apiScope, { crossLinker: shikiCrossLinker, ... })
+               Makes cross-linker available to remark plugins
+
+Page generation (page-generators/*.ts)
+  └─> markdownCrossLinker.addCrossLinks(descriptionText)
+        Markdown text → markdown text with [TypeName](/route) links
+
+Code block rendering (remark-api-codeblocks.ts)
+  └─> shikiCrossLinker.transformHast(hast, apiScope)
+        HAST → HAST with <a> anchors on type references
 ```
 
-**TODO: Document:**
+### Singleton Instances
 
-- Registration flow during API doc generation
-- Type matching algorithm
-- URL generation strategy
-- External vs internal linking
-- Integration with Twoslash
-- Edge cases and limitations
+```typescript
+// src/markdown/cross-linker.ts
+export const markdownCrossLinker: MarkdownCrossLinker =
+  new MarkdownCrossLinker();
 
-### 2. MarkdownCrossLinker
+// src/shiki-transformer.ts — instantiated per plugin call
+const shikiCrossLinker = new ShikiCrossLinker();
+```
+
+The `MarkdownCrossLinker` is a true module-level singleton. The
+`ShikiCrossLinker` is created per plugin instantiation and passed
+into the `VfsRegistry` for scope-keyed retrieval by remark plugins.
+
+---
+
+## MarkdownCrossLinker
 
 **Location:** `src/markdown/cross-linker.ts`
 
-**Purpose:** Transform type references in plain markdown text into
-clickable links.
+Transforms type references in plain markdown text into clickable links.
+Used by page generators to cross-link descriptions, parameter docs, and
+remarks.
 
-**Key Methods:**
-
-- `registerApiItem()` - Register an API item
-- `generateInlineCodeLinks()` - Transform \`TypeName\` references
-- `shouldLinkType()` - Determine if type should be linked
-- `generateUrl()` - Generate URL for API item
-
-**Workflow:**
-
-```text
-Markdown Generation:
-  ├─> Page generator creates markdown text
-  ├─> MarkdownCrossLinker.generateInlineCodeLinks()
-  ├─> Regex matches inline code patterns
-  ├─> Type names matched against registry
-  ├─> Matching types replaced with [TypeName](url)
-  └─> Markdown with clickable type links
-```
-
-**TODO: Document:**
-
-- Regex patterns for type matching
-- Conflict resolution (same name, different types)
-- Performance optimization strategies
-- Integration with page generators
-- Testing approach
-
-### 3. Singleton Pattern
-
-**Approach:** Both cross-linkers use singleton pattern to share state
-across all page generations.
-
-**Benefits:**
-
-- Single source of truth for all registered API items
-- Efficient memory usage
-- Consistent URL generation
-- Easy access from any page generator
-
-**Location:**
+### Interface
 
 ```typescript
-// src/shiki-transformer.ts
-export const shikiCrossLinker = new ShikiCrossLinker();
-
-// src/markdown/cross-linker.ts
-export const markdownCrossLinker = new MarkdownCrossLinker();
+class MarkdownCrossLinker {
+  clear(): void;
+  addRoutes(
+    items: Record<string, CrossLinkableItem[]>,
+    baseRoute: string,
+    categories: Record<string, { folderName: string }>,
+  ): { routes: Map<string, string>; kinds: Map<string, string> };
+  initialize(...): { routes, kinds };  // deprecated: clear() + addRoutes()
+  addCrossLinks(text: string): string;
+  addCrossLinksHtml(text: string): string;
+}
 ```
 
-**TODO: Document:**
+### State
 
-- Initialization timing
-- Lifecycle management
-- Thread safety considerations
-- Testing singleton components
+Single `Map<string, string>` mapping display names to route paths.
+Populated by `addRoutes()`, which iterates each category's items:
+
+- **Top-level items:** `"MyClass"` → `"/api/classes/myclass"`
+- **Class/interface members:** `"MyClass.method"` → `"/api/classes/myclass#method"`
+
+Member routes are constructed using `sanitizeId()` for the anchor
+fragment. Only classes and interfaces have member routes registered.
+
+### addCrossLinks
+
+Replaces standalone type names in text with markdown links:
+
+1. Sort all registered names by length descending.
+2. For each name, build regex: `\b${name}\b(?![a-zA-Z])`.
+3. For each match, check:
+   - Not inside an existing markdown link (`](` or `[` prefix).
+   - Not inside a backtick code span (odd backtick count before offset).
+4. Replace with `[${name}](${route})`.
+
+### addCrossLinksHtml
+
+Same logic but produces `<a href="${route}">${name}</a>`. Detects
+existing HTML `<a>` tags instead of markdown link syntax.
+
+---
+
+## ShikiCrossLinker
+
+**Location:** `src/shiki-transformer.ts`
+
+Post-processes Shiki-generated HAST (Hypertext Abstract Syntax Tree) to
+add clickable type reference links in syntax-highlighted code blocks,
+including inside Twoslash hover tooltips.
+
+### State
+
+Three scope-indexed Maps for multi-API isolation:
+
+```typescript
+private apiItemRoutesByScope: Map<string, Map<string, string>>;
+private apiItemKindsByScope: Map<string, Map<string, string>>;
+private classMembersMapByScope: Map<string, Map<string, string[]>>;
+```
+
+`classMembersMap` groups member names by their parent class/namespace.
+For example, if routes contain `"Logger.addTransport"`, the map stores
+`"Logger"` → `["addTransport"]`, sorted by length descending.
+
+### Interface
+
+```typescript
+class ShikiCrossLinker {
+  reinitialize(
+    routes: Map<string, string>,
+    kinds: Map<string, string>,
+    apiScope: string,
+  ): void;
+
+  setApiScope(apiScope: string): void;
+
+  transformHast(hast: Root, apiScope?: string): Root;
+
+  createTransformer(): ShikiTransformer;  // deprecated, returns no-op
+}
+```
+
+### Three-Phase HAST Transformation
+
+`transformHast()` delegates to `transformRootWithScope()`, which walks
+the HAST tree in three phases per line:
+
+#### Phase 1: Class/Namespace Member Linking
+
+Maintains a `scopeStack` to track nested class, interface, and namespace
+declarations. When inside a class body:
+
+```text
+class Logger {        ← push "Logger" onto scopeStack
+  addTransport(): void;  ← check "Logger.addTransport" in routes
+}                     ← pop scopeStack
+```
+
+Detects class/namespace boundaries by matching opening braces against
+closing braces. When `currentScope` is set, attempts to match span
+content as `${currentScope}.${content}` against the routes map.
+
+#### Phase 2: Twoslash Tooltip Method Extraction
+
+Finds `.twoslash-hover` spans and extracts method signatures from their
+tooltip code blocks using regex:
+
+```text
+/^(?:\([^)]+\)\s+)?
+  (?:(?:function|interface|class|enum|type|namespace|const|let|var)\s+)?
+  ([A-Z]\w+)\.(\w+)[(:]/
+```
+
+This matches patterns like:
+
+- `function Formatters.formatEntry(`
+- `interface Formatters.Options`
+- `(property) Logger.addTransport:`
+
+When a match is found, the method name span is linked to the qualified
+route `${className}.${methodName}`.
+
+#### Phase 3a/3b: Type Reference Linking
+
+Builds a regex pattern from all top-level type names (excluding dotted
+member names) and processes:
+
+- **3a:** Type references inside `.twoslash-hover` spans (tooltip type
+  info).
+- **3b:** Type references in regular code text.
+
+The `linkTypeReferencesInLine()` helper walks element children, splits
+text nodes at type reference boundaries, and inserts `<a>` elements
+with class `api-type-link` and `data-api-processed` attribute.
+
+Skips spans already processed by Phase 1 or 2 (detected via
+`data-api-processed` attribute).
+
+### Why Post-Processing?
+
+The `createTransformer()` method (which would run during Shiki
+rendering) is deprecated and returns a no-op. Cross-linking was moved
+to post-processing via `transformHast()` because:
+
+- Twoslash popup positioning depends on the original HAST structure.
+- Modifying spans during rendering caused popup containers to shift or
+  break.
+- Post-processing the final HAST avoids these timing issues entirely.
+
+---
 
 ## URL Generation
 
-### URL Structure
+### Route Path Structure
+
+Routes are constructed in `prepareWorkItems` (`build-stages.ts`):
 
 ```text
-/{category}/{api-item-name}
+{baseRoute}/{categoryFolderName}/{itemDisplayName}
 
 Examples:
-/class/ClaudeBinaryPlugin
-/interface/PluginConfig
-/function/createPlugin
-/type/Options
-/enum/LogLevel
+  /api/classes/myclass
+  /api/functions/createpipeline
+  /api/interfaces/iconfig
+  /api/enums/loglevel
+  /api/types/options
+  /api/variables/version
 ```
 
-**TODO: Document:**
+### Member Anchors
 
-- Category determination logic
-- Name sanitization rules
-- Handling name collisions
-- External package URLs
-- Version-specific URLs
-- Anchor generation for members
+Class and interface members use fragment anchors:
+
+```text
+/api/classes/myclass#addtransport
+/api/classes/myclass#static-create
+/api/interfaces/iconfig#timeout
+```
+
+Anchor IDs are generated by `sanitizeId(displayName, prefix?)`:
+lowercase, spaces/underscores → hyphens, strip special chars,
+optional prefix for disambiguation (e.g., `"static"`).
+
+### Multi-Entry Collision Segments
+
+When `hasCollision` is true (same display name, different kind across
+entry points), an entry-point segment is inserted:
+
+```text
+/api/classes/default/config
+/api/classes/testing/config
+```
+
+See `multi-entry-point-support.md` for details.
+
+### Namespace Members
+
+Namespace members use qualified names with the namespace prefix:
+
+```text
+/api/functions/formatters.formatentry
+/api/interfaces/formatters.formatoptions
+```
+
+PascalCase members also get an unqualified route if no collision
+exists with a top-level item of the same name.
+
+### Route Construction Code
+
+```typescript
+// Top-level item
+const route = `${baseRoute}/${folderName}/${displayName.toLowerCase()}`;
+
+// With collision segment
+const route = `${baseRoute}/${folderName}/${segment}/${displayName.toLowerCase()}`;
+
+// Class/interface member
+const memberRoute = `${itemRoute}#${sanitizeId(memberName)}`;
+
+// Namespace member (qualified)
+const qualifiedRoute = `${baseRoute}/${folderName}/${qualifiedName.toLowerCase()}`;
+```
+
+---
+
+## Type Matching Algorithm
+
+### Longest-First Ordering
+
+Both cross-linkers sort registered names by length descending before
+matching. This prevents partial matches:
+
+```text
+Names: ["HookEvent", "Hook", "Event"]
+Sorted: ["HookEvent", "Hook", "Event"]
+
+Text: "Handles a HookEvent"
+Match: "HookEvent" (not "Hook" + leftover "Event")
+```
+
+### Word Boundary Regex
+
+```typescript
+const regex = new RegExp(`\\b${name}\\b(?![a-zA-Z])`, "g");
+```
+
+- `\b` ensures the match starts and ends at a word boundary.
+- `(?![a-zA-Z])` negative lookahead prevents matching "MyClass" inside
+  "MyClassFactory".
+
+### Conflict Avoidance
+
+**MarkdownCrossLinker:**
+
+- Skips matches inside existing markdown links (checks for `](` or `[`
+  prefix before the match offset).
+- Skips matches inside backtick code spans (odd backtick count).
+
+**ShikiCrossLinker:**
+
+- `data-api-processed` attribute prevents double-processing across
+  phases.
+- Dotted member names (e.g., `"Logger.addTransport"`) are filtered out
+  of the Phase 3 regex pattern to avoid matching partial text. Only
+  top-level names participate in generic type reference linking.
+- Phase 1 handles dotted names via scope-stack context.
+- Phase 2 handles dotted names via Twoslash tooltip parsing.
+
+### Scope Isolation
+
+The ShikiCrossLinker stores routes per API scope. When processing a
+code block, the scope is determined by the file path or explicit
+parameter. Routes from other scopes are not visible, preventing
+false matches in multi-API builds.
+
+---
+
+## Backtick Code Span Safety
+
+Both `addCrossLinks()` and the `escapeMdxGenerics()` helper detect
+backtick code spans and skip processing inside them.
+
+### Problem
+
+Without backtick awareness, cross-linking could produce invalid MDX:
+
+```text
+Input:  `Pipeline<I, O>` processes data
+Step 1: `[Pipeline](/api/classes/pipeline)<I, O>` processes data
+Step 2: `[Pipeline](/api/classes/pipeline)`<I, O>`` processes data
+         ^ MDX parser sees <I, O> as JSX tags → parse error
+```
+
+### Solution
+
+**`addCrossLinks()`** counts backtick characters before the match
+offset. If the count is odd, the match is inside a code span:
+
+```typescript
+const backtickCount = (beforeMatch.match(/`/g) || []).length;
+if (backtickCount % 2 === 1) {
+  return match;  // Skip, inside code span
+}
+```
+
+**`escapeMdxGenerics()`** splits text on code spans, applies escaping
+only to plain-text segments:
+
+```typescript
+const parts = text.split(/(`[^`]+`)/g);
+return parts.map((part) => {
+  if (part.startsWith("`") && part.endsWith("`")) {
+    return part;  // Code span, leave alone
+  }
+  return part.replace(/<([A-Z]...)>/g, "`<$1>`");
+}).join("");
+```
+
+---
 
 ## Integration Points
 
@@ -164,174 +452,212 @@ Cross-linkers are initialized in `generateApiDocs` using data from
 `prepareWorkItems`:
 
 ```typescript
+// prepareWorkItems builds routes and kinds maps
+const { workItems, crossLinkData } = prepareWorkItems({ ... });
+
+// MarkdownCrossLinker: builds its own routes from categorized items
 markdownCrossLinker.initialize(
-  ApiParser.categorizeApiItems(apiPackage, categories),
+  ApiParser.categorizeApiItems(resolvedItems, categories),
   baseRoute,
   categories,
 );
+
+// ShikiCrossLinker: receives pre-built routes/kinds maps
 shikiCrossLinker.reinitialize(
   crossLinkData.routes,
   crossLinkData.kinds,
   apiScope,
 );
-TwoslashManager.addTypeRoutes(crossLinkData.routes);
-```
 
-The `prepareWorkItems` function in `build-stages.ts` builds the route
-and kind maps by iterating over all API items and their members.
+// Register in VfsRegistry for remark plugin access
+VfsRegistry.register(apiScope, {
+  crossLinker: shikiCrossLinker,
+  highlighter,
+  packageName,
+  apiScope,
+  // ... other VFS config
+});
+```
 
 ### 2. Page Generation
 
 **Location:** `src/markdown/page-generators/*.ts`
 
-- Use MarkdownCrossLinker for text transformation
-- Generate member signatures with links
-- Cross-link related types
+All page generators import the singleton `markdownCrossLinker` and apply
+cross-linking to description text:
 
-> TODO: Document integration patterns
+```typescript
+import { markdownCrossLinker } from "../cross-linker.js";
+
+// In generator methods:
+const summary = markdownCrossLinker.addCrossLinks(rawSummary);
+const description = markdownCrossLinker.addCrossLinks(rawDescription);
+```
+
+Cross-linking is applied to:
+
+- Class/interface summaries and remarks
+- Constructor and method parameter descriptions
+- Property descriptions
+- Return type descriptions
+- `@see` and `@link` tag content
 
 ### 3. Code Block Rendering
 
-**Generated API Docs:**
+**Generated API docs** (`remark-api-codeblocks.ts`):
 
-Code blocks in generated API documentation (class signatures, member
-signatures, examples) are rendered by page generators using Shiki with
-the `ShikiCrossLinker.createTransformer()` transformer applied.
+Code blocks in generated pages are rendered by Shiki, then
+post-processed by the ShikiCrossLinker:
 
-**Location:** `src/markdown/page-generators/*.ts`
+```typescript
+const vfsConfig = VfsRegistry.get(apiScopeValue);
+let hast = await generateShikiHast(source, vfsConfig.highlighter, ...);
+if (hast && vfsConfig.crossLinker) {
+  hast = vfsConfig.crossLinker.transformHast(hast, apiScopeValue);
+}
+```
 
-- Page generators call `codeToHtml()` with cross-linker transformer
-- `MemberFormatTransformer` handles member signature display formatting
-- Twoslash provides type hover information
+The resulting HAST is base64-encoded and passed as a prop to the
+`ExampleBlockWrapper` or `SignatureBlockWrapper` component for
+browser rendering.
 
-**User-Authored Code Blocks:**
+**User-authored code blocks** (`remark-with-api.ts`):
 
-User-authored `with-api` code blocks in MDX files are processed by the
-`remarkWithApi` remark plugin.
+```` ```typescript with-api ```` code blocks are processed by the
+`remarkWithApi` remark plugin using the same VfsRegistry lookup and
+`transformHast()` post-processing.
 
-**Location:** `src/remark-with-api.ts`
+---
 
-- Processes ```` ```typescript with-api ```` code blocks
-- Applies Shiki cross-linker transformer for type links
-- Does NOT apply `MemberFormatTransformer` (not member signatures)
-- Renders to ExampleBlock component with pre-rendered HTML
+## VfsRegistry
 
-> TODO: Document full rendering pipeline details
+**Location:** `src/vfs-registry.ts`
 
-## Type Matching Algorithm
+The `VfsRegistry` connects the ShikiCrossLinker to remark plugins by
+storing per-scope `VfsConfig` objects:
 
-### Matching Strategy
+```typescript
+interface VfsConfig {
+  vfs: Map<string, VirtualFileSystem>;
+  highlighter: Highlighter;
+  crossLinker?: ShikiCrossLinker;
+  twoslashTransformer?: ShikiTransformer;
+  hideCutTransformer?: ShikiTransformer;
+  hideCutLinesTransformer?: ShikiTransformer;
+  packageName: string;
+  apiScope: string;
+  theme?: ShikiThemeConfig;
+}
+```
 
-**TODO: Document:**
+**Key methods:**
 
-- Exact name matching
-- Qualified name matching (e.g., `Module.Type`)
-- Generic type matching
-- Union/intersection type handling
-- Import path resolution
-- Scope priority (current package > external packages)
+- `register(apiScope, config)` -- Store config by scope
+- `get(apiScope)` -- Retrieve by scope (used by remark plugins)
+- `getByFilePath(filePath)` -- Extract scope from file path and
+  retrieve (used for user-authored code blocks)
 
-### Conflict Resolution
+---
 
-**TODO: Document:**
+## Testing
 
-- Same name in different scopes
-- Same name, different categories
-- Priority rules
-- Disambiguation strategies
+### MarkdownCrossLinker Tests
 
-## Performance Considerations
+**Location:** `src/markdown/cross-linker.test.ts`
 
-### Registration Performance
+- Route initialization: top-level items, class members, interface
+  members, kinds tracking, member name sanitization, re-initialization
+- `addCrossLinks()`: basic linking, longest-name priority, skip
+  existing markdown links, word boundary matching, multiple
+  occurrences, backtick code spans
+- `addCrossLinksHtml()`: HTML anchor generation, skip existing HTML
+  links, word boundaries, HTML tag preservation
+- Module instance export verification
 
-**TODO: Benchmark and document:**
+### ShikiCrossLinker Tests
 
-- Time to register N API items
-- Memory usage for registry
-- Lookup performance (O notation)
+**Location:** `src/shiki-transformer.test.ts`
 
-### Transformation Performance
+- Phase 3 type reference linking: single match, split at boundaries,
+  multiple references, no matches, whitespace, skip processed spans,
+  filter dotted names, `api-type-link` class, Twoslash hover linking
+- Phase 1 class method linking: class declaration scope, method linking,
+  scope reset after closing brace
+- Phase 1 namespace member linking: function, interface, enum members,
+  scope reset
+- Phase 2 tooltip regex: function/interface/property/class patterns
+- Phase 3 namespace PascalCase unqualified names
+- `reinitialize()` scope isolation: old routes with explicit scope,
+  new routes with new scope, scope boundary enforcement
 
-**TODO: Benchmark and document:**
+### VfsRegistry Tests
 
-- Code block transformation overhead
-- Markdown text transformation overhead
-- Impact on total build time
-- Optimization opportunities
+**Location:** `__test__/vfs-registry.test.ts`
 
-## Testing Strategy
+- Registration and retrieval by scope
+- Clearing, `hasConfigs()`, `getScopes()`
+- `getByFilePath()` with various path patterns
+- Config overwriting
 
-### Unit Tests
+---
 
-**TODO: Create tests for:**
+## File Locations
 
-- Type matching accuracy
-- URL generation correctness
-- Conflict resolution
-- Edge cases (special characters, Unicode, etc.)
+| File | Purpose |
+| --- | --- |
+| `src/markdown/cross-linker.ts` | MarkdownCrossLinker class + singleton |
+| `src/shiki-transformer.ts` | ShikiCrossLinker class + HAST transformation |
+| `src/vfs-registry.ts` | VfsRegistry connecting cross-linker to remark |
+| `src/build-program.ts` | Cross-linker initialization |
+| `src/build-stages.ts` | Route/kinds map construction in prepareWorkItems |
+| `src/markdown/helpers.ts` | `escapeMdxGenerics()` with backtick safety |
+| `src/remark-api-codeblocks.ts` | Generated code block cross-linking |
+| `src/remark-with-api.ts` | User-authored code block cross-linking |
 
-### Integration Tests
-
-**TODO: Create tests for:**
-
-- End-to-end cross-linking
-- Multiple packages
-- External package linking
-- Generated HTML validation
+---
 
 ## Future Enhancements
 
-### Phase 1: Enhanced Matching
+### Potential Improvements
 
-- Fuzzy matching for typos
-- Alias support (import as)
-- Namespace support
-- Module augmentation handling
+1. **External package linking** -- Link to npm/TypeDoc documentation
+   for types from external packages
+2. **Conditional exports linking** -- Handle TypeScript conditional
+   exports in cross-link resolution
+3. **Broken link detection** -- Warn when a cross-linked route does
+   not correspond to a generated page
+4. **Regex caching** -- Pre-compile and cache the per-name regexes
+   for large APIs
 
-### Phase 2: External Package Linking
+### Known Limitations
 
-- Link to npm package documentation
-- Link to TypeDoc sites
-- Custom URL mapping configuration
+1. **No external package links** -- Only types from the documented
+   package are linked; external types (e.g., `ZodType`) are not
+   cross-linked
+2. **Sanitization duplication** -- `sanitizeId()` logic exists in both
+   `build-stages.ts` and `cross-linker.ts`; divergence would break
+   member anchor links
+3. **HTML cross-links in tooltips** -- Phase 2 Twoslash tooltip parsing
+   uses a regex that may not match all TypeScript declaration forms
 
-### Phase 3: Analytics
-
-- Track most-linked types
-- Identify broken links
-- Generate link graph visualization
-
-### Phase 4: Optimization
-
-- Lazy registration
-- Incremental updates
-- Parallel transformation
-- Cache compiled regexes
+---
 
 ## Related Documentation
 
 - **Page Generation System:**
-  `.claude/design/rspress-plugin-api-extractor/page-generation-system.md` -
-  Integration with page generators
+  `page-generation-system.md` -- Stream pipeline using cross-link data
 - **SSG Compatible Components:**
-  `.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md` -
-  Runtime components with cross-linked code blocks
+  `ssg-compatible-components.md` -- Runtime components rendering
+  cross-linked code blocks
 - **Import Generation System:**
-  `.claude/design/rspress-plugin-api-extractor/import-generation-system.md` -
-  Type reference extraction (related to cross-linking)
-- **Main Plugin README:** `plugin/README.md`
-- **Package CLAUDE.md:** `plugin/CLAUDE.md`
+  `import-generation-system.md` -- Type reference extraction
+- **Multi-Entry Point Support:**
+  `multi-entry-point-support.md` -- Collision segments in routes
+- **Build Architecture:**
+  `build-architecture.md` -- Service layer and plugin structure
 
 ### External Resources
 
 - Shiki documentation: <https://shiki.style/>
-- TypeScript AST: <https://astexplorer.net/>
+- HAST specification: <https://github.com/syntax-tree/hast>
 - RSPress plugin development: <https://rspress.dev/plugin/>
-
----
-
-**Document Status:** Stub - outlines architecture but needs detailed
-implementation documentation.
-
-**Next Steps:** Document type matching algorithm, URL generation logic,
-registration flow, integration patterns, add code examples and diagrams,
-benchmark performance.

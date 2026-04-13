@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, LogLevel, Logger } from "effect";
 import { createHighlighter } from "shiki";
 import { describe, expect, it } from "vitest";
 import { generateApiDocs } from "../src/build-program.js";
@@ -55,7 +55,11 @@ describe("generateApiDocs (Effect program)", () => {
 		const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
 
 		const program = generateApiDocs(apiConfig, buildContext, fileContextMap);
-		const testLayer = Layer.merge(NodeFileSystem.layer, MockSnapshotServiceLayer);
+		const testLayer = Layer.mergeAll(
+			NodeFileSystem.layer,
+			MockSnapshotServiceLayer,
+			Logger.minimumLogLevel(LogLevel.None),
+		);
 		const crossLinkData = await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
 
 		// Cross-link data should be populated

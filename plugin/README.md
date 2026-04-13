@@ -16,6 +16,7 @@ copy-paste code examples.
 - Interactive Twoslash tooltips with type information on hover
 - Automatic cross-linking between type references across your API
 - Support for single-package sites, multi-package portals, and versioned documentation
+- Multi-entry point packages automatically resolved with deduplication and "Available from" metadata
 - SSG-compatible React components that output clean markdown for LLM consumption
 
 ## Installation

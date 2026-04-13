@@ -1,0 +1,3840 @@
+{
+  "metadata": {
+    "toolPackage": "@microsoft/api-extractor",
+    "toolVersion": "7.58.2",
+    "schemaVersion": 1011,
+    "oldestForwardsCompatibleVersion": 1001,
+    "tsdocConfig": {
+      "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+      "noStandardTags": true,
+      "tagDefinitions": [
+        {
+          "tagName": "@alpha",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@beta",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@defaultValue",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@decorator",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@deprecated",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@eventProperty",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@example",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@experimental",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@inheritDoc",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@internal",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@label",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@link",
+          "syntaxKind": "inline",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@override",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@packageDocumentation",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@param",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@privateRemarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@public",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@readonly",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@remarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@returns",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@sealed",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@see",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@throws",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@typeParam",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@virtual",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@jsx",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxRuntime",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxFrag",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxImportSource",
+          "syntaxKind": "block"
+        }
+      ],
+      "supportForTags": {
+        "@alpha": true,
+        "@beta": true,
+        "@defaultValue": true,
+        "@decorator": true,
+        "@deprecated": true,
+        "@eventProperty": true,
+        "@example": true,
+        "@experimental": true,
+        "@inheritDoc": true,
+        "@internal": true,
+        "@label": true,
+        "@link": true,
+        "@override": true,
+        "@packageDocumentation": true,
+        "@param": true,
+        "@privateRemarks": true,
+        "@public": true,
+        "@readonly": true,
+        "@remarks": true,
+        "@returns": true,
+        "@sealed": true,
+        "@see": true,
+        "@throws": true,
+        "@typeParam": true,
+        "@virtual": true,
+        "@jsx": true,
+        "@jsxRuntime": true,
+        "@jsxFrag": true,
+        "@jsxImportSource": true
+      },
+      "reportUnsupportedHtmlElements": true
+    }
+  },
+  "kind": "Package",
+  "canonicalReference": "kitchensink!",
+  "docComment": "/**\n * A typed data-pipeline library for composing sources, transforms, and sinks.\n *\n * @packageDocumentation\n */\n",
+  "name": "kitchensink",
+  "preserveMemberOrder": false,
+  "members": [
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "kitchensink!",
+      "name": "",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!BatchProcessor:class",
+          "docComment": "/**\n * Processes arrays of items in batches by delegating to an underlying {@link Pipeline} instance.\n *\n * @remarks\n *\n * `BatchProcessor` is a thin orchestration wrapper around `Pipeline` that accepts a pre-configured pipeline and applies it to every element of an input array. It is suitable for workloads where all items share the same transformation logic but need to be submitted together as a logical unit.\n *\n * The class is decorated with `@logged` (see `{@decorator logged}` below), which instruments each method call with entry/exit log lines in production deployments. The decorator is applied at the class level to cover all public methods uniformly.\n *\n * @typeParam T - The type of items to process. Both the pipeline input and output are constrained to this same type, making `BatchProcessor` suited to in-place transformation workflows such as normalisation or enrichment.\n *\n * @decorator\n *\n * `logged` — instruments all public methods with structured entry/exit logging. The `logged` decorator is defined in the application runtime layer and is not part of this library's public API surface.\n *\n * @example\n * ```typescript\n * import { BatchProcessor, Pipeline, JsonSource } from \"kitchensink\";\n *\n * const pipeline = Pipeline.create(\n * \tnew JsonSource(\"./data/records.json\"),\n * \t(record: Record<string, unknown>) => ({ ...record, processed: true }),\n * );\n *\n * const processor = new BatchProcessor(pipeline, { batchSize: 25 });\n * const results = await processor.processBatch([\n * \t{ id: 1, value: \"alpha\" },\n * \t{ id: 2, value: \"beta\" },\n * \t{ id: 3, value: \"gamma\" },\n * ]);\n * console.log(results[0]); // { id: 1, value: \"alpha\", processed: true }\n * ```\n *\n * @see\n *\n * {@link Pipeline} for the underlying single-item execution primitive.\n *\n * @see\n *\n * {@link PipelineOptions} for configuration options accepted by the constructor.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class BatchProcessor<T> "
+            }
+          ],
+          "fileUrlPath": "src/lib/batch-processor.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "BatchProcessor",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!BatchProcessor:constructor(1)",
+              "docComment": "/**\n * Creates a new `BatchProcessor` backed by the given pipeline.\n *\n * @param pipeline - A {@link Pipeline} configured to transform items of type `T`. The same pipeline instance is reused for every item in every batch, so it must be safe to call {@link Pipeline.execute} multiple times.\n *\n * @param options - {@link PipelineOptions} that influence how batches are processed. Currently `batchSize` is forwarded to the pipeline when present; other options are reserved for future use.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(pipeline: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Pipeline",
+                  "canonicalReference": "kitchensink!Pipeline:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T, T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineOptions",
+                  "canonicalReference": "kitchensink!PipelineOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "pipeline",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!BatchProcessor#processBatch:member(1)",
+              "docComment": "/**\n * Processes an array of items through the underlying pipeline and returns the transformed results in the same order.\n *\n * @remarks\n *\n * Each item is submitted to {@link Pipeline.execute} individually. The method uses `Promise.all` internally, so all items are in-flight concurrently. A single item failure causes the entire batch to reject with a `PipelineError`.\n *\n * The `batchSize` from {@link PipelineOptions} is applied to the underlying pipeline but does not chunk the `items` array — all items are always submitted in one `Promise.all` call.\n *\n * @param items - The array of items to process.\n *\n * @returns A promise that resolves with an array of transformed items in input order.\n *\n * @throws\n *\n * {@link PipelineError} if any item's transformation fails.\n *\n * @example\n * ```typescript\n * import { BatchProcessor, Pipeline, JsonSource } from \"kitchensink\";\n *\n * const pipeline = Pipeline.create(\n * \tnew JsonSource(\"./data/numbers.json\"),\n * \t(n: number) => n * 10,\n * );\n *\n * const processor = new BatchProcessor(pipeline, { batchSize: 10 });\n * const results = await processor.processBatch([1, 2, 3]);\n * console.log(results); // [10, 20, 30]\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "processBatch(items: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "items",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "processBatch"
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!CodecError:class",
+          "docComment": "/**\n * Error thrown when encoding or decoding data fails.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class CodecError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Error",
+              "canonicalReference": "!Error:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/lib/errors.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "CodecError",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!CodecError:constructor(1)",
+              "docComment": "/**\n * Constructs a new instance of the `CodecError` class\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "code",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!CodecError#code:member",
+              "docComment": "/**\n * Machine-readable error code identifying the failure type.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "code",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "kitchensink!CodecOptions:type",
+          "docComment": "/**\n * An open-ended options bag for codec configuration.\n *\n * @remarks\n *\n * Codec implementations may extend this type with their own typed properties. Unknown keys are permitted to allow forward-compatible configuration.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type CodecOptions = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    [key: string]: unknown;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/types.ts",
+          "releaseTag": "Public",
+          "name": "CodecOptions",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "Namespace",
+          "canonicalReference": "kitchensink!Codecs:namespace",
+          "docComment": "/**\n * A collection of utility functions for encoding and serialising data.\n *\n * @remarks\n *\n * `Codecs` groups related encoding helpers under a single namespace so they can be imported together without polluting the top-level module scope. All functions operate on arbitrary data and produce portable representations suitable for storage or transmission.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare namespace Codecs "
+            }
+          ],
+          "fileUrlPath": "src/lib/codecs.ts",
+          "releaseTag": "Public",
+          "name": "Codecs",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Codecs.binary:function(1)",
+              "docComment": "/**\n * Encodes a value to a `Uint8Array` using UTF-8 binary encoding.\n *\n * @remarks\n *\n * The value is first serialised to JSON and then encoded to bytes via `TextEncoder`. The resulting buffer is suitable for writing to a file, sending over a network socket, or storing in a binary data store.\n *\n * @param data - The value to encode.\n *\n * @returns A `Uint8Array` containing the UTF-8 encoded JSON bytes.\n *\n * @throws\n *\n * {@link CodecError} if the value cannot be serialised to JSON (for example, when it contains circular references or `BigInt` values).\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function binary(data: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "unknown"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Uint8Array",
+                  "canonicalReference": "!Uint8Array:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "data",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "binary"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Codecs.json:function(1)",
+              "docComment": "/**\n * Serialises a value to a JSON string.\n *\n * @remarks\n *\n * Uses `JSON.stringify` internally. The output is a standard JSON string that can be parsed back with `JSON.parse`.\n *\n * @param data - The value to convert to JSON.\n *\n * @typeParam T - The type of the value to serialise.\n *\n * @returns A JSON string representation of `data`.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function json<T>(data: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "data",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "json"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Codecs.streaming:function(1)",
+              "docComment": "/**\n * Returns an async iterable that streams encoded chunks from a {@link DataSource}.\n *\n * @remarks\n *\n * Each record fetched from `source` is individually encoded via {@link Codecs.binary} and yielded as a `Uint8Array` chunk. The source is connected before streaming begins and disconnected once all records have been yielded.\n *\n * This function is part of the staged streaming API and is not yet production-ready. The interface may change in a future minor release.\n *\n * @param source - A {@link DataSource} that supplies the records to encode.\n *\n * @typeParam T - The type of records produced by the data source.\n *\n * @returns An `AsyncIterable<Uint8Array>` that yields one encoded chunk per record fetched from `source`.\n *\n * @alpha @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function streaming<T>(source: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "DataSource",
+                  "canonicalReference": "kitchensink!DataSource:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "AsyncIterable",
+                  "canonicalReference": "!AsyncIterable:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Uint8Array",
+                  "canonicalReference": "!Uint8Array:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 8
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "streaming"
+            }
+          ]
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink!createPipeline:function(1)",
+          "docComment": "/**\n * Creates a new {@link Pipeline} connecting a data source to a transform function.\n *\n * @remarks\n *\n * This is the primary factory function for constructing pipelines. It delegates directly to {@link Pipeline.create} and forwards any provided options. Use this when you want a standalone function interface rather than calling the static method directly.\n *\n * {@label CREATE_PIPELINE}\n *\n * @param source - The {@link DataSource} that supplies raw input records.\n *\n * @param transform - The {@link Transform} applied to each input record.\n *\n * @param options - Optional {@link PipelineOptions} controlling batch size, retry count, and timeout behaviour.\n *\n * @typeParam I - The type of raw input records supplied by `source`.\n *\n * @typeParam O - The type of transformed output records produced by `transform`.\n *\n * @returns A fully configured `Pipeline<I, O>` ready to execute.\n *\n * @throws\n *\n * {@link PipelineError} if the pipeline cannot be created due to invalid configuration.\n *\n * @example\n * ```typescript\n * import { createPipeline, JsonSource } from \"kitchensink\";\n *\n * const pipeline = createPipeline(\n * \tnew JsonSource(\"./data/records.json\"),\n * \t(record: Record<string, unknown>) => ({ ...record, processed: true }),\n * \t{ batchSize: 50, retryCount: 2 },\n * );\n *\n * const result = await pipeline.execute({ id: 1 });\n * console.log(result); // { id: 1, processed: true }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createPipeline<I, O>(source: "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataSource",
+              "canonicalReference": "kitchensink!DataSource:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<I>"
+            },
+            {
+              "kind": "Content",
+              "text": ", transform: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Transform",
+              "canonicalReference": "kitchensink!Transform:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<I, O>"
+            },
+            {
+              "kind": "Content",
+              "text": ", options?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "PipelineOptions",
+              "canonicalReference": "kitchensink!PipelineOptions:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Pipeline",
+              "canonicalReference": "kitchensink!Pipeline:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<I, O>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/functions.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 9,
+            "endIndex": 11
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "source",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "transform",
+              "parameterTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 6
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "options",
+              "parameterTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 8
+              },
+              "isOptional": true
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "I",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "O",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createPipeline"
+        },
+        {
+          "kind": "Enum",
+          "canonicalReference": "kitchensink!DataFormat:enum",
+          "docComment": "/**\n * Serialization formats supported by the codec system.\n *\n * @remarks\n *\n * Used when configuring a codec for data encoding and decoding.\n *\n * @example\n * ```typescript\n * import { DataFormat } from \"kitchensink\";\n *\n * const format: DataFormat = DataFormat.JSON;\n * ```\n *\n * @see\n *\n * {@link Codecs} for codec implementations for each format.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare enum DataFormat "
+            }
+          ],
+          "fileUrlPath": "src/lib/enums.ts",
+          "releaseTag": "Public",
+          "name": "DataFormat",
+          "preserveMemberOrder": true,
+          "members": [
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!DataFormat.JSON:member",
+              "docComment": "/**\n * JSON text encoding.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "JSON = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"json\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "JSON"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!DataFormat.CSV:member",
+              "docComment": "/**\n * Comma-separated values encoding.\n *\n * @deprecated\n *\n * Use {@link DataFormat.JSON} or {@link DataFormat.MessagePack} instead.\n *\n * @see\n *\n * {@link Codecs.streaming} for the recommended streaming alternative.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "CSV = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"csv\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "CSV"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!DataFormat.Binary:member",
+              "docComment": "/**\n * Raw binary encoding.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Binary = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"binary\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Binary"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!DataFormat.MessagePack:member",
+              "docComment": "/**\n * MessagePack binary encoding.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "MessagePack = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"msgpack\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "MessagePack"
+            }
+          ]
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "kitchensink!DataSink:interface",
+          "docComment": "/**\n * A writable destination for pipeline output data.\n *\n * @remarks\n *\n * Implementations are responsible for managing the lifecycle of the underlying resource (file handle, network socket, database connection). Always call {@link DataSink.close} when finished writing.\n *\n * @typeParam T - The type of data accepted by this sink.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface DataSink<T> "
+            }
+          ],
+          "fileUrlPath": "src/lib/interfaces.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "DataSink",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "MethodSignature",
+              "canonicalReference": "kitchensink!DataSink#close:member(1)",
+              "docComment": "/**\n * Flushes any buffered data and releases the underlying resource.\n *\n * @returns A promise that resolves when the sink is fully closed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "close(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isOptional": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [],
+              "name": "close"
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!DataSink#name:member",
+              "docComment": "/**\n * Unique display name for this sink, used in logs and diagnostics.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "name",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "MethodSignature",
+              "canonicalReference": "kitchensink!DataSink#write:member(1)",
+              "docComment": "/**\n * Writes a single data record to this sink.\n *\n * @param data - The record to write.\n *\n * @returns A promise that resolves when the write is committed.\n *\n * @throws\n *\n * {@link PipelineError} if the sink is closed or the write fails.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "write(data: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isOptional": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "data",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "name": "write"
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!DataSource:class",
+          "docComment": "/**\n * Abstract base class for all data sources in a pipeline.\n *\n * @remarks\n *\n * Extend `DataSource` to implement a concrete data source. Subclasses must override the abstract {@link DataSource.connect} and {@link DataSource.fetch} methods. The {@link DataSource.disconnect} method provides a no-op default that subclasses may override as needed.\n *\n * @typeParam T - The type of records produced by this data source.\n *\n * @throws\n *\n * {@link DataSourceError} if the underlying resource cannot be accessed.\n *\n * @example\n * ```typescript\n * import { DataSource } from \"kitchensink\";\n *\n * class NumberSource extends DataSource<number> {\n * \treadonly name = \"NumberSource\";\n *\n * \tasync connect(): Promise<void> {\n * \t\t// establish connection\n * \t}\n *\n * \tasync fetch(): Promise<number[]> {\n * \t\treturn [1, 2, 3];\n * \t}\n * }\n *\n * const src = new NumberSource();\n * await src.connect();\n * const records = await src.fetch();\n * src.disconnect();\n * ```\n *\n * @see\n *\n * Pipeline\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare abstract class DataSource<T> "
+            }
+          ],
+          "fileUrlPath": "src/lib/data-source.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": true,
+          "name": "DataSource",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!DataSource#connect:member(1)",
+              "docComment": "/**\n * Opens a connection to the underlying data resource.\n *\n * @remarks\n *\n * Implementations should perform all necessary initialisation here so that subsequent calls to {@link DataSource.fetch} succeed without additional setup.\n *\n * @returns A promise that resolves when the connection is ready.\n *\n * @throws\n *\n * {@link DataSourceError} if the connection cannot be established.\n *\n * @virtual\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "abstract connect(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": true,
+              "name": "connect"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!DataSource.DEFAULT_TIMEOUT:member",
+              "docComment": "/**\n * Default timeout in milliseconds applied when no explicit timeout is configured on a data source.\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly DEFAULT_TIMEOUT = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "30000"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "DEFAULT_TIMEOUT",
+              "propertyTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!DataSource#disconnect:member(1)",
+              "docComment": "/**\n * Releases any resources held by this data source.\n *\n * @remarks\n *\n * The default implementation is a no-op. Override this method to close file handles, database connections, or network sockets when the source is no longer needed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "disconnect(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "disconnect"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!DataSource#fetch:member(1)",
+              "docComment": "/**\n * Retrieves all available records from the data source.\n *\n * @remarks\n *\n * Called after a successful {@link DataSource.connect}. Implementations should return a complete snapshot of the available data at the time of the call. For large datasets consider batching inside the implementation.\n *\n * @returns A promise that resolves with an array of records of type `T`.\n *\n * @throws\n *\n * {@link DataSourceError} if the data cannot be read or parsed.\n *\n * @virtual\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "abstract fetch(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": true,
+              "name": "fetch"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!DataSource#name:member",
+              "docComment": "/**\n * Human-readable identifier for this data source, used in logs and error messages.\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "abstract readonly name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "name",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": true
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!DataSourceError:class",
+          "docComment": "/**\n * Error thrown when a data source encounters a read or connection failure.\n *\n * @remarks\n *\n * Raised by {@link DataSource} implementations when the underlying data cannot be accessed or parsed.\n *\n * @see\n *\n * DataSource\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class DataSourceError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Error",
+              "canonicalReference": "!Error:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/lib/errors.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "DataSourceError",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!DataSourceError:constructor(1)",
+              "docComment": "/**\n * Constructs a new instance of the `DataSourceError` class\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "code",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!DataSourceError#code:member",
+              "docComment": "/**\n * Machine-readable error code identifying the failure type.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "code",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink!decode:function(1)",
+          "docComment": "/**\n * Decodes a `Uint8Array` buffer back to a typed value using the specified {@link DataFormat}.\n *\n * @remarks\n *\n * Only {@link DataFormat.JSON} is currently supported for decoding. The buffer is decoded from UTF-8 bytes and then parsed with `JSON.parse`. The caller is responsible for ensuring the buffer contents match the expected type `T`.\n *\n * @param buffer - The raw bytes to decode.\n *\n * @param format - The {@link DataFormat} that was used to encode the original data.\n *\n * @typeParam T - The expected type of the decoded value.\n *\n * @returns The decoded value cast to type `T`.\n *\n * @throws\n *\n * {@link CodecError} if the format is unsupported or if the buffer cannot be parsed.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function decode<T>(buffer: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Uint8Array",
+              "canonicalReference": "!Uint8Array:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", format: "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataFormat",
+              "canonicalReference": "kitchensink!DataFormat:enum"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/functions.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 5,
+            "endIndex": 6
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "buffer",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "format",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "decode"
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "kitchensink!DEFAULT_PIPELINE_OPTIONS:var",
+          "docComment": "/**\n * Ready-to-use default values for all {@link PipelineOptions} properties.\n *\n * @remarks\n *\n * Spread this object into user-supplied options to fill in any omitted fields:\n * ```typescript\n * import { DEFAULT_PIPELINE_OPTIONS } from \"kitchensink\";\n *\n * const opts: PipelineOptions = { ...DEFAULT_PIPELINE_OPTIONS, batchSize: 50 };\n * ```\n *\n * @see\n *\n * PipelineOptions\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "DEFAULT_PIPELINE_OPTIONS: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Required",
+              "canonicalReference": "!Required:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "PipelineOptions",
+              "canonicalReference": "kitchensink!PipelineOptions:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            }
+          ],
+          "fileUrlPath": "src/lib/constants.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "DEFAULT_PIPELINE_OPTIONS",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink!encode:function(1)",
+          "docComment": "/**\n * Encodes a value to a `Uint8Array` using the specified {@link DataFormat}.\n *\n * @remarks\n *\n * Supports {@link DataFormat.JSON} and {@link DataFormat.Binary} formats. JSON encoding serialises the value with `JSON.stringify` and then encodes the resulting string as UTF-8 bytes. Binary encoding uses {@link Codecs.binary} directly.\n *\n * @param data - The value to encode. Must be JSON-serialisable for JSON and Binary formats.\n *\n * @param format - The {@link DataFormat} that controls the encoding strategy.\n *\n * @returns A `Uint8Array` containing the encoded bytes.\n *\n * @throws\n *\n * {@link CodecError} if the format is unsupported or if serialisation fails (for example, when `data` contains circular references or `BigInt` values).\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function encode(data: "
+            },
+            {
+              "kind": "Content",
+              "text": "unknown"
+            },
+            {
+              "kind": "Content",
+              "text": ", format: "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataFormat",
+              "canonicalReference": "kitchensink!DataFormat:enum"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Uint8Array",
+              "canonicalReference": "!Uint8Array:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/functions.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 5,
+            "endIndex": 6
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "data",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "format",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            }
+          ],
+          "name": "encode"
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "kitchensink!ErrorHandler:type",
+          "docComment": "/**\n * A callback invoked when an unrecoverable error propagates out of a pipeline stage.\n *\n * @remarks\n *\n * Error handlers should not rethrow. Use them to log, report, or perform cleanup actions on failure.\n *\n * @param error - The error that was thrown.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ErrorHandler = "
+            },
+            {
+              "kind": "Content",
+              "text": "(error: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Error",
+              "canonicalReference": "!Error:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ") => void"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/types.ts",
+          "releaseTag": "Public",
+          "name": "ErrorHandler",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "Namespace",
+          "canonicalReference": "kitchensink!Filters:namespace",
+          "docComment": "/**\n * A collection of higher-order functions for filtering and slicing arrays.\n *\n * @remarks\n *\n * `Filters` groups composable array-filtering helpers under a single namespace. Each function returns a {@link Transform} that can be composed into a pipeline stage or applied directly to an array. Functions are generic so they preserve the item type through the filter step.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare namespace Filters "
+            }
+          ],
+          "fileUrlPath": "src/lib/filters.ts",
+          "releaseTag": "Public",
+          "name": "Filters",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Filters.fuzzy:function(1)",
+              "docComment": "/**\n * Returns a {@link Transform} that keeps only items whose `key` property contains `pattern` as a substring.\n *\n * @remarks\n *\n * The property value is converted to a string via `String()` before the substring check, so the filter works on any property type. The match is case-sensitive.\n *\n * This function is part of the staged fuzzy-search API and may change in a future minor release before it is promoted to stable.\n *\n * @param pattern - The substring to search for within the property value.\n *\n * @param key - The property key on each item to inspect.\n *\n * @typeParam T - The type of items in the array.\n *\n * @returns A {@link Transform} that accepts a `T[]` and returns the items whose `key` property contains `pattern`.\n *\n * @beta @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function fuzzy<T>(pattern: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", key: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "keyof T"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Transform",
+                  "canonicalReference": "kitchensink!Transform:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[], T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "pattern",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "key",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "fuzzy"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Filters.take:function(1)",
+              "docComment": "/**\n * Returns a {@link Transform} that limits an array to at most `count` items.\n *\n * @remarks\n *\n * The returned transform delegates to `Array.prototype.slice` so it never mutates the input array. If `count` exceeds the array length the entire array is returned unchanged.\n *\n * @param count - The maximum number of items to retain.\n *\n * @typeParam T - The type of items in the array.\n *\n * @returns A {@link Transform} that accepts a `T[]` and returns the first `count` elements as a new `T[]`.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function take<T>(count: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Transform",
+                  "canonicalReference": "kitchensink!Transform:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[], T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "count",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "take"
+            },
+            {
+              "kind": "Function",
+              "canonicalReference": "kitchensink!Filters.where:function(1)",
+              "docComment": "/**\n * Returns a {@link Transform} that filters an array to the items matching `predicate`.\n *\n * @remarks\n *\n * The returned transform delegates to `Array.prototype.filter`, so it preserves the original order of matching items and never mutates the input array.\n *\n * @param predicate - A function that returns `true` for items to keep.\n *\n * @typeParam T - The type of items in the array.\n *\n * @returns A {@link Transform} that accepts a `T[]` and returns a filtered `T[]`.\n *\n * @example\n * ```typescript\n * import { Filters } from \"kitchensink\";\n *\n * const onlyEven = Filters.where<number>((n) => n % 2 === 0);\n * console.log(onlyEven([1, 2, 3, 4, 5])); // [2, 4]\n * ```\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "function where<T>(predicate: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(item: T) => boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Transform",
+                  "canonicalReference": "kitchensink!Transform:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[], T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "predicate",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "name": "where"
+            }
+          ]
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!JsonSource:class",
+          "docComment": "/**\n * A sealed data source that reads JSON object records from a file path.\n *\n * @remarks\n *\n * `JsonSource` is a concrete, sealed implementation of {@link DataSource} that targets JSON files. It is intentionally `@sealed` — do not subclass it. If you need custom JSON loading behaviour, extend {@link DataSource} directly and implement the abstract methods yourself.\n *\n * @throws\n *\n * {@link DataSourceError} when {@link JsonSource.connect} or {@link JsonSource.fetch} encounters a file-system or parse error.\n *\n * @example\n * ```typescript\n * import { JsonSource } from \"kitchensink\";\n *\n * const source = new JsonSource(\"./data/records.json\");\n * await source.connect();\n * const records = await source.fetch();\n * source.disconnect();\n * console.log(records[0]);\n * // → { path: \"./data/records.json\", loaded: true }\n * ```\n *\n * @see\n *\n * DataSource\n *\n * @public @sealed\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class JsonSource extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataSource",
+              "canonicalReference": "kitchensink!DataSource:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>>"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/lib/json-source.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "JsonSource",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!JsonSource:constructor(1)",
+              "docComment": "/**\n * Creates a new `JsonSource` targeting the given file.\n *\n * @param filePath - Path to the JSON file to read. May be absolute or relative to the current working directory.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(filePath: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "filePath",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!JsonSource#connect:member(1)",
+              "docComment": "/**\n * Prepares the JSON source for reading.\n *\n * @remarks\n *\n * For `JsonSource` the connect step is a lightweight no-op — JSON files do not require an explicit connection. The method exists to satisfy the {@link DataSource} contract and to give subclass authors a hook point if they ever need pre-read validation.\n *\n * @returns A promise that resolves immediately.\n *\n * @throws\n *\n * {@link DataSourceError} if a pre-read check fails.\n *\n * @override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "connect(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "connect"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!JsonSource#fetch:member(1)",
+              "docComment": "/**\n * Returns the parsed contents of the JSON file as an array of records.\n *\n * @remarks\n *\n * This demo implementation returns a single synthetic record containing the configured `filePath` and a `loaded` flag. In a production implementation this method would read and parse the file using `fs.readFile`.\n *\n * @returns A promise that resolves with an array of `Record<string, unknown>` representing the JSON objects found in the file.\n *\n * @throws\n *\n * {@link DataSourceError} if the file cannot be read or its contents are not valid JSON.\n *\n * @override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "fetch(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, unknown>[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "fetch"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!JsonSource#name:member",
+              "docComment": "/**\n * Human-readable identifier for this data source.\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "name",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "kitchensink!Middleware:type",
+          "docComment": "/**\n * A middleware function that intercepts data flowing through a pipeline stage.\n *\n * @remarks\n *\n * Middleware functions receive a value and a `next` continuation. They may transform the data before or after calling `next`, or short-circuit the chain by returning a value directly.\n *\n * @param data - The current data value entering this middleware.\n *\n * @param next - Continuation function that passes data to the next middleware.\n *\n * @typeParam T - The type of data being processed.\n *\n * @example\n * ```typescript\n * import type { Middleware } from \"kitchensink\";\n *\n * const logger: Middleware<string> = (data, next) => {\n * \tconsole.log(\"before:\", data);\n * \tconst result = next(data);\n * \tconsole.log(\"after:\", result);\n * \treturn result;\n * };\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type Middleware<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "(data: T, next: (data: T) => T) => T"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/types.ts",
+          "releaseTag": "Public",
+          "name": "Middleware",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!Pipeline:class",
+          "docComment": "/**\n * A strongly-typed data pipeline that connects a {@link DataSource} to a {@link Transform} and manages execution lifecycle.\n *\n * @remarks\n *\n * `Pipeline` is the primary orchestration primitive in the kitchensink library. It models the flow of data from a source through a single synchronous transformation step. Use the static {@link Pipeline.create} factory instead of the constructor directly to benefit from type inference on the generic parameters.\n *\n * For processing arrays of inputs concurrently, see the experimental {@link Pipeline.parallel} method. For deprecated batch-style access, see {@link Pipeline.process}.\n *\n * @typeParam In - The type of raw input data accepted by the pipeline.\n *\n * @typeParam Out - The type of transformed output data produced by the pipeline.\n *\n * @example\n * ```typescript\n * import { Pipeline, JsonSource, PipelineStatus } from \"kitchensink\";\n *\n * const source = new JsonSource(\"./data/records.json\");\n * const pipeline = Pipeline.create(source, (record) => ({\n * \t...record,\n * \tprocessed: true,\n * }));\n *\n * const result = await pipeline.execute({ id: 1, name: \"example\" });\n * console.log(pipeline.status); // PipelineStatus.Completed\n * console.log(result); // { id: 1, name: \"example\", processed: true }\n * ```\n *\n * @example\n * ```typescript\n * import { Pipeline, JsonSource } from \"kitchensink\";\n *\n * // Configure batch size via options\n * const source = new JsonSource(\"./data/items.json\");\n * const pipeline = Pipeline.create(\n * \tsource,\n * \t(item) => String(item),\n * \t{ batchSize: 50, retryCount: 2, timeout: 5000 },\n * );\n *\n * pipeline.batchSize = 25;\n * console.log(pipeline.batchSize); // 25\n * ```\n *\n * @see\n *\n * {@link DataSource} for implementing a custom data source.\n *\n * @see\n *\n * {@link Transform} for the transformation function interface.\n *\n * @see\n *\n * {@link PipelineOptions} for available configuration options.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class Pipeline<In, Out> "
+            }
+          ],
+          "fileUrlPath": "src/lib/pipeline.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "In",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "Out",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "Pipeline",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!Pipeline:constructor(1)",
+              "docComment": "/**\n * Creates a new `Pipeline` with the given source, transform, and options.\n *\n * @remarks\n *\n * Prefer {@link Pipeline.create} over this constructor for better generic type inference. The constructor is intentionally `public` to allow subclassing and dependency injection in tests.\n *\n * @param source - The {@link DataSource} that supplies input records.\n *\n * @param transform - The {@link Transform} applied to each input record.\n *\n * @param options - Optional {@link PipelineOptions} to configure batch size, retry behaviour, and timeout.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(source: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "DataSource",
+                  "canonicalReference": "kitchensink!DataSource:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<In>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", transform: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Transform",
+                  "canonicalReference": "kitchensink!Transform:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<In, Out>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineOptions",
+                  "canonicalReference": "kitchensink!PipelineOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "transform",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 7,
+                    "endIndex": 8
+                  },
+                  "isOptional": true
+                }
+              ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!Pipeline#batchSize:member",
+              "docComment": "/**\n * The maximum number of records accumulated before a batch is flushed.\n *\n * @remarks\n *\n * Defaults to `100` unless overridden via {@link PipelineOptions.batchSize} at construction time. Setting this value affects subsequent execute calls but does not flush any in-progress batch.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "get batchSize(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";\n\nset batchSize(value: number);"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "batchSize",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!Pipeline.create:member(1)",
+              "docComment": "/**\n * Creates a new `Pipeline` from a source and transform with full type inference on the generic parameters.\n *\n * @remarks\n *\n * This static factory is the recommended way to construct a pipeline because TypeScript can infer `I` and `O` from the arguments, avoiding explicit type annotations at the call site.\n *\n * @param source - A {@link DataSource} instance that supplies raw records.\n *\n * @param transform - A {@link Transform} function that converts each `I` to `O`.\n *\n * @param options - Optional {@link PipelineOptions} for pipeline configuration.\n *\n * @typeParam I - The input record type inferred from `source`.\n *\n * @typeParam O - The output record type inferred from `transform`.\n *\n * @returns A fully configured `Pipeline<I, O>` ready to execute.\n *\n * @example\n * ```typescript\n * import { Pipeline, JsonSource } from \"kitchensink\";\n *\n * const pipeline = Pipeline.create(\n * \tnew JsonSource(\"./data/records.json\"),\n * \t(record) => JSON.stringify(record),\n * );\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static create<I, O>(source: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "DataSource",
+                  "canonicalReference": "kitchensink!DataSource:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<I>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", transform: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Transform",
+                  "canonicalReference": "kitchensink!Transform:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<I, O>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineOptions",
+                  "canonicalReference": "kitchensink!PipelineOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Pipeline",
+                  "canonicalReference": "kitchensink!Pipeline:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<I, O>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "I",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "O",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "source",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "transform",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 7,
+                    "endIndex": 8
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "create"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!Pipeline#execute:member(1)",
+              "docComment": "/**\n * Asynchronously executes the pipeline transform for a single input record, managing the full execution lifecycle.\n *\n * @remarks\n *\n * Transitions the pipeline through: 1. {@link PipelineStatus.Running} — immediately on invocation. 2. {@link PipelineStatus.Completed} — after the transform succeeds. 3. {@link PipelineStatus.Failed} — if the transform throws.\n *\n * Concurrent calls to `execute` are supported but each call manages its own status transition independently.\n *\n * @param input - The input record to process.\n *\n * @returns A promise that resolves with the transformed output.\n *\n * @throws\n *\n * {@link PipelineError} if the transform function throws or if the pipeline is in a terminal {@link PipelineStatus.Failed} state.\n *\n * @example\n * ```typescript\n * import { Pipeline, JsonSource, PipelineError } from \"kitchensink\";\n *\n * const pipeline = Pipeline.create(\n * \tnew JsonSource(\"./data.json\"),\n * \t(record) => ({ ...record, transformed: true }),\n * );\n *\n * try {\n * \tconst result = await pipeline.execute({ id: 42 });\n * \tconsole.log(result); // { id: 42, transformed: true }\n * } catch (err) {\n * \tif (err instanceof PipelineError) {\n * \t\tconsole.error(\"Pipeline failed:\", err.code, err.message);\n * \t}\n * }\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "execute(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "In"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<Out>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "execute"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!Pipeline#parallel:member(1)",
+              "docComment": "/**\n * Executes the pipeline transform over an array of inputs concurrently, returning a promise that resolves with all outputs in input order.\n *\n * @remarks\n *\n * Each input is processed via an independent call to {@link Pipeline.execute}, so individual failures throw {@link PipelineError} and short-circuit the entire batch via `Promise.all` semantics. For fault-tolerant parallel processing, use `Promise.allSettled` on individual `execute` calls instead.\n *\n * This API is not yet stable and may change in a future minor release without a major version bump.\n *\n * @param inputs - An array of input records to process in parallel.\n *\n * @returns A promise that resolves with an array of transformed outputs in the same order as `inputs`.\n *\n * @throws\n *\n * {@link PipelineError} if any individual execution fails.\n *\n * @example\n * ```typescript\n * import { Pipeline, JsonSource } from \"kitchensink\";\n *\n * const pipeline = Pipeline.create(\n * \tnew JsonSource(\"./data.json\"),\n * \t(n: number) => n * 2,\n * );\n *\n * const results = await pipeline.parallel([1, 2, 3, 4, 5]);\n * console.log(results); // [2, 4, 6, 8, 10]\n * ```\n *\n * @experimental\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "parallel(inputs: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "In[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<Out[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "inputs",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "parallel"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink!Pipeline#process:member(1)",
+              "docComment": "/**\n * Synchronously applies the pipeline transform to a single input and returns the output.\n *\n * @remarks\n *\n * This method bypasses the async execution lifecycle — it does not update {@link Pipeline.status} and does not throw {@link PipelineError} on failure. Migrate call sites to {@link Pipeline.execute} which provides proper lifecycle management and error handling.\n *\n * @deprecated\n *\n * Use {@link Pipeline.execute} instead. This method will be removed in a future major version.\n *\n * @param input - The input record to transform.\n *\n * @returns The transformed output record.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "process(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "In"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "Out"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "process"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!Pipeline#status:member",
+              "docComment": "/**\n * The current execution state of this pipeline.\n *\n * @remarks\n *\n * Reflects the last state transition triggered by {@link Pipeline.execute} or {@link Pipeline.parallel}. Starts as {@link PipelineStatus.Idle} and advances through Running → Completed (or Failed on error).\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "get status(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineStatus",
+                  "canonicalReference": "kitchensink!PipelineStatus:enum"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "status",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!PipelineError:class",
+          "docComment": "/**\n * Base error class for all pipeline-related errors.\n *\n * @remarks\n *\n * Thrown during pipeline lifecycle events such as start, run, pause, and stop. Subclass this for more specific pipeline failure scenarios.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class PipelineError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Error",
+              "canonicalReference": "!Error:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/lib/errors.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "PipelineError",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!PipelineError:constructor(1)",
+              "docComment": "/**\n * Constructs a new instance of the `PipelineError` class\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "code",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!PipelineError#code:member",
+              "docComment": "/**\n * Machine-readable error code identifying the failure type.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "code",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "kitchensink!PipelineEvent:interface",
+          "docComment": "/**\n * Event callbacks that observe significant moments in a pipeline's lifecycle.\n *\n * @remarks\n *\n * Attach handlers to receive notifications without coupling to the pipeline implementation. All handlers are optional.\n *\n * @typeParam T - The type of data produced by the pipeline.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface PipelineEvent<T> "
+            }
+          ],
+          "fileUrlPath": "src/lib/interfaces.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "PipelineEvent",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineEvent#onComplete:member",
+              "docComment": "/**\n * Fired when the pipeline finishes successfully with its final result.\n *\n * @param result - The aggregated output produced by the pipeline run.\n *\n * @eventProperty\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "onComplete?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(result: T) => void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "onComplete",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineEvent#onError:member",
+              "docComment": "/**\n * Fired when an unrecoverable error halts the pipeline.\n *\n * @param error - The error that caused the pipeline to stop.\n *\n * @eventProperty\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "onError?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(error: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Error",
+                  "canonicalReference": "!Error:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ") => void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "onError",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineEvent#onStart:member",
+              "docComment": "/**\n * Fired immediately after the pipeline transitions to the Running state.\n *\n * @eventProperty\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "onStart?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "() => void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "onStart",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "kitchensink!PipelineOptions:interface",
+          "docComment": "/**\n * Configuration options controlling pipeline execution behaviour.\n *\n * @remarks\n *\n * All properties are optional. Omitted values fall back to their documented defaults, which are also exported as {@link DEFAULT_PIPELINE_OPTIONS}.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface PipelineOptions "
+            }
+          ],
+          "fileUrlPath": "src/lib/interfaces.ts",
+          "releaseTag": "Public",
+          "name": "PipelineOptions",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineOptions#batchSize:member",
+              "docComment": "/**\n * Maximum number of records to accumulate before flushing to the sink.\n *\n * @defaultValue 100\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "batchSize?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "batchSize",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineOptions#retryCount:member",
+              "docComment": "/**\n * Number of times a failed stage should be retried before the pipeline transitions to the {@link PipelineStatus.Failed} state.\n *\n * @defaultValue 3\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "retryCount?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "retryCount",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink!PipelineOptions#timeout:member",
+              "docComment": "/**\n * Maximum time in milliseconds to wait for a single batch to complete before treating it as a timeout failure.\n *\n * @defaultValue 30000\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "timeout?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "timeout",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Enum",
+          "canonicalReference": "kitchensink!PipelineStatus:enum",
+          "docComment": "/**\n * Represents the current execution state of a data pipeline.\n *\n * @remarks\n *\n * Used throughout the pipeline lifecycle to track progress and control flow. Transitions follow: Idle → Running → Paused/Completed/Failed.\n *\n * @example\n * ```typescript\n * import { PipelineStatus } from \"kitchensink\";\n *\n * function isPipelineActive(status: PipelineStatus): boolean {\n * \treturn status === PipelineStatus.Running || status === PipelineStatus.Paused;\n * }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare enum PipelineStatus "
+            }
+          ],
+          "fileUrlPath": "src/lib/enums.ts",
+          "releaseTag": "Public",
+          "name": "PipelineStatus",
+          "preserveMemberOrder": true,
+          "members": [
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!PipelineStatus.Idle:member",
+              "docComment": "/**\n * Pipeline is idle and ready to start.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Idle = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"idle\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Idle"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!PipelineStatus.Running:member",
+              "docComment": "/**\n * Pipeline is actively processing data.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Running = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"running\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Running"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!PipelineStatus.Paused:member",
+              "docComment": "/**\n * Pipeline has been temporarily suspended.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Paused = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"paused\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Paused"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!PipelineStatus.Completed:member",
+              "docComment": "/**\n * Pipeline finished successfully.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Completed = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"completed\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Completed"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "kitchensink!PipelineStatus.Failed:member",
+              "docComment": "/**\n * Pipeline terminated due to an error.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Failed = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "\"failed\""
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Failed"
+            }
+          ]
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "kitchensink!Transform:interface",
+          "docComment": "/**\n * A callable interface that transforms a value from one type to another.\n *\n * @remarks\n *\n * Implement this interface to define a single-argument conversion step that can be composed into a pipeline stage.\n *\n * @typeParam In - The input value type.\n *\n * @typeParam Out - The output value type.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface Transform<In, Out> "
+            }
+          ],
+          "fileUrlPath": "src/lib/interfaces.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "In",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "Out",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "Transform",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "CallSignature",
+              "canonicalReference": "kitchensink!Transform:call(1)",
+              "docComment": "/**\n * Transforms `input` into the output type.\n *\n * @param input - The value to transform.\n *\n * @returns The transformed value.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "In"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "Out"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ]
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink!validate:function(1)",
+          "docComment": "/**\n * Validates an unknown value against a schema transform and returns the typed result.\n *\n * @remarks\n *\n * The `schema` parameter is any {@link Transform} from `unknown` to `T`. If the transform throws, the error is caught and re-thrown as a {@link ValidationError} with the original message preserved.\n *\n * This function is useful for integrating third-party validation libraries (such as Zod or Valibot parse functions) into the pipeline without spreading try/catch blocks throughout application code.\n *\n * @param data - The raw unknown value to validate.\n *\n * @param schema - A {@link Transform} that parses and returns a typed `T`, or throws if the data is invalid.\n *\n * @typeParam T - The type the validated data is expected to conform to.\n *\n * @returns The validated and typed value `T`.\n *\n * @throws\n *\n * {@link ValidationError} if `schema` throws for the provided `data`.\n *\n * @example\n * ```typescript\n * import { validate } from \"kitchensink\";\n *\n * interface Config {\n * \thost: string;\n * \tport: number;\n * }\n *\n * function parseConfig(data: unknown): Config {\n * \tif (\n * \t\ttypeof data !== \"object\" ||\n * \t\tdata === null ||\n * \t\t!(\"host\" in data) ||\n * \t\t!(\"port\" in data)\n * \t) {\n * \t\tthrow new Error(\"Invalid config shape\");\n * \t}\n * \treturn data as Config;\n * }\n *\n * const config = validate({ host: \"localhost\", port: 8080 }, parseConfig);\n * console.log(config.host); // \"localhost\"\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function validate<T>(data: "
+            },
+            {
+              "kind": "Content",
+              "text": "unknown"
+            },
+            {
+              "kind": "Content",
+              "text": ", schema: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Transform",
+              "canonicalReference": "kitchensink!Transform:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, T>"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/lib/functions.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 6,
+            "endIndex": 7
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "data",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "schema",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "validate"
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink!ValidationError:class",
+          "docComment": "/**\n * Error thrown when input data fails schema or constraint validation.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class ValidationError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Error",
+              "canonicalReference": "!Error:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/lib/errors.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "ValidationError",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink!ValidationError:constructor(1)",
+              "docComment": "/**\n * Constructs a new instance of the `ValidationError` class\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "message",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "code",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink!ValidationError#code:member",
+              "docComment": "/**\n * Machine-readable error code identifying the failure type.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly code: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "code",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "kitchensink!VERSION:var",
+          "docComment": "/**\n * Current public API version of the kitchensink package.\n *\n * @remarks\n *\n * Follows semantic versioning. Bump this value whenever a new release is cut and the public API surface changes.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "VERSION: "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            }
+          ],
+          "fileUrlPath": "src/lib/constants.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "VERSION",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        }
+      ]
+    },
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "kitchensink/testing!",
+      "name": "testing",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink/testing!createMockData:function(1)",
+          "docComment": "/**\n * Generates an array of `count` mock items of type `T`.\n *\n * @param count - The number of items to generate.\n *\n * @typeParam T - The type of items to generate.\n *\n * @returns An array of `count` empty objects cast as `T`.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createMockData<T>(count: "
+            },
+            {
+              "kind": "Content",
+              "text": "number"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "T[]"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/testing/fixtures.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 4
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "count",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createMockData"
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink/testing!createMockData:function(2)",
+          "docComment": "/**\n * Generates an array of `count` copies of `template`.\n *\n * @param count - The number of items to generate.\n *\n * @param template - The template object to copy for each item.\n *\n * @typeParam T - The type of items to generate.\n *\n * @returns An array of `count` shallow copies of `template`.\n *\n * @example\n * ```typescript\n * import { createMockData } from \"kitchensink/testing\";\n *\n * const items = createMockData(3, { id: 0, active: true });\n * console.log(items);\n * // [{ id: 0, active: true }, { id: 0, active: true }, { id: 0, active: true }]\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createMockData<T>(count: "
+            },
+            {
+              "kind": "Content",
+              "text": "number"
+            },
+            {
+              "kind": "Content",
+              "text": ", template: "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "T[]"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/testing/fixtures.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 5,
+            "endIndex": 6
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 2,
+          "parameters": [
+            {
+              "parameterName": "count",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "template",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createMockData"
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "kitchensink/testing!createTestSink:function(1)",
+          "docComment": "/**\n * Creates a {@link DataSink} implementation that captures every written record into an in-memory array for inspection in tests.\n *\n * @typeParam T - The type of data accepted by the sink.\n *\n * @returns A `DataSink<T>` augmented with a `captured` array containing all records written so far.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createTestSink<T>(): "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataSink",
+              "canonicalReference": "kitchensink!~DataSink:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<T> & {\n    captured: T[];\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/testing/fixtures.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createTestSink"
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink/testing!MockSource:class",
+          "docComment": "/**\n * @typeParam T - The type of records held by this mock source.\n *\n * @example\n * ```typescript\n * import { MockSource } from \"kitchensink/testing\";\n *\n * const source = new MockSource(\"users\", [\n * \t{ id: 1, name: \"Alice\" },\n * \t{ id: 2, name: \"Bob\" },\n * ]);\n *\n * await source.connect();\n * const records = await source.fetch();\n * console.log(records); // [{ id: 1, name: \"Alice\" }, { id: 2, name: \"Bob\" }]\n * source.disconnect();\n * ```\n *\n * {@inheritDoc DataSource}\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class MockSource<T> extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "DataSource",
+              "canonicalReference": "kitchensink!~DataSource:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/testing/mock-source.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "MockSource",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Constructor",
+              "canonicalReference": "kitchensink/testing!MockSource:constructor(1)",
+              "docComment": "/**\n * Creates a new `MockSource` with the given name and data.\n *\n * @param name - A human-readable identifier for this source.\n *\n * @param data - The records that {@link MockSource.fetch} will return.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "constructor(name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", data: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ");"
+                }
+              ],
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "name",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "data",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ]
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink/testing!MockSource#connect:member(1)",
+              "docComment": "/**\n * No-op connection — `MockSource` holds its data in memory and requires no external resource setup.\n *\n * @returns A promise that resolves immediately.\n *\n * @override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "connect(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "connect"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink/testing!MockSource#fetch:member(1)",
+              "docComment": "/**\n * Returns the fixed data array supplied at construction time.\n *\n * @returns A promise that resolves with a shallow copy of the stored records.\n *\n * @override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "fetch(): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "fetch"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink/testing!MockSource#name:member",
+              "docComment": "/**\n * Human-readable identifier for this mock source, used in logs and error messages.\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "name",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "kitchensink/testing!TestFixture:interface",
+          "docComment": "/**\n * A composite test fixture that combines a {@link MockSource}, a test sink, and a {@link TestPipeline} into a single convenience object.\n *\n * @remarks\n *\n * Use `TestFixture` when you need to wire up a complete pipeline in a test case without repeating boilerplate. All three members share the same element type `T`, making it straightforward to assert on data flowing from source through pipeline to sink.\n *\n * @typeParam T - The element type flowing through the fixture.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface TestFixture<T> "
+            }
+          ],
+          "fileUrlPath": "src/testing/fixtures.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "TestFixture",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink/testing!TestFixture#pipeline:member",
+              "docComment": "/**\n * The instrumented pipeline that logs every execution.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "pipeline: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "TestPipeline",
+                  "canonicalReference": "kitchensink!TestPipeline:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T, T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "pipeline",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink/testing!TestFixture#sink:member",
+              "docComment": "/**\n * The capturing sink that collects pipeline outputs.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "sink: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "DataSink",
+                  "canonicalReference": "kitchensink!~DataSink:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T> & {\n        captured: T[];\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "sink",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "kitchensink/testing!TestFixture#source:member",
+              "docComment": "/**\n * The mock data source supplying input records.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "source: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MockSource",
+                  "canonicalReference": "kitchensink!MockSource:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "source",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "kitchensink/testing!TestPipeline:class",
+          "docComment": "/**\n * A test-instrumented subclass of {@link Pipeline} that records every input/output pair produced by {@link TestPipeline.execute}.\n *\n * @remarks\n *\n * `TestPipeline` extends `Pipeline` to provide observability into pipeline execution without modifying production code. Each successful call to {@link TestPipeline.execute} appends an entry to {@link TestPipeline.executionLog}, making it straightforward to assert on the exact sequence of inputs and outputs in test suites.\n *\n * The log is never cleared automatically — reset it between test cases by replacing the pipeline instance or by splicing the array directly.\n *\n * @typeParam In - The type of raw input data accepted by the pipeline.\n *\n * @typeParam Out - The type of transformed output data produced by the pipeline.\n *\n * @example\n * ```typescript\n * import { Pipeline } from \"kitchensink\";\n * import { MockSource, TestPipeline } from \"kitchensink/testing\";\n *\n * const source = new MockSource(\"numbers\", [1, 2, 3]);\n * const pipeline = new TestPipeline(source, (n: number) => n * 2);\n *\n * await pipeline.execute(4);\n * await pipeline.execute(5);\n *\n * console.log(pipeline.executionLog);\n * // [{ input: 4, output: 8 }, { input: 5, output: 10 }]\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class TestPipeline<In, Out> extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Pipeline",
+              "canonicalReference": "kitchensink!~Pipeline:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<In, Out>"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/testing/test-pipeline.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "In",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "Out",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "TestPipeline",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "kitchensink/testing!TestPipeline#execute:member(1)",
+              "docComment": "/**\n * Executes the pipeline transform for a single input record and appends the result to {@link TestPipeline.executionLog}.\n *\n * @param input - The input record to process.\n *\n * @returns A promise that resolves with the transformed output.\n *\n * @override\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "execute(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "In"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<Out>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "execute"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "kitchensink/testing!TestPipeline#executionLog:member",
+              "docComment": "/**\n * An ordered log of every input/output pair processed by this pipeline instance. Each entry is appended after a successful call to {@link TestPipeline.execute}.\n *\n * @readonly\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly executionLog: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Array",
+                  "canonicalReference": "!Array:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<{\n        input: In;\n        output: Out;\n    }>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "executionLog",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          },
+          "implementsTokenRanges": []
+        }
+      ]
+    }
+  ]
+}

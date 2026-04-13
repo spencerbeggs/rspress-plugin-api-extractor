@@ -203,6 +203,24 @@ describe("MarkdownCrossLinker", () => {
 		});
 	});
 
+	describe("setRoutes", () => {
+		it("should replace all existing routes with pre-built routes", () => {
+			const items: Record<string, ApiItem[]> = {
+				classes: [{ displayName: "OldClass", kind: "Class", members: [] } as unknown as ApiClass],
+			};
+			const categories = { classes: { folderName: "classes" } };
+			crossLinker.initialize(items, "/api", categories);
+			expect(crossLinker.addCrossLinks("OldClass")).toContain("[OldClass]");
+
+			const routes = new Map<string, string>();
+			routes.set("NewClass", "/api/classes/newclass");
+			crossLinker.setRoutes(routes);
+
+			expect(crossLinker.addCrossLinks("OldClass")).toBe("OldClass");
+			expect(crossLinker.addCrossLinks("NewClass")).toBe("[NewClass](/api/classes/newclass)");
+		});
+	});
+
 	describe("addCrossLinks", () => {
 		beforeEach(() => {
 			const items: Record<string, ApiItem[]> = {
@@ -288,6 +306,33 @@ describe("MarkdownCrossLinker", () => {
 			// MyClass should be linked inside bold formatting
 			expect(result).toContain("[MyClass](/api/classes/myclass)");
 		});
+
+		it("should not linkify inside backtick code spans", () => {
+			const text = "A `MyClass<T>` instance";
+
+			const result = crossLinker.addCrossLinks(text);
+
+			// MyClass inside backticks should NOT be linkified
+			expect(result).toBe("A `MyClass<T>` instance");
+		});
+
+		it("should linkify outside backtick code spans but not inside", () => {
+			const text = "See `MyClass<T>` or use MyClass directly";
+
+			const result = crossLinker.addCrossLinks(text);
+
+			// Inside backticks: unchanged; outside backticks: linked
+			expect(result).toBe("See `MyClass<T>` or use [MyClass](/api/classes/myclass) directly");
+		});
+
+		it("should handle multiple code spans correctly", () => {
+			const text = "`MyClass` and `Hook` are types";
+
+			const result = crossLinker.addCrossLinks(text);
+
+			// Both are inside code spans — should not be linkified
+			expect(result).toBe("`MyClass` and `Hook` are types");
+		});
 	});
 
 	describe("addCrossLinksHtml", () => {
@@ -365,6 +410,17 @@ describe("MarkdownCrossLinker", () => {
 			const result = crossLinker.addCrossLinksHtml("");
 
 			expect(result).toBe("");
+		});
+
+		it("should not linkify second occurrence when first is already inside an HTML link", () => {
+			const text = '<a href="/existing">MyClass</a> and then MyClass again';
+
+			const result = crossLinker.addCrossLinksHtml(text);
+
+			// First occurrence is inside an existing link — should not be double-wrapped
+			expect(result).toContain('<a href="/existing">MyClass</a>');
+			// Second occurrence should be linked
+			expect(result).toContain('and then <a href="/api/classes/myclass">MyClass</a> again');
 		});
 
 		it("should preserve HTML tags", () => {

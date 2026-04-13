@@ -17,7 +17,8 @@
 	},
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
 		"build": "turbo run build:dev build:prod",
@@ -27,8 +28,8 @@
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.57.7",
-		"@rslib/core": "^0.20.0",
-		"@savvy-web/rslib-builder": "^0.19.0",
+		"@rslib/core": "^0.21.0",
+		"@savvy-web/rslib-builder": "^0.19.1",
 		"@types/node": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk"
 	}

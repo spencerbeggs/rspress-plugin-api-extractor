@@ -31,6 +31,8 @@ export function MemberSignature({
 	summary,
 	hasParameters = false,
 }: MemberSignatureProps): ReactElement {
+	const { wrapped, toggleWrap } = useWrapToggle();
+
 	// SSG-MD mode: return clean markdown instead of interactive components
 	if (import.meta.env.SSG_MD) {
 		// Extract signature from HAST by extracting text content
@@ -55,7 +57,6 @@ export function MemberSignature({
 	}
 
 	// Browser mode: return interactive component
-	const { wrapped, toggleWrap } = useWrapToggle();
 
 	return (
 		<div className={clsx(styles.block, hasParameters && styles.hasParameters)}>

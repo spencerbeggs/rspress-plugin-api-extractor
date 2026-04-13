@@ -18,6 +18,8 @@ copy-paste code examples.
 - Automatic cross-linking between type references across your API
 - Single-package sites with RSPress multiVersion and i18n support
 - Multi-package documentation portals
+- Multi-entry point packages automatically resolved with deduplication
+  and "Available from" metadata
 - SSG-compatible React components that output clean markdown for LLM
   consumption
 

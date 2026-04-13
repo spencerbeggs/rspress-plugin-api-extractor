@@ -1,6 +1,7 @@
 import type { ApiClass, ApiInterface, ApiItem, ApiNamespace, ApiPackage } from "@microsoft/api-extractor-model";
 import { ApiDocumentedItem, ApiItemKind, ApiReleaseTagMixin, ReleaseTag } from "@microsoft/api-extractor-model";
 import type { DocNode } from "@microsoft/tsdoc";
+import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
 import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
 /**
@@ -47,10 +48,13 @@ export class ApiParser {
 	}
 
 	/**
-	 * Extract all API items from a package and categorize them based on configuration
+	 * Extract all API items from a package (or resolved entry items) and categorize them based on configuration.
+	 *
+	 * When passed a `ResolvedEntryItem[]`, uses the items directly (multi-entry support).
+	 * When passed an `ApiPackage`, reads from `entryPoints[0]` (legacy single-entry behavior).
 	 */
 	public static categorizeApiItems(
-		apiPackage: ApiPackage,
+		source: ApiPackage | ResolvedEntryItem[],
 		categories: Record<string, CategoryConfig>,
 	): Record<string, ApiItem[]> {
 		// Initialize empty arrays for each category
@@ -59,10 +63,16 @@ export class ApiParser {
 			items[categoryKey] = [];
 		}
 
-		// Get the entry point (there's typically only one)
-		const entryPoint = apiPackage.entryPoints[0];
-		if (!entryPoint) {
-			return items;
+		// Extract the flat list of API items from the source
+		let members: readonly ApiItem[];
+		if (Array.isArray(source)) {
+			members = source.map((r) => r.item);
+		} else {
+			const entryPoint = source.entryPoints[0];
+			if (!entryPoint) {
+				return items;
+			}
+			members = entryPoint.members;
 		}
 
 		// Sort categories: those with tsdocModifier first (higher priority)
@@ -76,7 +86,7 @@ export class ApiParser {
 		});
 
 		// Categorize each member
-		for (const member of entryPoint.members) {
+		for (const member of members) {
 			let categorized = false;
 
 			// Check each category's rules (sorted by priority)
@@ -96,8 +106,8 @@ export class ApiParser {
 				}
 			}
 
-			// Log warning if item wasn't categorized
-			if (!categorized) {
+			// Log warning if item wasn't categorized (suppressed in test environments)
+			if (!categorized && typeof process !== "undefined" && !process.env.VITEST) {
 				console.warn(`⚠️  API item "${member.displayName}" (kind: ${member.kind}) not categorized`);
 			}
 		}
@@ -106,22 +116,32 @@ export class ApiParser {
 	}
 
 	/**
-	 * Extract all members from namespaces in a package.
+	 * Extract all members from namespaces in a package (or resolved entry items).
 	 * Returns a flat list of namespace members with their qualified names.
 	 *
-	 * @param apiPackage - The API package to extract from
+	 * When passed a `ResolvedEntryItem[]`, scans those items for namespaces (multi-entry support).
+	 * When passed an `ApiPackage`, reads from `entryPoints[0]` (legacy single-entry behavior).
+	 *
+	 * @param source - The API package or resolved entry items to extract from
 	 * @returns Array of namespace members with qualified names
 	 */
-	public static extractNamespaceMembers(apiPackage: ApiPackage): NamespaceMember[] {
+	public static extractNamespaceMembers(source: ApiPackage | ResolvedEntryItem[]): NamespaceMember[] {
 		const members: NamespaceMember[] = [];
 
-		const entryPoint = apiPackage.entryPoints[0];
-		if (!entryPoint) {
-			return members;
+		// Extract the flat list of top-level items from the source
+		let topLevelItems: readonly ApiItem[];
+		if (Array.isArray(source)) {
+			topLevelItems = source.map((r) => r.item);
+		} else {
+			const entryPoint = source.entryPoints[0];
+			if (!entryPoint) {
+				return members;
+			}
+			topLevelItems = entryPoint.members;
 		}
 
-		// Find all namespaces in the entry point
-		for (const item of entryPoint.members) {
+		// Find all namespaces in the top-level items
+		for (const item of topLevelItems) {
 			if (item.kind === ApiItemKind.Namespace) {
 				const namespace = item as ApiNamespace;
 				// Extract members from this namespace

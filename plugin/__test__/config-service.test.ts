@@ -17,7 +17,7 @@ const fixtureModel = path.join(import.meta.dirname, "../src/__fixtures__/example
 const makeTestLayer = (options: PluginOptions) =>
 	Layer.provideMerge(
 		ConfigServiceLive(options, new ShikiCrossLinker()),
-		Layer.mergeAll(PathDerivationServiceLive, MockTypeRegistryServiceLayer, PluginLoggerLayer("info")),
+		Layer.mergeAll(PathDerivationServiceLive, MockTypeRegistryServiceLayer, PluginLoggerLayer("none")),
 	);
 
 describe("ConfigService types", () => {
@@ -267,7 +267,7 @@ describe("ConfigServiceLive.resolve", () => {
 
 		const testLayer = Layer.provideMerge(
 			ConfigServiceLive(options, new ShikiCrossLinker()),
-			Layer.mergeAll(PathDerivationServiceLive, FailingTypeRegistryLayer, PluginLoggerLayer("info")),
+			Layer.mergeAll(PathDerivationServiceLive, FailingTypeRegistryLayer, PluginLoggerLayer("none")),
 		);
 
 		const program = Effect.gen(function* () {

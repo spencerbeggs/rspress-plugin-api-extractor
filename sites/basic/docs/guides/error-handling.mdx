@@ -1,0 +1,85 @@
+---
+title: Error Handling
+---
+
+The library defines a hierarchy of typed error classes — `PipelineError`,
+`DataSourceError`, `CodecError`, and `ValidationError`. Each carries a
+machine-readable `code` property alongside the standard `message`.
+
+## Catching Pipeline Errors
+
+`Pipeline.execute` throws `PipelineError` when the transform throws or the
+pipeline is in a terminal failed state. Use `instanceof` narrowing to handle
+it specifically.
+
+```typescript with-api
+import { Pipeline, JsonSource, PipelineError } from "kitchensink";
+
+const pipeline = Pipeline.create(
+ new JsonSource("./data.json"),
+ (record: Record<string, unknown>) => {
+  if (!record["id"]) throw new Error("missing id");
+  return record;
+ },
+);
+
+try {
+ const result = await pipeline.execute({});
+ //    ^?
+} catch (err) {
+ if (err instanceof PipelineError) {
+  console.error(err.code, err.message);
+  //            ^?
+ }
+}
+```
+
+## DataSource Errors
+
+`DataSource` implementations throw `DataSourceError` when a connection or
+fetch fails. Hover over `DataSourceError` to see the class docs.
+
+```typescript with-api
+import { DataSource, DataSourceError } from "kitchensink";
+
+class FailingSource extends DataSource<string> {
+ readonly name = "FailingSource";
+
+ async connect(): Promise<void> {
+  throw new DataSourceError("Network unreachable", "CONNECT_FAILED");
+ }
+
+ async fetch(): Promise<string[]> {
+  return [];
+ }
+}
+
+const src = new FailingSource();
+
+try {
+ await src.connect();
+} catch (err) {
+ if (err instanceof DataSourceError) {
+  console.error(err.code);
+  //            ^?
+ }
+}
+```
+
+## Type-Mismatch Example
+
+The `// @errors: 2322` directive marks the expected TypeScript type error so
+the code block renders without a build failure.
+
+```typescript with-api
+// @errors: 2322
+import { Pipeline, JsonSource } from "kitchensink";
+
+const pipeline = Pipeline.create(
+ new JsonSource("./data.json"),
+ (n: number) => n * 2,
+);
+
+// Passing a string where a number is expected — deliberate type error
+const result = await pipeline.execute("not-a-number");
+```

@@ -117,7 +117,20 @@ export class MarkdownCrossLinker {
 	}
 
 	/**
-	 * Add cross-links to type references in code (markdown format)
+	 * Set routes directly from pre-built route maps (e.g., from prepareWorkItems).
+	 * Replaces all existing routes.
+	 */
+	public setRoutes(routes: Map<string, string>): void {
+		this.apiItemRoutes.clear();
+		for (const [name, route] of routes) {
+			this.apiItemRoutes.set(name, route);
+		}
+	}
+
+	/**
+	 * Add cross-links to type references in code (markdown format).
+	 *
+	 * Skips matches inside backtick code spans and existing markdown links.
 	 */
 	public addCrossLinks(text: string): string {
 		let result = text;
@@ -133,10 +146,15 @@ export class MarkdownCrossLinker {
 			// Also match when followed by generic brackets, array brackets, or type operators
 			const regex = new RegExp(`\\b${name}\\b(?![a-zA-Z])`, "g");
 
-			result = result.replace(regex, (match) => {
+			result = result.replace(regex, (match, offset: number) => {
+				const beforeMatch = result.substring(0, offset);
 				// Don't linkify if it's already in a markdown link
-				const beforeMatch = result.substring(0, result.indexOf(match));
 				if (beforeMatch.endsWith("](") || beforeMatch.endsWith("[")) {
+					return match;
+				}
+				// Don't linkify inside backtick code spans
+				const backtickCount = (beforeMatch.match(/`/g) || []).length;
+				if (backtickCount % 2 === 1) {
 					return match;
 				}
 				return `[${match}](${route})`;
@@ -164,9 +182,9 @@ export class MarkdownCrossLinker {
 			// Also match when followed by generic brackets, array brackets, or type operators
 			const regex = new RegExp(`\\b${name}\\b(?![a-zA-Z])`, "g");
 
-			result = result.replace(regex, (match) => {
+			result = result.replace(regex, (match, offset: number) => {
 				// Don't linkify if it's already in an HTML link
-				const beforeMatch = result.substring(0, result.indexOf(match));
+				const beforeMatch = result.substring(0, offset);
 				if (beforeMatch.includes("<a") && !beforeMatch.includes("</a>")) {
 					return match;
 				}

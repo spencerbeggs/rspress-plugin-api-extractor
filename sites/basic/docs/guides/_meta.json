@@ -1,0 +1,8 @@
+[
+	{ "type": "file", "name": "getting-started", "label": "Getting Started" },
+	{ "type": "file", "name": "data-sources", "label": "Data Sources" },
+	{ "type": "file", "name": "transforms", "label": "Transforms" },
+	{ "type": "file", "name": "error-handling", "label": "Error Handling" },
+	{ "type": "file", "name": "advanced", "label": "Advanced" },
+	{ "type": "file", "name": "testing", "label": "Testing" }
+]

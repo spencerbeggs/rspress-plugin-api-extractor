@@ -3,33 +3,59 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
-completeness: 90
-related: []
+updated: 2026-04-09
+last-synced: 2026-04-09
+completeness: 95
+related:
+  - rspress-plugin-api-extractor/page-generation-system.md
 dependencies: []
 ---
 
-# Multi-Entry Point Support for Virtual TypeScript Environment
+# Multi-Entry Point Support
 
-**Status:** ✅ Production-ready
+**Status:** Production-ready
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Purpose](#purpose)
+- [Doc Generation Pipeline](#doc-generation-pipeline)
+- [VFS Generation](#vfs-generation)
+- [Implementation Details](#implementation-details)
+- [Backward Compatibility](#backward-compatibility)
+- [Import Resolution Between Entry Points](#import-resolution-between-entry-points)
+- [Performance Impact](#performance-impact)
+- [Use Cases](#use-cases)
+- [Future Enhancements](#future-enhancements)
 
 ## Overview
 
-Extends the `TwoslashProjectGenerator` to support packages with multiple entry
-points, generating separate `.d.ts` files for each entry and configuring the
-virtual `package.json` with proper exports.
+Multi-entry point support spans two subsystems:
 
-**Status:** Fully implemented with backward compatibility for single-entry
-packages.
+1. **Doc Generation Pipeline** -- The `MultiEntryResolver`
+   (`multi-entry-resolver.ts`) deduplicates re-exports, detects name
+   collisions, and feeds resolved items into `prepareWorkItems`. Page
+   generators render an "Available from" line, and navigation labels
+   include entry point qualifiers for colliding items.
+
+2. **Virtual TypeScript Environment** -- The `TwoslashProjectGenerator`
+   generates separate `.d.ts` files per entry point with proper
+   `package.json` exports for Twoslash type resolution.
+
+Both subsystems are fully implemented with backward compatibility for
+single-entry packages.
 
 ## Purpose
 
 Modern npm packages often provide multiple entry points for different use
 cases (testing utilities, platform-specific code, plugin systems). The
-multi-entry point system generates separate `.d.ts` files for each entry point
-defined in an API Extractor model, properly configuring the virtual
-`package.json` with exports.
+multi-entry point system:
+
+- Generates separate `.d.ts` files for each entry point in the VFS
+- Deduplicates re-exported items across entry points in documentation
+- Detects name collisions and disambiguates navigation labels
+- Shows "Available from" metadata on pages for items re-exported across
+  entry points
 
 **Supported package structure:**
 
@@ -47,7 +73,136 @@ The system automatically detects the number of entry points and adjusts
 generation strategy accordingly, maintaining full backward compatibility with
 single-entry packages.
 
-## Solution Architecture
+## Doc Generation Pipeline
+
+### MultiEntryResolver
+
+**Location:** `src/multi-entry-resolver.ts`
+
+The `MultiEntryResolver` is a pure function (`resolveEntryPoints`) that
+takes an `ApiPackage` with one or more `ApiEntryPoint` instances and
+produces a flat array of `ResolvedEntryItem` records:
+
+```typescript
+interface ResolvedEntryItem {
+  /** The API item from the model */
+  readonly item: ApiItem;
+  /** Which entry point defines this item (canonical owner) */
+  readonly definingEntryPoint: string;
+  /** All entry points that export this item (includes re-exports) */
+  readonly availableFrom: string[];
+  /** Whether this display name collides with a different item
+      from another entry point */
+  readonly hasCollision: boolean;
+}
+```
+
+**Resolution algorithm:**
+
+1. Walk every entry point's members and group by identity key
+   (`displayName::kind`).
+2. Items with the same key in multiple entry points are treated as
+   re-exports. They are deduplicated to a single entry, preferring
+   the `"default"` entry point as the canonical owner.
+   `availableFrom` lists all entry points.
+3. If multiple *different* items share the same `displayName` but
+   different `kind` values (e.g., entry A has class `Config`, entry B
+   has interface `Config`), both get `hasCollision: true`.
+
+The main entry point (empty displayName `""` in the API model) is
+normalized to the string `"default"`.
+
+### Integration with prepareWorkItems
+
+`prepareWorkItems` in `build-stages.ts` calls `resolveEntryPoints`
+first, then builds a lookup map from identity key to
+`ResolvedEntryItem`. When constructing `WorkItem` records:
+
+- `availableFrom` is set on every item (from the resolved data).
+- `entryPointSegment` is set only when `hasCollision` is true,
+  taking the value of `definingEntryPoint`. This segment is later
+  inserted into the route path to disambiguate colliding items
+  (e.g., `/class/default/config` vs `/class/testing/config`).
+
+`loader.ts` (`ApiParser.categorizeApiItems` and
+`ApiParser.extractNamespaceMembers`) both accept
+`ApiPackage | ResolvedEntryItem[]`, using the resolved items directly
+for multi-entry support and falling back to `entryPoints[0]` for
+legacy single-entry behavior.
+
+### WorkItem Extensions
+
+```typescript
+interface WorkItem {
+  readonly item: ApiItem;
+  readonly categoryKey: string;
+  readonly categoryConfig: CategoryConfig;
+  readonly namespaceMember?: NamespaceMember;
+  /** Entry points this item is available from */
+  readonly availableFrom?: string[];
+  /** Entry point URL segment, set only when displayName collides */
+  readonly entryPointSegment?: string;
+}
+```
+
+### Page Generator Changes
+
+All seven page generators (`ClassPageGenerator`,
+`InterfacePageGenerator`, `FunctionPageGenerator`,
+`TypeAliasPageGenerator`, `EnumPageGenerator`, `VariablePageGenerator`,
+`NamespacePageGenerator`) accept an optional `availableFrom?: string[]`
+parameter appended to their `generate()` signature.
+
+When `availableFrom` has more than one entry, the helper function
+`generateAvailableFrom()` in `markdown/helpers.ts` renders a line:
+
+```text
+Available from: `package-name`, `package-name/testing`
+```
+
+The `"default"` entry name maps to the bare package name; other names
+become subpath imports.
+
+### Navigation Labels for Colliding Items
+
+When `entryPointSegment` is set on a `WorkItem`, two things change:
+
+1. **Route path** -- The entry point name is inserted as an extra
+   path segment:
+   `/{category}/{entryPointSegment}/{item-name}` instead of
+   `/{category}/{item-name}`.
+
+2. **Navigation label** -- The `_meta.json` label includes the entry
+   point qualifier in parentheses:
+   `"MyClass (testing)"` instead of `"MyClass"`.
+
+### Data Flow
+
+```text
+ApiPackage (with 1+ entry points)
+         |
+resolveEntryPoints()
+  → Deduplicate re-exports, detect collisions
+  → ResolvedEntryItem[]
+         |
+prepareWorkItems()
+  → Categorize items (ApiParser.categorizeApiItems)
+  → Build cross-link routes/kinds maps
+  → Construct WorkItem[] with availableFrom + entryPointSegment
+         |
+Stream pipeline (buildPipelineForApi)
+  → generateSinglePage: dispatches to page generator with availableFrom
+  → Route adjusted for entryPointSegment (if collision)
+  → writeSingleFile: label includes entry point qualifier
+```
+
+### Kitchensink Test Fixture
+
+The `modules/kitchensink/` module has a `./testing` entry point
+(`src/testing.ts`) configured in its `package.json` exports. This
+provides a real-world multi-entry package for integration testing.
+
+## VFS Generation
 
 ### Entry Point Detection
 
@@ -325,19 +480,15 @@ import { PluginTester } from "my-package/testing";
 The `TypeReferenceExtractor` ensures all external types are imported, but
 inter-entry references are handled by TypeScript's natural module resolution.
 
-## Current API Extractor Limitation
+## API Extractor Multi-Entry Status
 
-API Extractor currently generates single-entry `.api.json` models even for
-packages with multiple entry points. To fully utilize this implementation:
+The `kitchensink` module now includes a `./testing` entry point, producing
+a multi-entry `.api.json` model. This validates the full pipeline end-to-end:
+VFS generation, deduplication, collision detection, page generation with
+"Available from" metadata, and navigation label qualification.
 
-1. **Wait for API Extractor support:** Future versions may support
-   multi-entry models
-2. **Manual model merging:** Combine multiple `.api.json` files into one
-   with multiple entry points
-3. **Custom extraction:** Build custom tooling to generate multi-entry models
-
-**Current state:** Implementation ready but no real-world multi-entry models
-to test against yet.
+For packages where API Extractor does not natively support multiple entry
+points, manual model merging or custom extraction remains necessary.
 
 ## Performance Impact
 
@@ -423,9 +574,9 @@ node_modules/my-lib/
 
 ## Future Enhancements
 
-**Note:** Per-entry-point import optimization has been implemented. Imports
-are now generated separately for each entry point, including only types
-actually used by that entry.
+**Note:** Per-entry-point import optimization and doc generation pipeline
+integration (deduplication, collision detection, "Available from" rendering,
+navigation label qualification) are implemented.
 
 ### Potential Improvements
 
@@ -434,29 +585,30 @@ actually used by that entry.
    for different module systems
 3. **Entry Point Dependencies:** Explicit tracking of which entry points
    reference others
-4. **Entry Point Documentation:** Generate separate documentation sections
-   for each entry point
+4. **Per-Entry Filtering:** Allow users to exclude specific entry points
+   from documentation
 
 ### Known Limitations
 
-1. **API Extractor Support:** Currently no packages generate multi-entry
-   models in production
-2. **Cross-Entry References:** Relies on TypeScript's module resolution for
-   references between entries
-3. **Exports Complexity:** Only supports simple `{ types: "..." }` format,
-   not conditional exports
+1. **Cross-Entry References:** Relies on TypeScript's module resolution for
+   references between entries in VFS
+2. **Exports Complexity:** VFS `package.json` only supports simple
+   `{ types: "..." }` format, not conditional exports
+3. **Collision Scope:** Collision detection is by `displayName` only; two
+   items with the same name and same kind across entries are treated as
+   re-exports (deduplicated), not collisions
 
 ## Related Documentation
 
+- **Page Generation System:**
+  `.claude/design/rspress-plugin-api-extractor/page-generation-system.md` -
+  Stream pipeline consuming resolved entry items
 - **Import Generation System:**
   `.claude/design/rspress-plugin-api-extractor/import-generation-system.md` -
   Per-entry-point import extraction
 - **Source Mapping:**
   `.claude/design/rspress-plugin-api-extractor/source-mapping-system.md` -
   Per-entry-point source map generation
-- **Type Parameter Constraints:**
-  `.claude/design/rspress-plugin-api-extractor/type-parameter-constraints.md` -
-  Generic type reconstruction
 - **Type Loading & VFS:**
   `.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md` -
   Virtual file system integration
