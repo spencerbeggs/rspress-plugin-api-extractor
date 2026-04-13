@@ -14,7 +14,7 @@
 		"rspress-plugin-api-extractor": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.8",
+		"@rspress/core": "^2.0.9",
 		"@savvy-web/rslib-builder": "^0.19.1",
 		"@types/react": "^19.2.10",
 		"@typescript/native-preview": "catalog:silk",
