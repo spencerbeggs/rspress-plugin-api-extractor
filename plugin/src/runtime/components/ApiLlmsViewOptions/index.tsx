@@ -10,17 +10,7 @@ import { useI18n, usePage, useSite } from "@rspress/core/runtime";
 import { useMdUrl } from "@rspress/core/theme";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-interface ApiScope {
-	name: string;
-	packageName: string;
-	packageRoute: string;
-	baseRoute: string;
-	llmsTxt: string;
-	llmsFullTxt: string;
-	llmsDocsTxt: string;
-	llmsApiTxt: string | null;
-}
+import type { ApiScope } from "../shared/types.js";
 
 function resolveUrl(urlPath: string): string {
 	if (typeof window === "undefined") return urlPath;

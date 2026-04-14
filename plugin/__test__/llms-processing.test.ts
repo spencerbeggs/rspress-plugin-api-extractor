@@ -314,3 +314,37 @@ describe("generatePackageLlmsFullTxt", () => {
 		expect(sections.length).toBe(2);
 	});
 });
+
+describe("filterLlmsTxt with real RSPress llms.txt format", () => {
+	// RSPress generates llms.txt URLs with .md extension, matching
+	// the route-to-md-path conversion: /api/class/pipeline -> /api/class/pipeline.md
+	// This test verifies the .md extension assumption holds for filtering.
+	it("filters entries whose URLs use .md extension (RSPress format)", () => {
+		const realSample = [
+			"# Site Title",
+			"",
+			"## Others",
+			"",
+			"- [Pipeline | Class | API | Kitchen Sink](/api/class/pipeline.md): A data pipeline",
+			"- [Getting Started](/guides/getting-started.md)",
+			"- [createPipeline | Function | API | Kitchen Sink](/api/function/createpipeline.md): Creates a pipeline",
+		].join("\n");
+
+		// API routes built from generatedFiles use .md extension:
+		// "class/pipeline.mdx" -> "/api/class/pipeline.md"
+		const apiRoutes = new Set(["/api/class/pipeline.md", "/api/function/createpipeline.md"]);
+
+		const result = filterLlmsTxt(realSample, apiRoutes, []);
+		expect(result).toContain("[Getting Started]");
+		expect(result).not.toContain("[Pipeline | Class");
+		expect(result).not.toContain("[createPipeline");
+	});
+
+	it("does not filter entries if URL format mismatches (no .md)", () => {
+		const content = "- [Pipeline](/api/class/pipeline): desc";
+		// Route has .md but entry URL does not — no match, entry preserved
+		const apiRoutes = new Set(["/api/class/pipeline.md"]);
+		const result = filterLlmsTxt(content, apiRoutes, []);
+		expect(result).toContain("[Pipeline]");
+	});
+});

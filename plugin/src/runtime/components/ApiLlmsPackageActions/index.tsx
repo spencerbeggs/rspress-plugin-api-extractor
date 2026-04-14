@@ -2,20 +2,7 @@ import { usePage, useSite } from "@rspress/core/runtime";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
-/** Shape of scope metadata injected into themeConfig by the plugin */
-interface ApiScope {
-	name: string;
-	packageName: string;
-	packageRoute: string;
-	baseRoute: string;
-	version: string | null;
-	locale: string | null;
-	llmsTxt: string;
-	llmsFullTxt: string;
-	llmsDocsTxt: string;
-	llmsApiTxt: string | null;
-}
+import type { ApiScope } from "../shared/types.js";
 
 function resolveUrl(urlPath: string): string {
 	if (typeof window === "undefined") return urlPath;
