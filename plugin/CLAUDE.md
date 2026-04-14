@@ -16,6 +16,22 @@ The runtime bundle uses `@rsbuild/plugin-react`, BannerPlugin for CSS
 injection, and CSS modules. The plugin bundle is a single Node.js file with
 external dependencies.
 
+### Runtime Source Components
+
+Some runtime components (`ApiLlmsPackageActions`, `ApiLlmsViewOptions`) are
+registered via RSPress's `globalUIComponents` and `resolve.alias` at build
+time. These components are compiled by RSPress from source (not pre-compiled
+by rslib) because they use `import.meta.env.SSG_MD` and RSPress runtime
+hooks (`useSite`, `usePage`).
+
+The paths in `plugin.ts` use `../../src/runtime/` relative to `import.meta.url`
+which resolves to `dist/dev/index.js` in development. This is correct because
+`publishConfig.linkDirectory: true` means dev consumers see the `dist/dev/`
+directory as the package root. For published packages, `@savvy-web/rslib-builder`
+transforms the `package.json` and `files` array during the build, so the paths
+resolve correctly in the published structure too. Do not change these paths
+without understanding the build pipeline transformation.
+
 ### Effect Service Layer
 
 The plugin uses Effect-TS for all build orchestration. `plugin.ts` is a thin
