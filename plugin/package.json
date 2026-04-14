@@ -17,7 +17,7 @@
 		".": "./src/index.ts",
 		"./runtime": "./src/runtime/index.tsx"
 	},
-	"files": ["dist"],
+	"files": ["dist", "src/runtime"],
 	"scripts": {
 		"build": "turbo run build:dev build:prod",
 		"build:dev": "rslib build --config-loader native --env-mode dev",

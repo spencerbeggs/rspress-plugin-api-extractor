@@ -263,6 +263,11 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 					updatedConfig.builderConfig.resolve = {};
 				}
 				const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+				// TODO: verify this path resolves correctly for published packages
+				// (dist/npm/ structure). Works in monorepo dev (dist/dev/) because
+				// ../../src/runtime/ traverses up from dist/dev/ to the plugin root.
+				// For published packages, src/runtime/ is included via the "files"
+				// array in package.json.
 				const customLlmsViewOptions = path.resolve(
 					pluginDir,
 					"../../src/runtime/components/ApiLlmsViewOptions/index.tsx",
@@ -353,9 +358,11 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 				if (!updatedConfig.globalUIComponents) {
 					updatedConfig.globalUIComponents = [];
 				}
-				const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+				// TODO: verify this path resolves correctly for published packages
+				// (see similar TODO above for ApiLlmsViewOptions path)
+				const llmsComponentPluginDir = path.dirname(fileURLToPath(import.meta.url));
 				const llmsComponentPath = path.resolve(
-					pluginDir,
+					llmsComponentPluginDir,
 					"../../src/runtime/components/ApiLlmsPackageActions/index.tsx",
 				);
 				updatedConfig.globalUIComponents.push(llmsComponentPath);

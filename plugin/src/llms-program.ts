@@ -160,20 +160,25 @@ function collectApiEntries(globalLlmsTxtContent: string, result: GenerateApiDocs
 /**
  * Collect guide page entries from the global llms.txt that are NOT API pages.
  *
- * Guide pages are entries in the global llms.txt that are under the same
- * prefix but not in the API routes set.
+ * Guide pages are entries in the global llms.txt that are under the package's
+ * route but not in the API routes set. Uses packageRoute (e.g., "/kitchensink")
+ * instead of prefix to avoid matching entries from other packages.
  */
-function collectGuideEntries(globalLlmsTxtContent: string, apiRoutes: Set<string>, prefix: string): LlmsTxtEntry[] {
+function collectGuideEntries(
+	globalLlmsTxtContent: string,
+	apiRoutes: Set<string>,
+	packageRoute: string,
+): LlmsTxtEntry[] {
+	const base = packageRoute.endsWith("/") ? packageRoute : `${packageRoute}/`;
 	const entries: LlmsTxtEntry[] = [];
-	const prefixPath = prefix ? `/${prefix}/` : "/";
 
 	for (const line of globalLlmsTxtContent.split("\n")) {
 		const entry = parseLlmsTxtLine(line);
 		if (!entry) {
 			continue;
 		}
-		// Include entries under this prefix that are NOT API routes
-		if (entry.url.startsWith(prefixPath) && !apiRoutes.has(entry.url)) {
+		// Include entries under this package's route that are NOT API routes
+		if ((entry.url === packageRoute || entry.url.startsWith(base)) && !apiRoutes.has(entry.url)) {
 			entries.push(entry);
 		}
 	}
@@ -258,6 +263,7 @@ export function processLlmsFiles(input: ProcessLlmsFilesInput): Effect.Effect<vo
 
 		// Step 1: Build the set of all API route URLs
 		const apiRoutes = buildApiRoutes(buildResults);
+		yield* Effect.logDebug(`Built ${apiRoutes.size} API routes for LLMs filtering`);
 
 		if (apiRoutes.size === 0) {
 			return;
@@ -349,7 +355,6 @@ function processPrefix(
 						llmsTxtContent,
 						llmsFullTxtContent,
 						apiRoutes,
-						prefix,
 						llmsPlugin,
 						packageRoutes.get(result.packageName) ?? result.baseRoute,
 					),
@@ -369,7 +374,6 @@ function generatePerPackageFiles(
 	globalLlmsTxtContent: string,
 	globalLlmsFullContent: string,
 	apiRoutes: Set<string>,
-	prefix: string,
 	llmsPlugin: LlmsPlugin,
 	packageRoute: string,
 ): Effect.Effect<void> {
@@ -385,8 +389,8 @@ function generatePerPackageFiles(
 		// Collect API page entries from global llms.txt
 		const apiEntries = collectApiEntries(globalLlmsTxtContent, result);
 
-		// Collect guide page entries (non-API entries under the same prefix)
-		const guideEntries = collectGuideEntries(globalLlmsTxtContent, apiRoutes, prefix);
+		// Collect guide page entries (non-API entries under this package's route)
+		const guideEntries = collectGuideEntries(globalLlmsTxtContent, apiRoutes, packageRoute);
 
 		// Generate per-package llms.txt
 		const packageLlmsTxt = generatePackageLlmsTxt({

@@ -221,8 +221,9 @@ export function generateStructuredLlmsTxt(
 		output.push("");
 	}
 
-	// Packages section
-	const packagesWithEntries = packages.filter((pkg) => (packageEntries.get(pkg.packageName)?.length ?? 0) > 0);
+	// Packages section — always include all packages, even API-only packages
+	// get a section with just the API Reference link
+	const packagesWithEntries = packages;
 	if (packagesWithEntries.length > 0) {
 		output.push("## Packages");
 		output.push("");

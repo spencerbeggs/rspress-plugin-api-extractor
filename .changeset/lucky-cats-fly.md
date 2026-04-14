@@ -27,4 +27,4 @@ Added `ApiLlmsPackageActions`, a React component that injects per-package LLMs c
 
 ### LlmsPlugin Schema
 
-Added `scopes` and `apiTxt` fields to the `LlmsPlugin` configuration schema. All new LLMs features are enabled by default and can be selectively disabled through this schema.
+Added `scopes` and `apiTxt` fields to the `LlmsPlugin` configuration schema. All LLMs features activate automatically when `llms: true` is set in the RSPress config. To disable, set `llmsPlugin: { enabled: false }` in the plugin options. Individual features can also be selectively disabled through this schema.
