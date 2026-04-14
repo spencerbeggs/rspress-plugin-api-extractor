@@ -158,7 +158,9 @@ describe("Config leaf schemas", () => {
 	it("decodes LlmsPlugin with defaults", () => {
 		const decode = Schema.decodeUnknownSync(LlmsPlugin);
 		const result = decode({});
-		expect(result.enabled).toBe(false);
+		expect(result.enabled).toBe(true);
+		expect(result.scopes).toBe(true);
+		expect(result.apiTxt).toBe(true);
 		expect(result.showCopyButton).toBe(true);
 		expect(result.showViewOptions).toBe(true);
 		expect(result.copyButtonText).toBe("Copy Markdown");

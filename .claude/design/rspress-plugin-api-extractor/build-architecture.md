@@ -326,5 +326,7 @@ cd plugin && pnpm dev   # Rebuilds on file changes
   `page-generation-system.md`
 - **Snapshot Tracking:**
   `snapshot-tracking-system.md`
+- **LLMs Integration:**
+  `llms-integration.md`
 - **Type Loading & VFS:**
   `type-loading-vfs.md`

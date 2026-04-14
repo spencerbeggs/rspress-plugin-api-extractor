@@ -60,11 +60,17 @@ describe("generateApiDocs (Effect program)", () => {
 			MockSnapshotServiceLayer,
 			Logger.minimumLogLevel(LogLevel.None),
 		);
-		const crossLinkData = await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
 
 		// Cross-link data should be populated
-		expect(crossLinkData.routes.size).toBeGreaterThan(0);
-		expect(crossLinkData.kinds.size).toBeGreaterThan(0);
+		expect(result.crossLinkData.routes.size).toBeGreaterThan(0);
+		expect(result.crossLinkData.kinds.size).toBeGreaterThan(0);
+
+		// Build result metadata should be populated
+		expect(result.generatedFiles.size).toBeGreaterThan(0);
+		expect(result.resolvedOutputDir).toBeTruthy();
+		expect(result.baseRoute).toBe("/example-module");
+		expect(result.packageName).toBe("example-module");
 
 		// File context map should have entries for generated files
 		expect(fileContextMap.size).toBeGreaterThan(0);

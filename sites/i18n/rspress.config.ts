@@ -9,6 +9,13 @@ export default defineConfig({
 	root: "docs",
 	title: "i18n API Test",
 	outDir: "dist",
+	llms: true,
+	themeConfig: {
+		llmsUI: {
+			viewOptions: ["markdownLink", "chatgpt", "claude"],
+			placement: "title",
+		},
+	},
 	lang: "en",
 	locales: [
 		{ lang: "en", label: "English" },

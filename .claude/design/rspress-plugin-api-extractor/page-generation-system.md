@@ -400,3 +400,5 @@ Both use the VfsRegistry to access the highlighter and transformers.
   `component-development.md` -- Runtime components used in generated pages
 - **SSG-Compatible Components:**
   `ssg-compatible-components.md` -- Dual-mode components
+- **LLMs Integration:**
+  `llms-integration.md` -- LLMs file generation and UI

@@ -1,0 +1,12 @@
+[
+	{
+		"type": "dir",
+		"name": "guides",
+		"label": "Guides"
+	},
+	{
+		"type": "dir",
+		"name": "api",
+		"label": "API Reference"
+	}
+]

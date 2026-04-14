@@ -873,6 +873,8 @@ declare module "*.module.css" {
 - **Main Plugin README:** `plugin/README.md`
 - **Package CLAUDE.md:** `plugin/CLAUDE.md` -
   Component development guide
+- **LLMs Integration:**
+  `.claude/design/rspress-plugin-api-extractor/llms-integration.md`
 
 ### External Resources
 

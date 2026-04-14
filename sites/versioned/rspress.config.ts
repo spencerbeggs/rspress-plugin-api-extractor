@@ -9,6 +9,13 @@ export default defineConfig({
 	root: "docs",
 	title: "Versioned API Test",
 	outDir: "dist",
+	llms: true,
+	themeConfig: {
+		llmsUI: {
+			viewOptions: ["markdownLink", "chatgpt", "claude"],
+			placement: "title",
+		},
+	},
 	multiVersion: {
 		default: "v2",
 		versions: ["v1", "v2"],

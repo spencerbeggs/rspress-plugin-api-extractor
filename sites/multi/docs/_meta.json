@@ -1,0 +1,17 @@
+[
+	{
+		"type": "dir",
+		"name": "blog",
+		"label": "Blog"
+	},
+	{
+		"type": "dir",
+		"name": "kitchensink",
+		"label": "Kitchen Sink"
+	},
+	{
+		"type": "dir",
+		"name": "versioned",
+		"label": "Versioned Module"
+	}
+]

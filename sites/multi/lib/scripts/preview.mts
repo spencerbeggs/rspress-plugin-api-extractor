@@ -59,7 +59,7 @@ child.on("exit", (code) => {
 try {
 	await waitForReady;
 	if (shouldOpenBrowser) {
-		await open(`http://localhost:${PORT}/api/`);
+		await open(`http://localhost:${PORT}/`);
 		console.log("✅ Browser opened successfully");
 	} else {
 		console.log("✅ Server ready (browser opening disabled via NO_OPEN)");

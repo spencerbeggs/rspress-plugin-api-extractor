@@ -1,0 +1,111 @@
+---
+title: Getting Started with Kitchensink
+---
+
+The kitchensink library provides a typed data-pipeline API for composing
+sources, transforms, and sinks. This guide walks you through installation,
+creating your first pipeline, and running it against real data.
+
+## Prerequisites
+
+Before you begin, make sure you have the following:
+
+- **Node.js 20** or later installed
+- **TypeScript 5.4** or later configured in your project
+- A package manager such as **pnpm**, **npm**, or **yarn**
+- Basic familiarity with TypeScript generics and async/await
+
+## Installation
+
+Install the kitchensink package from npm:
+
+```typescript
+// Using pnpm (recommended)
+// pnpm add kitchensink
+
+// Using npm
+// npm install kitchensink
+```
+
+## Creating Your First Pipeline
+
+The [Pipeline](/kitchensink/api/class/pipeline) class is the central
+abstraction. It connects a [DataSource](/kitchensink/api/class/datasource)
+to a [Transform](/kitchensink/api/interface/transform) and manages the
+execution lifecycle.
+
+Use the static `Pipeline.create` factory method to construct a pipeline
+from a [JsonSource](/kitchensink/api/class/jsonsource) and a transform
+function:
+
+```typescript
+import { Pipeline, JsonSource } from "kitchensink";
+import type { PipelineOptions } from "kitchensink";
+
+const source = new JsonSource("./data/records.json");
+
+const pipeline = Pipeline.create(source, (record: Record<string, unknown>) => ({
+  ...record,
+  processed: true,
+}));
+```
+
+## Running the Pipeline
+
+Once created, call `execute` with an input value. The pipeline applies your
+transform and returns the result:
+
+```typescript
+import { Pipeline, JsonSource, PipelineStatus } from "kitchensink";
+
+const source = new JsonSource("./data/records.json");
+
+const pipeline = Pipeline.create(source, (record: Record<string, unknown>) => ({
+  ...record,
+  processed: true,
+}));
+
+const result = await pipeline.execute({ id: 1, name: "example" });
+
+console.log(pipeline.status === PipelineStatus.Completed); // true
+```
+
+After execution the [PipelineStatus](/kitchensink/api/enum/pipelinestatus)
+reflects the current lifecycle state. Check `pipeline.status` to confirm
+completion before reading results.
+
+## Configuration Options
+
+You can pass [PipelineOptions](/kitchensink/api/interface/pipelineoptions) as
+the third argument to `Pipeline.create` to control execution behavior:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `batchSize` | `number` | `100` | Number of items processed per batch |
+| `retryCount` | `number` | `0` | Times to retry a failed transform |
+| `timeout` | `number` | `30000` | Maximum execution time in milliseconds |
+
+```typescript
+import { Pipeline, JsonSource } from "kitchensink";
+import type { PipelineOptions } from "kitchensink";
+
+const opts: PipelineOptions = {
+  batchSize: 50,
+  retryCount: 2,
+  timeout: 5000,
+};
+
+const pipeline = Pipeline.create(
+  new JsonSource("./data/items.json"),
+  (item: string) => item.toUpperCase(),
+  opts,
+);
+```
+
+## Next Steps
+
+- Learn about data formats and error handling in the
+  [Configuration Guide](/kitchensink/guides/configuration)
+- Explore batch processing and middleware in the
+  [Advanced Usage Guide](/kitchensink/guides/advanced-usage)
+- Browse the full [API Reference](/kitchensink/api/)

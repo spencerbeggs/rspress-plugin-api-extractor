@@ -9,6 +9,9 @@ import "./components/shared/_twoslash.css";
 // Components
 export type { ApiExampleProps } from "./components/ApiExample/index.js";
 export { ApiExample } from "./components/ApiExample/index.js";
+// ApiLlmsPackageActions is NOT exported here — it's loaded via
+// globalUIComponents which compiles it from source. Including it in
+// the pre-compiled runtime bundle would pull in react-dom.
 export type { ApiMemberProps } from "./components/ApiMember/index.js";
 export { ApiMember } from "./components/ApiMember/index.js";
 export type { ApiSignatureProps } from "./components/ApiSignature/index.js";

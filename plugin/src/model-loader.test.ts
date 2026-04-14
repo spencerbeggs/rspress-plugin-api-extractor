@@ -297,6 +297,8 @@ describe("ApiModelLoader", () => {
 				ogImage: "/images/og.png",
 				llmsPlugin: {
 					enabled: true,
+					scopes: true,
+					apiTxt: true,
 					showCopyButton: true,
 					showViewOptions: true,
 					copyButtonText: "Copy",

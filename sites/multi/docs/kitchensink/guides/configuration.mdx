@@ -1,0 +1,131 @@
+---
+title: Configuration
+---
+
+This guide covers pipeline configuration in depth: data format selection,
+codec usage, error handling strategies, and filter composition. These
+options let you tailor pipeline behavior to your specific data processing
+needs.
+
+## Data Formats
+
+The [DataFormat](/kitchensink/api/enum/dataformat) enum defines the
+serialization formats that the pipeline supports. Each format has
+different trade-offs for size, speed, and human readability.
+
+| Format | Enum Value | Best For | Human Readable |
+| --- | --- | --- | --- |
+| JSON | `DataFormat.Json` | Configuration, API payloads | Yes |
+| Binary | `DataFormat.Binary` | Large datasets, network transfer | No |
+| Streaming | `DataFormat.Streaming` | Real-time data, large files | Partial |
+
+## Codec Configuration
+
+The [Codecs](/kitchensink/api/namespace/codecs) namespace provides
+functions for each format. Pass [CodecOptions](/kitchensink/api/type/codecoptions)
+to control encoding behavior:
+
+```typescript
+import { Codecs, DataFormat } from "kitchensink";
+
+// JSON codec: serialize any value to a JSON string
+const jsonPayload = Codecs.json({ id: 1, name: "Alice" });
+console.log(typeof jsonPayload); // "string"
+
+// Binary codec: encode to Uint8Array for efficient transfer
+const binaryPayload = Codecs.binary({ id: 1, name: "Alice" });
+console.log(binaryPayload instanceof Uint8Array); // true
+```
+
+For real-time processing, the streaming codec accepts a
+[DataSource](/kitchensink/api/class/datasource) and returns an async
+iterable:
+
+```typescript
+import { Codecs, JsonSource } from "kitchensink";
+
+const source = new JsonSource("./data/events.json");
+const stream = Codecs.streaming(source);
+
+for await (const chunk of stream) {
+  console.log("Received chunk:", chunk);
+}
+```
+
+## Error Handling
+
+The library provides a hierarchy of typed errors that you can catch and
+handle precisely. All pipeline errors extend
+[PipelineError](/kitchensink/api/class/pipelineerror):
+
+- [CodecError](/kitchensink/api/class/codecerror) -- Serialization or
+  deserialization failures
+- [DataSourceError](/kitchensink/api/class/datasourceerror) -- Source
+  read or connection failures
+- [ValidationError](/kitchensink/api/class/validationerror) -- Input
+  validation failures
+
+Register a custom [ErrorHandler](/kitchensink/api/type/errorhandler) to
+intercept errors before they propagate:
+
+```typescript
+import { Pipeline, JsonSource, PipelineError } from "kitchensink";
+import type { ErrorHandler } from "kitchensink";
+
+const onError: ErrorHandler = (error: PipelineError) => {
+  console.error(`Pipeline failed: ${error.message}`);
+  // Return true to suppress the error, false to re-throw
+  return false;
+};
+
+const pipeline = Pipeline.create(
+  new JsonSource("./data/records.json"),
+  (record: Record<string, unknown>) => record,
+);
+```
+
+## Filter Composition
+
+The [Filters](/kitchensink/api/namespace/filters) namespace provides
+composable predicate functions that can be chained together to refine
+pipeline input.
+
+**Available filters:**
+
+- [Filters.where](/kitchensink/api/function/filters.where) -- Keep items
+  matching a predicate
+- [Filters.take](/kitchensink/api/function/filters.take) -- Limit the
+  number of items
+- [Filters.fuzzy](/kitchensink/api/function/filters.fuzzy) -- Approximate
+  string matching
+
+```typescript
+import { Filters } from "kitchensink";
+
+interface User {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+const activeOnly = Filters.where<User>((user) => user.active);
+const firstFive = Filters.take<User>(5);
+const nameSearch = Filters.fuzzy<User>("Ali", "name");
+
+const users: User[] = [
+  { id: 1, name: "Alice", active: true },
+  { id: 2, name: "Bob", active: false },
+  { id: 3, name: "Alicia", active: true },
+];
+
+// Compose filters: active users matching "Ali", take first 5
+const result = firstFive(nameSearch(activeOnly(users)));
+console.log(result.length); // 2
+```
+
+## Related Guides
+
+- [Getting Started](/kitchensink/guides/getting-started) -- Installation
+  and first pipeline
+- [Advanced Usage](/kitchensink/guides/advanced-usage) -- Batch processing,
+  middleware, and testing

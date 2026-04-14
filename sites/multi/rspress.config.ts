@@ -9,9 +9,11 @@ export default defineConfig({
 	root: "docs",
 	title: "Multi-API Portal Test",
 	outDir: "dist",
-	builderConfig: {
-		source: {
-			define: { "import.meta.env": "import.meta.env" },
+	llms: true,
+	themeConfig: {
+		llmsUI: {
+			viewOptions: ["markdownLink", "chatgpt", "claude"],
+			placement: "title",
 		},
 	},
 	plugins: [

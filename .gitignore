@@ -42,3 +42,4 @@ api-docs-snapshot.db-*
 .claude/plans/
 .claude/plugins-debug.log
 .playwright-mcp
+docs/superpowers
