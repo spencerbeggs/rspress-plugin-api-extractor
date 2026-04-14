@@ -643,3 +643,4 @@ export interface MyComponentProps {
 - **Build Architecture:** `@./build-architecture.md`
 - **SSG-Compatible Components:** `@./ssg-compatible-components.md`
 - **Twoslash Integration:** Reference performance-observability.md for error tracking
+- **LLMs Integration:** `@./llms-integration.md`

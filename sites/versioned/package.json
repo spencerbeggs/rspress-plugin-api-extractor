@@ -15,12 +15,14 @@
 		"versioned-v2": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.8",
-		"@savvy-web/rslib-builder": "^0.19.1",
-		"@types/react": "^19.2.10",
+		"@rspress/core": "^2.0.9",
+		"@savvy-web/rslib-builder": "^0.20.1",
+		"@types/node": "catalog:silk",
+		"@types/react": "catalog:silk",
+		"@types/react-dom": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk",
 		"open": "^11.0.0",
-		"react": "^19.2.5",
-		"react-dom": "^19.2.5"
+		"react": "catalog:silk",
+		"react-dom": "catalog:silk"
 	}
 }

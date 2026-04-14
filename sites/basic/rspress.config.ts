@@ -16,6 +16,13 @@ export default defineConfig({
 			},
 		},
 	},
+	llms: true,
+	themeConfig: {
+		llmsUI: {
+			viewOptions: ["markdownLink", "chatgpt", "claude"],
+			placement: "outline",
+		},
+	},
 	plugins: [
 		ApiExtractorPlugin({
 			logLevel: "info",

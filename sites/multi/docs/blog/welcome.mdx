@@ -1,0 +1,63 @@
+---
+title: Welcome to the Multi-API Portal
+---
+
+This portal brings together documentation for multiple packages under a
+single site. Each package has its own API reference, guides, and examples,
+while sharing a unified navigation and search experience.
+
+## What Is This Portal?
+
+A multi-API documentation portal solves a common problem in monorepo and
+platform projects: keeping related package documentation discoverable
+without forcing readers to jump between separate sites. Here you will
+find:
+
+- **API Reference** pages generated from TypeScript source code, with
+  full type signatures, parameter tables, and cross-linked type
+  references
+- **Guide pages** written by maintainers covering installation,
+  configuration, and advanced usage patterns
+- **Blog posts** (like this one) for announcements and project-level
+  updates that span multiple packages
+
+## Packages Covered
+
+This portal currently documents two packages:
+
+**Kitchensink** -- A typed data-pipeline library for composing sources,
+transforms, and sinks. It includes batch processing, codec namespaces
+for JSON and binary formats, composable filter functions, and a full
+suite of testing utilities. Browse the
+[Kitchensink API Reference](/kitchensink/api/) or start with the
+[Getting Started Guide](/kitchensink/guides/getting-started).
+
+**Versioned Module** -- A lightweight application framework with
+structured logging, plugin support, and configuration management. It is
+used in this portal to demonstrate multi-version documentation workflows.
+Browse the [Versioned Module API Reference](/versioned/api/) or start
+with the [Quickstart Guide](/versioned/guides/quickstart).
+
+## How the Documentation Is Built
+
+All API reference pages are generated automatically from API Extractor
+models. When a library builds, API Extractor produces a `.api.json` model
+file that describes every exported type, function, class, and interface.
+The documentation plugin reads these models and generates structured
+markdown with:
+
+- Syntax-highlighted type signatures
+- Interactive hover tooltips powered by Twoslash
+- Cross-linked type references that navigate between pages
+- Automatic navigation trees grouped by API item kind
+
+Guide pages and blog posts are written in MDX and live alongside the
+generated content. They reference the same API items using standard
+markdown links.
+
+## Getting Involved
+
+If you are a contributor, the guide pages are a good place to start.
+Each package has a `guides/` directory where you can add new tutorials,
+recipes, or troubleshooting pages. Blog posts live in the `blog/`
+directory and are not scoped to any specific package.

@@ -17,9 +17,9 @@ export interface PathDerivationInput {
 	docsRoot: string;
 	baseRoute: string;
 	apiFolder: string | null;
-	locales: string[];
+	locales: readonly string[];
 	defaultLang: string | undefined;
-	versions: string[];
+	versions: readonly string[];
 	defaultVersion: string | undefined;
 }
 

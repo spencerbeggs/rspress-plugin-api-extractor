@@ -1,0 +1,70 @@
+---
+title: Project Updates
+---
+
+A summary of recent changes across the packages documented in this portal.
+
+## Multi-Entry Point Support
+
+The documentation system now supports packages that export multiple entry
+points. When a package has both a main export and subpath exports (such as
+`kitchensink` and `kitchensink/testing`), the API reference pages show an
+"Available from" line listing every entry point that exposes each item. This
+makes it easier to find the right import path for your use case.
+
+Items that share the same name across different entry points are
+disambiguated in the navigation sidebar with a qualifier in parentheses.
+For example, if both the main entry and the testing entry export a class
+named `Config`, the sidebar shows "Config" and "Config (testing)".
+
+## Pipeline Improvements
+
+The [Pipeline](/kitchensink/api/class/pipeline) class received several
+enhancements:
+
+- **Parallel execution** -- The `parallel` method processes multiple inputs
+  concurrently, returning a `Promise` that resolves to an array of results
+- **Runtime batch size** -- The `batchSize` setter allows adjusting batch
+  size after pipeline construction, useful for adapting to runtime
+  conditions
+- **Status tracking** -- The `status` getter exposes the current
+  [PipelineStatus](/kitchensink/api/enum/pipelinestatus), making it
+  straightforward to check whether a pipeline is idle, running, or
+  completed
+
+## Logger Enhancements
+
+The [Logger](/versioned/api/class/logger) in the versioned module now
+accepts an optional [LogLevel](/versioned/api/enum/loglevel) parameter in
+its constructor. This controls the minimum severity level for output:
+
+| Level | Behavior |
+| --- | --- |
+| `LogLevel.Info` | All messages emitted |
+| `LogLevel.Warning` | Warnings and errors only |
+| `LogLevel.Error` | Errors only |
+
+Combine this with the `logPath` property in
+[Config](/versioned/api/interface/config) to direct structured log output
+to a file for later analysis.
+
+## Documentation Quality
+
+The generated API documentation now includes:
+
+- **Snapshot tracking** -- Only files whose content has changed are written
+  to disk, preserving SEO timestamps and reducing unnecessary builds
+- **Cross-linking** -- Type references in descriptions and code blocks are
+  automatically linked to the corresponding API page
+- **Twoslash integration** -- Code examples in guide pages can use
+  `with-api` code blocks to get interactive hover tooltips showing full
+  type information
+
+## What Is Next
+
+Upcoming work includes:
+
+- Improved i18n support for multi-language documentation
+- Version comparison views for the versioned module
+- Performance dashboard for build metrics
+- Additional codecs and filter functions in the kitchensink library

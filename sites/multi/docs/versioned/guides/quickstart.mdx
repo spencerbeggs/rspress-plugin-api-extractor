@@ -1,0 +1,98 @@
+---
+title: Quickstart
+---
+
+This guide walks you through setting up the versioned-module, creating an
+application instance, and configuring it for development.
+
+## Installation
+
+Install the versioned-module package:
+
+```typescript
+// Using pnpm
+// pnpm add versioned-module
+
+// Using npm
+// npm install versioned-module
+```
+
+## Creating an Application
+
+The [createApp](/versioned/api/function/createapp) function is the primary
+entry point. It accepts a [Config](/versioned/api/interface/config) object
+and returns a runner function that starts your application.
+
+```typescript
+import { createApp } from "versioned-module";
+import type { Config } from "versioned-module";
+
+const config: Config = {
+  name: "my-service",
+  port: 3000,
+  debug: false,
+};
+
+const run = createApp(config);
+
+// Start the application
+run();
+```
+
+## Configuration Reference
+
+The [Config](/versioned/api/interface/config) interface defines all
+available options:
+
+| Property | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | Yes | The application name used in logs and metadata |
+| `port` | `number` | Yes | The port number the application listens on |
+| `debug` | `boolean` | No | Enable debug mode for verbose output |
+| `logPath` | `string` | No | File path for log output; defaults to stdout |
+
+## Adding a Logger
+
+The [Logger](/versioned/api/class/logger) class provides structured logging
+at configurable severity levels. Pass a
+[LogLevel](/versioned/api/enum/loglevel) to control which messages are
+emitted.
+
+```typescript
+import { Logger, LogLevel } from "versioned-module";
+
+const logger = new Logger(LogLevel.Info);
+
+logger.log("Application starting...");
+logger.warn("High memory usage detected");
+logger.error("Failed to bind to port");
+```
+
+## Development Configuration
+
+For local development, enable debug mode and set a log path so you can
+inspect output after the process exits:
+
+```typescript
+import { createApp, Logger, LogLevel } from "versioned-module";
+import type { Config } from "versioned-module";
+
+const devConfig: Config = {
+  name: "my-service-dev",
+  port: 4000,
+  debug: true,
+  logPath: "./logs/dev.log",
+};
+
+const logger = new Logger(LogLevel.Debug);
+logger.log("Starting in development mode");
+
+const run = createApp(devConfig);
+run();
+```
+
+## Next Steps
+
+- Learn about plugin integration and deployment in the
+  [Integration Guide](/versioned/guides/integration)
+- Browse the full [API Reference](/versioned/api/)

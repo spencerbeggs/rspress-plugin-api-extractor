@@ -11,6 +11,21 @@ import type { VfsConfig } from "./vfs-registry.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 /**
+ * Result of generating API docs for a single API config.
+ * Extends CrossLinkData with build metadata needed by post-build processing (e.g., LLMs program).
+ */
+export interface GenerateApiDocsResult {
+	readonly crossLinkData: CrossLinkData;
+	readonly generatedFiles: Set<string>;
+	readonly resolvedOutputDir: string;
+	readonly baseRoute: string;
+	readonly packageName: string;
+	readonly apiName: string | undefined;
+	readonly packageVersion: string | undefined;
+	readonly packageDescription: string | undefined;
+}
+
+/**
  * Generate markdown documentation for a single API as a native Effect program.
  *
  * Orchestrates the 5 build stages:
@@ -20,14 +35,14 @@ import { VfsRegistry } from "./vfs-registry.js";
  * 4. writeMetadata — write root _meta.json, main index, category _meta.json files
  * 5. cleanupAndCommit — batch upsert snapshots, delete stale/orphan files
  *
- * Returns the CrossLinkData for this API so callers can merge cross-link data
- * across multiple APIs.
+ * Returns build result metadata including CrossLinkData for cross-link merging
+ * and generated file paths for LLMs post-processing.
  */
 export function generateApiDocs(
 	apiConfig: ResolvedApiConfig & { suppressExampleErrors?: boolean },
 	buildContext: ResolvedBuildContext,
 	fileContextMap: Map<string, { api?: string; version?: string; file: string }>,
-): Effect.Effect<CrossLinkData, never, FileSystem.FileSystem | SnapshotService> {
+): Effect.Effect<GenerateApiDocsResult, never, FileSystem.FileSystem | SnapshotService> {
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
 		const snapshotSvc = yield* SnapshotService;
@@ -162,6 +177,15 @@ export function generateApiDocs(
 
 		yield* Effect.logInfo(`Generated ${changedCount} API documentation files for ${packageName}`);
 
-		return crossLinkData;
+		return {
+			crossLinkData,
+			generatedFiles,
+			resolvedOutputDir,
+			baseRoute,
+			packageName,
+			apiName: apiName ?? undefined,
+			packageVersion: packageJson?.version,
+			packageDescription: typeof packageJson?.description === "string" ? packageJson.description : undefined,
+		};
 	});
 }

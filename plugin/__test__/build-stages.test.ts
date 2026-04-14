@@ -522,7 +522,7 @@ describe("generateSinglePage", () => {
 	});
 
 	it("returns null for unsupported item kinds", async () => {
-		const fakeItem = { displayName: "Test", kind: 999 } as WorkItem["item"];
+		const fakeItem = { displayName: "Test", kind: 999 } as unknown as WorkItem["item"];
 		const workItem: WorkItem = {
 			item: fakeItem,
 			categoryKey: "classes",

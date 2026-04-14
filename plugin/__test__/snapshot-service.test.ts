@@ -108,7 +108,7 @@ describe("SnapshotServiceLive", () => {
 
 		const result = await Effect.runPromise(program.pipe(Effect.provide(SnapshotServiceLive(dbPath))));
 
-		expect(result.stale.sort()).toEqual(["api/class/AlsoRemove.mdx", "api/class/Remove.mdx"]);
+		expect([...result.stale].sort()).toEqual(["api/class/AlsoRemove.mdx", "api/class/Remove.mdx"]);
 		expect(result.remaining).toHaveLength(1);
 		expect(result.remaining[0].filePath).toBe("api/class/Keep.mdx");
 	});
@@ -149,6 +149,6 @@ describe("SnapshotServiceLive", () => {
 
 		const result = await Effect.runPromise(program.pipe(Effect.provide(SnapshotServiceLive(dbPath))));
 
-		expect(result.sort()).toEqual(["api/class/A.mdx", "api/enum/B.mdx"]);
+		expect([...result].sort()).toEqual(["api/class/A.mdx", "api/enum/B.mdx"]);
 	});
 });

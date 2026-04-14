@@ -1,0 +1,123 @@
+---
+title: Integration
+---
+
+This guide covers integrating the versioned-module into existing systems:
+writing plugins, configuring structured logging, and preparing a
+production deployment.
+
+## Plugin System
+
+The [Plugin](/versioned/api/type/plugin) type defines a function that
+receives the application [Config](/versioned/api/interface/config) and
+can modify behavior at startup. Plugins run before the application
+starts listening.
+
+```typescript
+import { createApp } from "versioned-module";
+import type { Config, Plugin } from "versioned-module";
+
+const metricsPlugin: Plugin = (config: Config) => {
+  console.log(`[metrics] Registering metrics for ${config.name}`);
+  // Set up Prometheus counters, histograms, etc.
+};
+
+const healthPlugin: Plugin = (config: Config) => {
+  console.log(`[health] Health endpoint on port ${config.port + 1}`);
+  // Start a lightweight health-check server
+};
+```
+
+Register plugins by invoking them before calling the app runner:
+
+```typescript
+import { createApp } from "versioned-module";
+import type { Config, Plugin } from "versioned-module";
+
+const config: Config = {
+  name: "api-gateway",
+  port: 8080,
+};
+
+const plugins: Plugin[] = [
+  (c: Config) => console.log(`Registering metrics for ${c.name}`),
+  (c: Config) => console.log(`Health check on port ${c.port + 1}`),
+];
+
+for (const plugin of plugins) {
+  plugin(config);
+}
+
+const run = createApp(config);
+run();
+```
+
+## Structured Logging
+
+The [Logger](/versioned/api/class/logger) class supports three severity
+levels defined by the [LogLevel](/versioned/api/enum/loglevel) enum.
+Choose the minimum level at construction time to control output volume.
+
+| Level | Emits | Use Case |
+| --- | --- | --- |
+| `LogLevel.Error` | Errors only | Production: minimal noise |
+| `LogLevel.Warning` | Errors + warnings | Staging: surface potential issues |
+| `LogLevel.Info` | All messages | Development: full visibility |
+
+```typescript
+import { Logger, LogLevel } from "versioned-module";
+
+// Production: only errors
+const prodLogger = new Logger(LogLevel.Error);
+prodLogger.error("Connection pool exhausted");
+
+// Development: everything
+const devLogger = new Logger(LogLevel.Info);
+devLogger.log("Request received: GET /api/users");
+devLogger.warn("Slow query detected: 850ms");
+devLogger.error("Unhandled rejection in route handler");
+```
+
+### Logging to a File
+
+Set the `logPath` property in [Config](/versioned/api/interface/config)
+to redirect all log output to a file. When `logPath` is omitted, the
+logger writes to stdout.
+
+```typescript
+import { createApp } from "versioned-module";
+import type { Config } from "versioned-module";
+
+const config: Config = {
+  name: "worker",
+  port: 9090,
+  logPath: "/var/log/worker/output.log",
+};
+
+const run = createApp(config);
+run();
+```
+
+## Deployment Checklist
+
+Before deploying to production, verify the following:
+
+- **Configuration validated** -- All required fields in
+  [Config](/versioned/api/interface/config) are set (`name`, `port`)
+- **Debug disabled** -- Set `debug: false` to suppress verbose output
+- **Log path configured** -- Point `logPath` to a persistent volume or
+  log aggregation agent
+- **Port available** -- Confirm the target `port` is not in use on the
+  deployment host
+- **Plugins tested** -- Run each [Plugin](/versioned/api/type/plugin)
+  in isolation before combining
+- **Health checks registered** -- Ensure your orchestrator can reach the
+  health endpoint
+- **Error handling in place** -- Wrap [createApp](/versioned/api/function/createapp)
+  in a try/catch for graceful shutdown
+
+## Related Guides
+
+- [Quickstart](/versioned/guides/quickstart) -- Installation and first
+  application
+- Full [API Reference](/versioned/api/)

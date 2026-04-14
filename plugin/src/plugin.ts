@@ -1,10 +1,14 @@
 /* v8 ignore start -- RSPress plugin adapter, requires RSPress runtime */
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { NodeFileSystem } from "@effect/platform-node";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Schema } from "effect";
+import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
+import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
@@ -76,6 +80,13 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 	// Track first build to avoid repeating summary on HMR rebuilds
 	let isFirstBuild = true;
 
+	// LLMs post-processing state
+	let rspressLlmsEnabled = false;
+	let rspressOutDir = "dist";
+	const buildResults: GenerateApiDocsResult[] = [];
+	const resolvedLlmsPlugin = mergeLlmsPluginConfig(options.llmsPlugin);
+	const packageRoutes = new Map<string, string>();
+
 	return {
 		name: "rspress-plugin-api-docs",
 
@@ -90,6 +101,19 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			if (isFirstBuild) {
 				// Log build summary via Effect metrics
 				await effectRuntime.runPromise(logBuildSummary);
+
+				// Post-process LLMs files when RSPress llms plugin and our llmsPlugin are both enabled
+				if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled) {
+					const { processLlmsFiles } = await import("./llms-program.js");
+					await effectRuntime.runPromise(
+						processLlmsFiles({
+							outDir: path.resolve(process.cwd(), rspressOutDir),
+							buildResults,
+							llmsPlugin: resolvedLlmsPlugin,
+							packageRoutes,
+						}),
+					);
+				}
 
 				// Mark first build as complete
 				isFirstBuild = false;
@@ -119,6 +143,10 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			const rspressLocales = (_config as { locales?: Array<{ lang: string }> }).locales?.map((l) => l.lang) ?? [];
 			const rspressLang = (_config as { lang?: string }).lang;
 			const rspressMultiVersion = (_config as { multiVersion?: { default: string; versions: string[] } }).multiVersion;
+
+			// Capture RSPress LLMs config for afterBuild processing
+			rspressLlmsEnabled = Boolean((_config as { llms?: boolean | object }).llms);
+			rspressOutDir = _config.outDir ?? "dist";
 
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
 			if (options.api) {
@@ -182,6 +210,9 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 
 						yield* Effect.logInfo("Generating API documentation...");
 
+						// Clear previous build results (for HMR rebuilds)
+						buildResults.length = 0;
+
 						yield* Effect.forEach(
 							buildContext.apiConfigs,
 							(apiConfig) =>
@@ -190,6 +221,10 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 									buildContext,
 									fileContextMap,
 								).pipe(
+									Effect.tap((result) => {
+										buildResults.push(result);
+										return Effect.void;
+									}),
 									Effect.tap(() =>
 										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
 									),
@@ -220,6 +255,29 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			if (!updatedConfig.builderConfig.source) {
 				updatedConfig.builderConfig.source = {};
 			}
+
+			// Replace RSPress's LlmsViewOptions with our custom version via resolve.alias.
+			// This lets us extend the default dropdown with package-level actions.
+			if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
+				if (!updatedConfig.builderConfig.resolve) {
+					updatedConfig.builderConfig.resolve = {};
+				}
+				const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+				const customLlmsViewOptions = path.resolve(
+					pluginDir,
+					"../../src/runtime/components/ApiLlmsViewOptions/index.tsx",
+				);
+				// Use createRequire to resolve from the bundled plugin's location,
+				// which has @rspress/core in its node_modules tree
+				const pluginRequire = createRequire(import.meta.url);
+				const rspressCoreDir = path.dirname(pluginRequire.resolve("@rspress/core/package.json"));
+				const originalLlmsViewOptions = path.join(rspressCoreDir, "dist/theme/components/Llms/LlmsViewOptions.js");
+				const existingAlias = (updatedConfig.builderConfig.resolve as Record<string, unknown>).alias;
+				updatedConfig.builderConfig.resolve.alias = {
+					...(typeof existingAlias === "object" && existingAlias !== null ? existingAlias : {}),
+					[originalLlmsViewOptions]: customLlmsViewOptions,
+				};
+			}
 			const existingInclude = updatedConfig.builderConfig.source.include || [];
 			if (!existingInclude.includes("rspress-plugin-api-extractor/runtime")) {
 				updatedConfig.builderConfig.source.include = [...existingInclude, "rspress-plugin-api-extractor/runtime"];
@@ -247,6 +305,61 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 			]);
 
 			updatedConfig.markdown.remarkPlugins.push([remarkApiCodeblocks]);
+
+			// Inject API scope metadata into themeConfig for the runtime UI component
+			// (e.g., per-scope llms.txt links). Only when both RSPress llms plugin and our scopes are enabled.
+			if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
+				// Populate the packageRoutes map (hoisted to plugin level for afterBuild use).
+				// Maps packageName -> package-level route (without apiFolder).
+				// e.g., "kitchensink" -> "/kitchensink" (not "/kitchensink/api")
+				packageRoutes.clear();
+				if (options.api) {
+					packageRoutes.set(options.api.packageName, normalizeBaseRoute(options.api.baseRoute ?? "/"));
+				} else if (options.apis) {
+					for (const api of options.apis) {
+						packageRoutes.set(
+							api.packageName,
+							normalizeBaseRoute(api.baseRoute ?? `/${unscopedName(api.packageName)}`),
+						);
+					}
+				}
+
+				const scopes = buildResults.map((result) => ({
+					name: result.apiName ?? result.packageName,
+					packageName: result.packageName,
+					// packageRoute is the broader scope for UI matching (e.g., "/kitchensink")
+					packageRoute: packageRoutes.get(result.packageName) ?? result.baseRoute,
+					// baseRoute is the API-specific route (e.g., "/kitchensink/api")
+					baseRoute: result.baseRoute,
+					version: null, // TODO: populate from DerivedPath when version support is wired
+					locale: null, // TODO: populate from DerivedPath when locale support is wired
+					llmsTxt: `${packageRoutes.get(result.packageName) ?? result.baseRoute}/llms.txt`,
+					llmsFullTxt: `${packageRoutes.get(result.packageName) ?? result.baseRoute}/llms-full.txt`,
+					llmsDocsTxt: `${packageRoutes.get(result.packageName) ?? result.baseRoute}/llms-docs.txt`,
+					llmsApiTxt: resolvedLlmsPlugin.apiTxt
+						? `${packageRoutes.get(result.packageName) ?? result.baseRoute}/llms-api.txt`
+						: null,
+				}));
+
+				if (!updatedConfig.themeConfig) {
+					updatedConfig.themeConfig = {};
+				}
+				(updatedConfig.themeConfig as Record<string, unknown>).apiExtractorScopes = scopes;
+
+				// Register the scope-aware LLM actions component as a global UI component.
+				// Resolve the absolute path from this file's location. In the bundled
+				// plugin (dist/index.js), import.meta.url points to the dist file, so
+				// ../src/runtime/ navigates to the source runtime directory.
+				if (!updatedConfig.globalUIComponents) {
+					updatedConfig.globalUIComponents = [];
+				}
+				const llmsComponentPluginDir = path.dirname(fileURLToPath(import.meta.url));
+				const llmsComponentPath = path.resolve(
+					llmsComponentPluginDir,
+					"../../src/runtime/components/ApiLlmsPackageActions/index.tsx",
+				);
+				updatedConfig.globalUIComponents.push(llmsComponentPath);
+			}
 
 			return updatedConfig;
 		},

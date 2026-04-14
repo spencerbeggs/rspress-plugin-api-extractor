@@ -1,0 +1,169 @@
+---
+title: Advanced Usage
+---
+
+This guide covers advanced patterns: batch processing with the
+[BatchProcessor](/kitchensink/api/class/batchprocessor), custom middleware
+composition, parallel execution, and testing utilities.
+
+## Batch Processing
+
+The [BatchProcessor](/kitchensink/api/class/batchprocessor) class wraps a
+[Pipeline](/kitchensink/api/class/pipeline) and processes arrays of items
+in configurable batch sizes. This is useful when transforming large
+datasets that should not be loaded into memory all at once.
+
+```typescript
+import { BatchProcessor, Pipeline, JsonSource } from "kitchensink";
+
+const pipeline = Pipeline.create(
+  new JsonSource("./data/numbers.json"),
+  (n: number) => n * 10,
+);
+
+const processor = new BatchProcessor(pipeline, { batchSize: 25 });
+
+const results = await processor.processBatch([1, 2, 3, 4, 5]);
+console.log(results); // [10, 20, 30, 40, 50]
+```
+
+Adjust `batchSize` at runtime through the pipeline instance:
+
+```typescript
+import { Pipeline, JsonSource } from "kitchensink";
+
+const pipeline = Pipeline.create(
+  new JsonSource("./data/items.json"),
+  (item: string) => item.toUpperCase(),
+  { batchSize: 100 },
+);
+
+// Dynamically reduce batch size for memory-constrained environments
+pipeline.batchSize = 25;
+console.log(pipeline.batchSize); // 25
+```
+
+## Custom Middleware
+
+The [Middleware](/kitchensink/api/type/middleware) type lets you wrap
+pipeline execution with cross-cutting concerns such as logging, metrics,
+or validation. Middleware functions receive the input and a `next`
+callback:
+
+```typescript
+import { Pipeline, JsonSource } from "kitchensink";
+import type { Middleware } from "kitchensink";
+
+const loggingMiddleware: Middleware<string, string> = (input, next) => {
+  console.log(`Processing: ${input}`);
+  const result = next(input);
+  console.log(`Result: ${result}`);
+  return result;
+};
+
+const timingMiddleware: Middleware<string, string> = (input, next) => {
+  const start = performance.now();
+  const result = next(input);
+  const elapsed = performance.now() - start;
+  console.log(`Transform took ${elapsed.toFixed(2)}ms`);
+  return result;
+};
+```
+
+## Parallel Execution
+
+For CPU-bound transforms, use the `parallel` method on
+[Pipeline](/kitchensink/api/class/pipeline) to process multiple inputs
+concurrently:
+
+```typescript
+import { Pipeline, JsonSource } from "kitchensink";
+
+const pipeline = Pipeline.create(
+  new JsonSource("./data/records.json"),
+  (record: Record<string, unknown>) => ({
+    ...record,
+    hash: JSON.stringify(record).length,
+  }),
+);
+
+const inputs = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 3, name: "Charlie" },
+];
+
+const results = await pipeline.parallel(inputs);
+console.log(results.length); // 3
+```
+
+## Testing
+
+The library ships testing utilities through its main export. Use
+[TestPipeline](/kitchensink/api/class/testpipeline) for deterministic
+pipeline testing and [MockSource](/kitchensink/api/class/mocksource)
+for controlled data input.
+
+### Test Setup
+
+Create a test pipeline with a mock source and assert against known
+outputs:
+
+```typescript
+import { TestPipeline, MockSource } from "kitchensink";
+import type { TestFixture } from "kitchensink";
+
+const fixture: TestFixture<string, string> = {
+  name: "uppercase transform",
+  input: "hello",
+  expected: "HELLO",
+};
+
+const source = new MockSource([fixture.input]);
+
+const testPipeline = new TestPipeline(
+  source,
+  (s: string) => s.toUpperCase(),
+);
+
+const result = testPipeline.runSync(fixture.input);
+console.log(result === fixture.expected); // true
+```
+
+### Using createTestSink
+
+The [createTestSink](/kitchensink/api/function/createtestsink) factory
+returns a [DataSink](/kitchensink/api/interface/datasink) that captures
+output for assertions:
+
+```typescript
+import { Pipeline, MockSource, createTestSink } from "kitchensink";
+
+const source = new MockSource(["a", "b", "c"]);
+const sink = createTestSink<string>();
+
+const pipeline = Pipeline.create(source, (s: string) => s.toUpperCase());
+
+await pipeline.execute("a");
+// Verify output was written to the sink
+```
+
+### Using createMockData
+
+The [createMockData](/kitchensink/api/function/createmockdata) helper
+generates typed test data:
+
+```typescript
+import { createMockData } from "kitchensink";
+
+const records = createMockData(10);
+console.log(records.length); // 10
+```
+
+## Related Guides
+
+- [Getting Started](/kitchensink/guides/getting-started) -- Installation
+  and first pipeline
+- [Configuration](/kitchensink/guides/configuration) -- Data formats,
+  codecs, and error handling
+- Full [API Reference](/kitchensink/api/)

@@ -36,11 +36,11 @@ export function isLoadedModel(result: ApiModel | LoadedModel): result is LoadedM
  * Normalize llmsPlugin config to always be an LlmsPlugin object
  */
 export function normalizeLlmsPluginConfig(config: boolean | LlmsPlugin | undefined): LlmsPlugin {
-	if (config === true) {
-		return { enabled: true };
-	}
-	if (config === false || config === undefined) {
+	if (config === false) {
 		return { enabled: false };
+	}
+	if (config === true || config === undefined) {
+		return { enabled: true };
 	}
 	return { enabled: true, ...config };
 }
@@ -65,6 +65,8 @@ export function mergeLlmsPluginConfig(
 	if (merged.enabled) {
 		return {
 			enabled: true,
+			scopes: merged.scopes ?? true,
+			apiTxt: merged.apiTxt ?? true,
 			showCopyButton: merged.showCopyButton ?? true,
 			showViewOptions: merged.showViewOptions ?? true,
 			copyButtonText: merged.copyButtonText ?? "Copy Markdown",

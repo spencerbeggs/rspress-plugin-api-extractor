@@ -112,6 +112,11 @@ resolution in the doc generation pipeline:
 - @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
 - @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
 
+**LLMs integration** — load when modifying llms.txt post-processing,
+per-package file generation, or scope-aware UI components:
+
+- @./.claude/design/rspress-plugin-api-extractor/llms-integration.md
+
 **Observability** — load when modifying Effect Metrics, logging, or
 error tracking:
 

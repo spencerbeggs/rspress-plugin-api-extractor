@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { ApiItem } from "@microsoft/api-extractor-model";
 import { ApiModel } from "@microsoft/api-extractor-model";
 import { describe, expect, it } from "vitest";
@@ -6,7 +7,7 @@ import { SourceMapGenerator } from "./source-map-generator.js";
 describe("SourceMapGenerator", () => {
 	const apiModel = new ApiModel();
 	const apiPackage = apiModel.loadPackage(
-		"/Users/spencer/workspaces/spencerbeggs/website/docs/lib/packages/claude-binary-plugin.api.json",
+		path.join(import.meta.dirname, "__fixtures__/kitchensink/kitchensink.api.json"),
 	);
 	const entryPoint = apiPackage.entryPoints[0];
 
@@ -45,7 +46,7 @@ describe("SourceMapGenerator", () => {
 
 	describe("Source map generation", () => {
 		it("should generate source map with correct structure", () => {
-			const generator = new SourceMapGenerator("claude-binary-plugin", "docs/lib/model.api.json");
+			const generator = new SourceMapGenerator("kitchensink", "docs/lib/model.api.json");
 
 			const member1 = entryPoint.members[0];
 			const member2 = entryPoint.members[1];
@@ -58,7 +59,7 @@ describe("SourceMapGenerator", () => {
 			const sourceMap = generator.generate();
 
 			expect(sourceMap.version).toBe(1);
-			expect(sourceMap.packageName).toBe("claude-binary-plugin");
+			expect(sourceMap.packageName).toBe("kitchensink");
 			expect(sourceMap.apiModelPath).toBe("docs/lib/model.api.json");
 			expect(Object.keys(sourceMap.declarations)).toHaveLength(2);
 		});
@@ -85,7 +86,7 @@ describe("SourceMapGenerator", () => {
 		});
 
 		it("should include source file paths", () => {
-			const generator = new SourceMapGenerator("claude-binary-plugin", "model.api.json");
+			const generator = new SourceMapGenerator("kitchensink", "model.api.json");
 			const member = entryPoint.members[0];
 
 			generator.addMapping(member);
@@ -98,7 +99,7 @@ describe("SourceMapGenerator", () => {
 		});
 
 		it("should include canonical references", () => {
-			const generator = new SourceMapGenerator("claude-binary-plugin", "model.api.json");
+			const generator = new SourceMapGenerator("kitchensink", "model.api.json");
 			const member = entryPoint.members[0];
 
 			generator.addMapping(member);
@@ -106,7 +107,7 @@ describe("SourceMapGenerator", () => {
 			const sourceMap = generator.generate();
 			const mapping = sourceMap.declarations[1];
 
-			expect(mapping.apiItem).toContain("claude-binary-plugin!");
+			expect(mapping.apiItem).toContain("kitchensink!");
 			expect(mapping.apiItem).toContain(":");
 		});
 	});
@@ -142,7 +143,7 @@ describe("SourceMapGenerator", () => {
 
 	describe("Multiple mappings", () => {
 		it("should handle multiple API items", () => {
-			const generator = new SourceMapGenerator("claude-binary-plugin", "model.api.json");
+			const generator = new SourceMapGenerator("kitchensink", "model.api.json");
 
 			// Add mappings for first 10 members
 			for (let i = 0; i < 10 && i < entryPoint.members.length; i++) {

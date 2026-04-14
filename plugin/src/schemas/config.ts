@@ -48,7 +48,9 @@ export type ErrorConfig = Schema.Schema.Type<typeof ErrorConfig>;
 
 export const LlmsPlugin = Schema.mutable(
 	Schema.Struct({
-		enabled: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+		enabled: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+		scopes: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+		apiTxt: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 		showCopyButton: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 		showViewOptions: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 		copyButtonText: Schema.optionalWith(Schema.String, { default: () => "Copy Markdown" }),
