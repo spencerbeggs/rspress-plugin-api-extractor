@@ -55,6 +55,32 @@ jobs:
             @savvy-web/pnpm-plugin-silk
           dependencies: |
             @savvy-web/*
+            @microsoft/api-extractor-model
+            @shikijs/twoslash
+            clsx
+            effect
+            gray-matter
+            hast-util-to-jsx-runtime
+            image-size
+            mdast-util-from-markdown
+            mdast-util-to-hast    
+            prettier
+            react-markdown
+            semver-effect
+            shiki
+            type-registry-effect
+            @microsoft/tsdoc
+            @rslib/core
+            @rspress/core
+            @types/hast
+            @types/mdast
+            @types/unist
+            mdast-util-mdx-jsx
+            sass
+            unified
+            unist-util-visit
+          peer-minor: |
+            @rspress/core
           run: |
             pnpm savvy-commit init
             pnpm savvy-lint init

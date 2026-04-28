@@ -1,10 +1,14 @@
 {
-	"$schema": "https://json.schemastore.org/tsconfig.json",
-	"files": [],
-	"references": [
-		{ "path": "plugin" },
-		{ "path": "modules/kitchensink" },
-		{ "path": "modules/versioned-v1" },
-		{ "path": "modules/versioned-v2" }
-	]
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"composite": true,
+		"declaration": true,
+		"module": "node20",
+		"outDir": "dist",
+		"resolveJsonModule": true,
+		"strict": true,
+		"strictNullChecks": true,
+		"target": "es2023"
+	},
+	"include": ["*.ts", "lib/**/*.ts", "lib/**/*.mts"]
 }
