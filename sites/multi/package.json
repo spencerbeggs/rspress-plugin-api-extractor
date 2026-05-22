@@ -15,8 +15,8 @@
 		"versioned-v1": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.9",
-		"@savvy-web/rslib-builder": "^0.20.3",
+		"@rspress/core": "^2.0.12",
+		"@savvy-web/rslib-builder": "^0.20.5",
 		"@types/node": "catalog:silk",
 		"@types/react": "catalog:silk",
 		"@types/react-dom": "catalog:silk",
