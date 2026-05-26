@@ -1,8 +1,7 @@
 import type { ApiItem, ApiPackage } from "@microsoft/api-extractor-model";
 
 /**
- * A resolved API item with entry point metadata for deduplication
- * and collision detection.
+ * A resolved API item with entry point metadata for deduplication.
  */
 export interface ResolvedEntryItem {
 	/** The API item from the model */
@@ -11,8 +10,6 @@ export interface ResolvedEntryItem {
 	readonly definingEntryPoint: string;
 	/** All entry points that export this item (includes re-exports) */
 	readonly availableFrom: string[];
-	/** Whether this display name collides with a different item from another entry point */
-	readonly hasCollision: boolean;
 }
 
 /**
@@ -35,13 +32,13 @@ function itemKey(item: ApiItem): string {
 
 /**
  * Resolve all entry points from an API package into a flat list of
- * deduplicated items with collision metadata.
+ * deduplicated items.
  *
  * - Re-exported items (same displayName + kind across entries) are
  *   deduplicated to a single entry with availableFrom listing all
  *   entry points. The defining entry point prefers "default".
- * - Genuinely different items with the same displayName + kind get
- *   hasCollision: true and separate entries.
+ * - Items with different kinds but the same displayName (e.g. the
+ *   Effect const + type companion pattern) remain as separate entries.
  *
  * @param apiPackage - The merged API package with 1+ entry points
  * @returns Flat array of resolved items
@@ -66,15 +63,13 @@ export function resolveEntryPoints(apiPackage: ApiPackage): ResolvedEntryItem[] 
 		}
 	}
 
-	// Step 2: For each key, build intermediate results and track displayName occurrences
+	// Step 2: For each key, build intermediate results
 	interface IntermediateResult {
 		item: ApiItem;
 		definingEntryPoint: string;
 		availableFrom: string[];
 	}
 	const intermediate: IntermediateResult[] = [];
-	// Track how many resolved items share each displayName (for collision detection)
-	const displayNameCount = new Map<string, number>();
 
 	for (const [, entries] of itemsByKey) {
 		if (entries.length === 1) {
@@ -94,18 +89,12 @@ export function resolveEntryPoints(apiPackage: ApiPackage): ResolvedEntryItem[] 
 				availableFrom: allEntryPoints,
 			});
 		}
-
-		const displayName = intermediate[intermediate.length - 1].item.displayName;
-		displayNameCount.set(displayName, (displayNameCount.get(displayName) || 0) + 1);
 	}
 
-	// Step 3: Build final results with collision flag
-	// A collision means multiple resolved items share the same displayName
-	// (e.g., entry A has class "Config", entry B has interface "Config")
+	// Step 3: Build final results
 	return intermediate.map((r) => ({
 		item: r.item,
 		definingEntryPoint: r.definingEntryPoint,
 		availableFrom: r.availableFrom,
-		hasCollision: (displayNameCount.get(r.item.displayName) || 0) > 1,
 	}));
 }

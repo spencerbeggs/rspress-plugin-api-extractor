@@ -1,4 +1,5 @@
 /* v8 ignore start -- re-export barrel, no testable logic */
+export type { BaseRoute, FolderInfo, FromFolderOptions, FromModelsDirOptions } from "./config-helpers.js";
 export type { LoadedModel } from "./internal-types.js";
 export { ApiExtractorPlugin } from "./plugin.js";
 export { DEFAULT_CATEGORIES } from "./schemas/config.js";

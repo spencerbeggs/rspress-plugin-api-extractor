@@ -1,6 +1,20 @@
-# LLMs Integration
+---
+status: current
+module: rspress-plugin-api-extractor
+category: architecture
+created: 2026-01-17
+updated: 2026-05-26
+last-synced: 2026-05-26
+completeness: 90
+related:
+  - rspress-plugin-api-extractor/build-architecture.md
+  - rspress-plugin-api-extractor/page-generation-system.md
+  - rspress-plugin-api-extractor/component-development.md
+  - rspress-plugin-api-extractor/ssg-compatible-components.md
+dependencies: []
+---
 
-**Status:** Production-ready
+# LLMs Integration
 
 ## Table of Contents
 

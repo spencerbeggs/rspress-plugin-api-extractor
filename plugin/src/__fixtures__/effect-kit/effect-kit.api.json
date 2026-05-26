@@ -1,0 +1,1156 @@
+{
+  "metadata": {
+    "toolPackage": "@microsoft/api-extractor",
+    "toolVersion": "7.58.7",
+    "schemaVersion": 1011,
+    "oldestForwardsCompatibleVersion": 1001,
+    "tsdocConfig": {
+      "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+      "noStandardTags": true,
+      "tagDefinitions": [
+        {
+          "tagName": "@alpha",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@beta",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@defaultValue",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@decorator",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@deprecated",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@eventProperty",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@example",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@experimental",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@inheritDoc",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@internal",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@label",
+          "syntaxKind": "inline"
+        },
+        {
+          "tagName": "@link",
+          "syntaxKind": "inline",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@override",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@packageDocumentation",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@param",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@privateRemarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@public",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@readonly",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@remarks",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@returns",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@sealed",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@see",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@throws",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@typeParam",
+          "syntaxKind": "block",
+          "allowMultiple": true
+        },
+        {
+          "tagName": "@virtual",
+          "syntaxKind": "modifier"
+        },
+        {
+          "tagName": "@jsx",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxRuntime",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxFrag",
+          "syntaxKind": "block"
+        },
+        {
+          "tagName": "@jsxImportSource",
+          "syntaxKind": "block"
+        }
+      ],
+      "supportForTags": {
+        "@alpha": true,
+        "@beta": true,
+        "@defaultValue": true,
+        "@decorator": true,
+        "@deprecated": true,
+        "@eventProperty": true,
+        "@example": true,
+        "@experimental": true,
+        "@inheritDoc": true,
+        "@internal": true,
+        "@label": true,
+        "@link": true,
+        "@override": true,
+        "@packageDocumentation": true,
+        "@param": true,
+        "@privateRemarks": true,
+        "@public": true,
+        "@readonly": true,
+        "@remarks": true,
+        "@returns": true,
+        "@sealed": true,
+        "@see": true,
+        "@throws": true,
+        "@typeParam": true,
+        "@virtual": true,
+        "@jsx": true,
+        "@jsxRuntime": true,
+        "@jsxFrag": true,
+        "@jsxImportSource": true
+      },
+      "reportUnsupportedHtmlElements": true
+    }
+  },
+  "kind": "Package",
+  "canonicalReference": "effect-kit!",
+  "docComment": "/**\n * Effect-based fixture exercising the Schema companion pattern (a `const` and a `type` sharing a name) plus a variety of API item kinds.\n *\n * @packageDocumentation\n */\n",
+  "name": "effect-kit",
+  "preserveMemberOrder": false,
+  "members": [
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "effect-kit!",
+      "name": "",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Interface",
+          "canonicalReference": "effect-kit!AcceptanceMetrics:interface",
+          "docComment": "/**\n * Acceptance metrics for a completed run.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface AcceptanceMetrics "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "AcceptanceMetrics",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit!AcceptanceMetrics#failed:member",
+              "docComment": "/**\n * Number of checks that failed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly failed: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "failed",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit!AcceptanceMetrics#passed:member",
+              "docComment": "/**\n * Number of checks that passed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly passed: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "passed",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit!ActionSeverity:type",
+          "docComment": "/**\n * Severity of a remediation action.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ActionSeverity = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "ActionSeverity",
+              "canonicalReference": "effect-kit!ActionSeverity:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "ActionSeverity",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit!ActionSeverity:var",
+          "docComment": "/**\n * Severity of a remediation action.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "ActionSeverity: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"low\", \"medium\", \"high\"]>"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "ActionSeverity",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit!ActorType:type",
+          "docComment": "/**\n * The kind of actor that produced an event.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ActorType = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "ActorType",
+              "canonicalReference": "effect-kit!ActorType:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "ActorType",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit!ActorType:var",
+          "docComment": "/**\n * The kind of actor that produced an event.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "ActorType: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"agent\", \"human\", \"system\"]>"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "ActorType",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "effect-kit!AgentNotFoundError:class",
+          "docComment": "/**\n * Error raised when an agent cannot be located.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class AgentNotFoundError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "AgentNotFoundError_base",
+              "canonicalReference": "effect-kit!~AgentNotFoundError_base"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "AgentNotFoundError",
+          "preserveMemberOrder": false,
+          "members": [],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Enum",
+          "canonicalReference": "effect-kit!OutputChannel:enum",
+          "docComment": "/**\n * Output channel for dispatched results.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare enum OutputChannel "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "OutputChannel",
+          "preserveMemberOrder": true,
+          "members": [
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "effect-kit!OutputChannel.Terminal:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Terminal = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "0"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Terminal"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "effect-kit!OutputChannel.Json:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Json = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "1"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Json"
+            },
+            {
+              "kind": "EnumMember",
+              "canonicalReference": "effect-kit!OutputChannel.Silent:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Silent = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "2"
+                }
+              ],
+              "initializerTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "name": "Silent"
+            }
+          ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit!RunId:type",
+          "docComment": "/**\n * Branded identifier for a run.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type RunId = "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "RunId",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit!RunPhase:type",
+          "docComment": "/**\n * Lifecycle phase of a run.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type RunPhase = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "RunPhase",
+              "canonicalReference": "effect-kit!RunPhase:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "RunPhase",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit!RunPhase:var",
+          "docComment": "/**\n * Lifecycle phase of a run.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "RunPhase: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"setup\", \"active\", \"teardown\"]>"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "RunPhase",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "effect-kit!summarize:function(1)",
+          "docComment": "/**\n * Summarize acceptance metrics into a short human string.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function summarize(metrics: "
+            },
+            {
+              "kind": "Reference",
+              "text": "AcceptanceMetrics",
+              "canonicalReference": "effect-kit!AcceptanceMetrics:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 4
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "metrics",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            }
+          ],
+          "name": "summarize"
+        }
+      ]
+    },
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "effect-kit/testing!",
+      "name": "testing",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Interface",
+          "canonicalReference": "effect-kit/testing!AcceptanceMetrics:interface",
+          "docComment": "/**\n * Acceptance metrics for a completed run.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface AcceptanceMetrics "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "AcceptanceMetrics",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/testing!AcceptanceMetrics#failed:member",
+              "docComment": "/**\n * Number of checks that failed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly failed: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "failed",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/testing!AcceptanceMetrics#passed:member",
+              "docComment": "/**\n * Number of checks that passed.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly passed: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "passed",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit/testing!ActionSeverity:type",
+          "docComment": "/**\n * Severity of a remediation action.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ActionSeverity = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "ActionSeverity",
+              "canonicalReference": "effect-kit!ActionSeverity:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "name": "ActionSeverity",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit/testing!ActionSeverity:var",
+          "docComment": "/**\n * Severity of a remediation action.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "ActionSeverity: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"low\", \"medium\", \"high\"]>"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "ActionSeverity",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "effect-kit/testing!AgentNotFoundError:class",
+          "docComment": "/**\n * Error raised when an agent cannot be located.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class AgentNotFoundError extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "AgentNotFoundError_base",
+              "canonicalReference": "effect-kit!~AgentNotFoundError_base"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "AgentNotFoundError",
+          "preserveMemberOrder": false,
+          "members": [],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "effect-kit/testing!MockInteraction:interface",
+          "docComment": "/**\n * A captured interaction used by the mock harness.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface MockInteraction "
+            }
+          ],
+          "fileUrlPath": "src/testing.ts",
+          "releaseTag": "Public",
+          "name": "MockInteraction",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/testing!MockInteraction#input:member",
+              "docComment": "/**\n * The recorded input payload.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "input",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/testing!MockInteraction#output:member",
+              "docComment": "/**\n * The recorded output payload.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly output: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "output",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit/testing!MockMode:type",
+          "docComment": "/**\n * Mock playback mode for the test harness.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type MockMode = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "MockMode",
+              "canonicalReference": "effect-kit!MockMode:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/testing.ts",
+          "releaseTag": "Public",
+          "name": "MockMode",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit/testing!MockMode:var",
+          "docComment": "/**\n * Mock playback mode for the test harness.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "MockMode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"record\", \"replay\"]>"
+            }
+          ],
+          "fileUrlPath": "src/testing.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "MockMode",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "effect-kit/testing!summarize:function(1)",
+          "docComment": "/**\n * Summarize acceptance metrics into a short human string.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function summarize(metrics: "
+            },
+            {
+              "kind": "Reference",
+              "text": "AcceptanceMetrics",
+              "canonicalReference": "effect-kit!AcceptanceMetrics:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 4
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "metrics",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            }
+          ],
+          "name": "summarize"
+        }
+      ]
+    },
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "effect-kit/dispatch!",
+      "name": "dispatch",
+      "preserveMemberOrder": false,
+      "members": [
+        {
+          "kind": "Interface",
+          "canonicalReference": "effect-kit/dispatch!DispatchEnvelope:interface",
+          "docComment": "/**\n * Envelope describing a single dispatch.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface DispatchEnvelope "
+            }
+          ],
+          "fileUrlPath": "src/dispatch.ts",
+          "releaseTag": "Public",
+          "name": "DispatchEnvelope",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/dispatch!DispatchEnvelope#id:member",
+              "docComment": "/**\n * Unique dispatch id.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly id: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "id",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "effect-kit/dispatch!DispatchEnvelope#kind:member",
+              "docComment": "/**\n * Dispatch kind.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly kind: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "DispatchKind",
+                  "canonicalReference": "effect-kit!DispatchKind:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "kind",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "effect-kit/dispatch!DispatchKind:type",
+          "docComment": "/**\n * Whether dispatch runs synchronously or asynchronously.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type DispatchKind = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Schema.Type",
+              "canonicalReference": "effect!Schema.Type:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "DispatchKind",
+              "canonicalReference": "effect-kit!DispatchKind:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/dispatch.ts",
+          "releaseTag": "Public",
+          "name": "DispatchKind",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "effect-kit/dispatch!DispatchKind:var",
+          "docComment": "/**\n * Whether dispatch runs synchronously or asynchronously.\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "DispatchKind: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Schema.Literal",
+              "canonicalReference": "effect!Literal:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<[\"sync\", \"async\"]>"
+            }
+          ],
+          "fileUrlPath": "src/dispatch.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "DispatchKind",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+	"name": "effect-kit",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Effect-based fixture module exercising multi-entry-point models and the Schema const+type companion pattern",
+	"keywords": [],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+		"directory": "modules/effect-kit"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "C. Spencer Beggs",
+		"email": "spencer@beggs.codes",
+		"url": "https://spencerbeg.gs"
+	},
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./testing": "./src/testing.ts",
+		"./dispatch": "./src/dispatch.ts"
+	},
+	"scripts": {
+		"build": "turbo run build:dev build:prod",
+		"build:dev": "rslib build --config-loader native --env-mode dev",
+		"build:prod": "rslib build --config-loader native --env-mode npm",
+		"types:check": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"effect": "^3.21.2"
+	},
+	"devDependencies": {
+		"@rslib/core": "^0.21.5",
+		"@savvy-web/rslib-builder": "^0.20.7",
+		"@types/node": "catalog:silk",
+		"@typescript/native-preview": "catalog:silk",
+		"typescript": "catalog:silk"
+	}
+}

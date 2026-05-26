@@ -3,21 +3,19 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-04-09
-last-synced: 2026-04-09
+updated: 2026-05-26
+last-synced: 2026-05-26
 completeness: 85
 related:
   - rspress-plugin-api-extractor/build-architecture.md
   - rspress-plugin-api-extractor/snapshot-tracking-system.md
   - rspress-plugin-api-extractor/cross-linking-architecture.md
   - rspress-plugin-api-extractor/component-development.md
-  - rspress-plugin-api-extractor/multi-entry-point-support.md
+  - rspress-plugin-api-extractor/multi-entry-resolution.md
 dependencies: []
 ---
 
 # Page Generation System
-
-**Status:** Production-ready (Effect Stream pipeline)
 
 ## Table of Contents
 
@@ -90,8 +88,6 @@ interface WorkItem {
   namespaceMember?: NamespaceMember;
   /** Entry points this item is available from */
   availableFrom?: string[];
-  /** Entry point URL segment, set only when displayName collides */
-  entryPointSegment?: string;
 }
 
 interface GeneratedPageResult {
@@ -129,17 +125,23 @@ Runs before the Stream pipeline. Produces:
 
 1. **Multi-entry resolution** -- `resolveEntryPoints()` from
    `multi-entry-resolver.ts` deduplicates re-exports across entry
-   points and detects name collisions (same displayName, different
-   kind). Each item receives `availableFrom` and collision metadata.
+   points. Each item receives `availableFrom`.
 2. **Categorized items** -- API items grouped by category key via
    `ApiParser.categorizeApiItems()`, which accepts
    `ResolvedEntryItem[]` (multi-entry) or `ApiPackage` (legacy)
-3. **Cross-link routes** -- Map of type name to route path; routes
-   include an extra entry-point segment for colliding items
-4. **Cross-link kinds** -- Map of type name to API item kind
-5. **Namespace member extraction** with collision detection
-6. **Flat WorkItem array** -- Each item carries `availableFrom` and
-   optionally `entryPointSegment` (set only for collisions)
+3. **Route collision detection** -- `assertNoRouteCollisions()` from
+   `route-collisions.ts` builds `RouteCandidate` records for all
+   top-level items and namespace members, then asserts that no two
+   distinct items share the same lowercased `categoryFolder/name` path.
+   If a collision is found the build **throws** with a clear error
+   naming both items, their kinds, canonical references, and the shared
+   route, with guidance to rename the items or remap categories. There
+   is no automatic suffix or silent disambiguation.
+4. **Cross-link routes** -- Map of type name to route path (always the
+   lowercased path, never suffixed)
+5. **Cross-link kinds** -- Map of type name to API item kind
+6. **Namespace member extraction** with collision detection
+7. **Flat WorkItem array** -- Each item carries `availableFrom`
 
 ### Stage 1: generateSinglePage (Effect)
 
@@ -203,14 +205,14 @@ Each generator produces `{ routePath: string; content: string }`:
 
 | Generator | Location | Handles |
 | --- | --- | --- |
-| `ClassPageGenerator` | `markdown/class-page.ts` | `ApiClass` |
-| `InterfacePageGenerator` | `markdown/interface-page.ts` | `ApiInterface` |
-| `FunctionPageGenerator` | `markdown/function-page.ts` | `ApiFunction` |
-| `TypeAliasPageGenerator` | `markdown/type-alias-page.ts` | `ApiTypeAlias` |
-| `EnumPageGenerator` | `markdown/enum-page.ts` | `ApiEnum` |
-| `VariablePageGenerator` | `markdown/variable-page.ts` | `ApiVariable` |
-| `NamespacePageGenerator` | `markdown/namespace-page.ts` | `ApiNamespace` |
-| `MainIndexPageGenerator` | `markdown/main-index-page.ts` | Index page |
+| `ClassPageGenerator` | `markdown/page-generators/class-page.ts` | `ApiClass` |
+| `InterfacePageGenerator` | `markdown/page-generators/interface-page.ts` | `ApiInterface` |
+| `FunctionPageGenerator` | `markdown/page-generators/function-page.ts` | `ApiFunction` |
+| `TypeAliasPageGenerator` | `markdown/page-generators/type-alias-page.ts` | `ApiTypeAlias` |
+| `EnumPageGenerator` | `markdown/page-generators/enum-page.ts` | `ApiEnum` |
+| `VariablePageGenerator` | `markdown/page-generators/variable-page.ts` | `ApiVariable` |
+| `NamespacePageGenerator` | `markdown/page-generators/namespace-page.ts` | `ApiNamespace` |
+| `MainIndexPageGenerator` | `markdown/page-generators/index-pages.ts` | Index page |
 
 ### Generator Interface
 
@@ -341,9 +343,7 @@ left padding from line 1.
 ]
 ```
 
-Entries are sorted alphabetically by label. When an item has
-`entryPointSegment` set (name collision across entry points), the label
-includes the qualifier: `"MyClass (testing)"`.
+Entries are sorted alphabetically by label.
 
 ## Integration Points
 
@@ -353,9 +353,9 @@ Cross-linkers are initialized in `build-program.ts` with data from
 `prepareWorkItems`:
 
 ```typescript
-markdownCrossLinker.initialize(categorizedItems, baseRoute, categories);
-shikiCrossLinker.reinitialize(routes, kinds, apiScope);
-TwoslashManager.addTypeRoutes(routes);
+markdownCrossLinker.setRoutes(crossLinkData.routes);
+shikiCrossLinker.reinitialize(crossLinkData.routes, crossLinkData.kinds, apiScope);
+TwoslashManager.addTypeRoutes(crossLinkData.routes);
 ```
 
 ### VFS Registry
@@ -389,9 +389,9 @@ Both use the VfsRegistry to access the highlighter and transformers.
 
 - **Build Architecture:**
   `build-architecture.md` -- Plugin structure and service layer
-- **Multi-Entry Point Support:**
-  `multi-entry-point-support.md` -- Entry point resolution,
-  deduplication, collision detection, and VFS generation
+- **Multi-Entry Resolution:**
+  `multi-entry-resolution.md` -- Entry point resolution, deduplication
+  and route collision detection
 - **Snapshot Tracking System:**
   `snapshot-tracking-system.md` -- Incremental build tracking
 - **Cross-Linking Architecture:**

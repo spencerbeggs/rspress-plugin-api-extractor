@@ -92,7 +92,7 @@ export function generateApiDocs(
 
 		// Initialize cross-linkers with the prepared data
 		// Use crossLinkData.routes directly so both cross-linkers share the same
-		// routes (including entryPointSegment for collision cases)
+		// routes (including disambiguation suffixes for genuine route collisions)
 		markdownCrossLinker.setRoutes(crossLinkData.routes);
 		// API scope is derived from baseRoute to match file path inference in remark plugins
 		// e.g., baseRoute "/example-module" -> scope "example-module"

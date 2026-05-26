@@ -163,6 +163,8 @@ external package types, VFS generation, or multi-entry point resolution:
 
 - @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
 - @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
+- @./.claude/design/rspress-plugin-api-extractor/multi-entry-resolution.md
+- @./.claude/design/rspress-plugin-api-extractor/multi-entry-vfs.md
 
 **LLMs integration** — load when modifying llms.txt post-processing,
 per-package file generation, or scope-aware UI components:

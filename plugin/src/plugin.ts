@@ -8,6 +8,7 @@ import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Schema } from "effect";
 import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
+import { fromFolder, fromModelsDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
@@ -47,7 +48,7 @@ function normalizeThemeConfig(
 /**
  * RSPress plugin for generating API documentation from API Extractor model files
  */
-export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
+function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	// Validate and decode options at factory time — catches structural issues via ParseError
 	const options = Schema.decodeUnknownSync(PluginOptions)(rawOptions);
 	// Create instances once at plugin initialization and reuse across all builds
@@ -365,3 +366,11 @@ export function ApiExtractorPlugin(rawOptions: PluginOptions): RspressPlugin {
 		},
 	};
 }
+
+/**
+ * RSPress plugin for generating API documentation from API Extractor model
+ * files. Config helpers are available under `ApiExtractorPlugin.api`.
+ */
+export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
+	api: { fromFolder, fromModelsDir },
+});

@@ -3,12 +3,12 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
+updated: 2026-05-26
+last-synced: 2026-05-26
 completeness: 85
 related:
   - rspress-plugin-api-extractor/import-generation-system.md
-  - rspress-plugin-api-extractor/multi-entry-point-support.md
+  - rspress-plugin-api-extractor/multi-entry-vfs.md
   - rspress-plugin-api-extractor/source-mapping-system.md
   - rspress-plugin-api-extractor/build-architecture.md
 dependencies: []
@@ -190,10 +190,9 @@ if loading fails (code blocks render without Twoslash enhancements).
 
 - **Import Generation System:**
   `import-generation-system.md` -- Import statement generation for VFS
-- **Multi-Entry Point Support:**
-  `multi-entry-point-support.md` -- VFS generation for multi-entry
-  packages
+- **Multi-Entry VFS:**
+  `multi-entry-vfs.md` -- VFS `.d.ts` generation for multi-entry packages
 - **Source Mapping:**
-  `source-mapping-system.md` -- Source map generation alongside VFS
+  `source-mapping-system.md` -- Standalone source-map utility
 - **Build Architecture:**
   `build-architecture.md` -- Service layer and plugin structure
