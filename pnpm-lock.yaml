@@ -29,7 +29,7 @@ catalogs:
       version: 19.2.3
     '@typescript/native-preview':
       specifier: ^7.0.0-dev.20260523.1
-      version: 7.0.0-dev.20260525.1
+      version: 7.0.0-dev.20260526.1
     effect:
       specifier: ^3.21.2
       version: 3.21.2
@@ -65,10 +65,10 @@ importers:
         version: 0.9.1(@commitlint/cli@21.0.1(@types/node@25.9.1)(conventional-commits-parser@6.4.0)(typescript@6.0.3))(@commitlint/config-conventional@21.0.1)(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/typeclass@0.40.0(effect@3.21.2))(@effect/workflow@0.18.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(commitizen@4.3.1(@types/node@25.9.1)(typescript@6.0.3))(husky@9.1.7)
       '@savvy-web/lint-staged':
         specifier: ^1.1.0
-        version: 1.1.0(dcd03086f064eb4405d2d3ef125adee6)
+        version: 1.1.0(12155112c749fb742d834c9d4370b6f6)
       '@savvy-web/vitest':
         specifier: ^1.3.2
-        version: 1.3.2(b81cfda2e56aaf2516bfd22bcf9ce72e)
+        version: 1.3.2(704e37005c3b8fae37206aa6e786a79e)
 
   modules/effect-kit:
     dependencies:
@@ -78,16 +78,16 @@ importers:
     devDependencies:
       '@rslib/core':
         specifier: ^0.21.5
-        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       typescript:
         specifier: catalog:silk
         version: 6.0.3
@@ -96,16 +96,16 @@ importers:
     devDependencies:
       '@rslib/core':
         specifier: ^0.21.5
-        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       typescript:
         specifier: catalog:silk
         version: 6.0.3
@@ -114,16 +114,16 @@ importers:
     devDependencies:
       '@rslib/core':
         specifier: ^0.21.5
-        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       typescript:
         specifier: catalog:silk
         version: 6.0.3
@@ -132,16 +132,16 @@ importers:
     devDependencies:
       '@rslib/core':
         specifier: ^0.21.5
-        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       typescript:
         specifier: catalog:silk
         version: 6.0.3
@@ -211,13 +211,13 @@ importers:
         version: 0.16.0
       '@rslib/core':
         specifier: ^0.21.5
-        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+        version: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
@@ -238,7 +238,7 @@ importers:
         version: 3.0.3
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       mdast-util-mdx-jsx:
         specifier: ^3.2.0
         version: 3.2.0
@@ -261,19 +261,16 @@ importers:
 
   sites/basic:
     dependencies:
-      kitchensink:
+      '@modules/kitchensink':
         specifier: workspace:*
         version: link:../../modules/kitchensink
-      rspress-plugin-api-extractor:
-        specifier: workspace:*
-        version: link:../../plugin/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
@@ -285,7 +282,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       open:
         specifier: ^11.0.0
         version: 11.0.0
@@ -295,22 +292,22 @@ importers:
       react-dom:
         specifier: catalog:silk
         version: 19.2.6(react@19.2.6)
+      rspress-plugin-api-extractor:
+        specifier: workspace:*
+        version: link:../../plugin/dist/dev
 
   sites/effect:
     dependencies:
-      effect-kit:
+      '@modules/effect-kit':
         specifier: workspace:*
         version: link:../../modules/effect-kit
-      rspress-plugin-api-extractor:
-        specifier: workspace:*
-        version: link:../../plugin/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
@@ -322,7 +319,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       open:
         specifier: ^11.0.0
         version: 11.0.0
@@ -332,22 +329,22 @@ importers:
       react-dom:
         specifier: catalog:silk
         version: 19.2.6(react@19.2.6)
+      rspress-plugin-api-extractor:
+        specifier: workspace:*
+        version: link:../../plugin/dist/dev
 
   sites/i18n:
     dependencies:
-      kitchensink:
+      '@modules/kitchensink':
         specifier: workspace:*
         version: link:../../modules/kitchensink
-      rspress-plugin-api-extractor:
-        specifier: workspace:*
-        version: link:../../plugin/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
@@ -359,7 +356,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       open:
         specifier: ^11.0.0
         version: 11.0.0
@@ -369,25 +366,25 @@ importers:
       react-dom:
         specifier: catalog:silk
         version: 19.2.6(react@19.2.6)
+      rspress-plugin-api-extractor:
+        specifier: workspace:*
+        version: link:../../plugin/dist/dev
 
   sites/multi:
     dependencies:
-      kitchensink:
+      '@modules/kitchensink':
         specifier: workspace:*
         version: link:../../modules/kitchensink
-      rspress-plugin-api-extractor:
-        specifier: workspace:*
-        version: link:../../plugin/dist/dev
-      versioned-v1:
+      '@modules/versioned-v1':
         specifier: workspace:*
         version: link:../../modules/versioned-v1
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
@@ -399,7 +396,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       open:
         specifier: ^11.0.0
         version: 11.0.0
@@ -409,25 +406,25 @@ importers:
       react-dom:
         specifier: catalog:silk
         version: 19.2.6(react@19.2.6)
-
-  sites/versioned:
-    dependencies:
       rspress-plugin-api-extractor:
         specifier: workspace:*
         version: link:../../plugin/dist/dev
-      versioned-v1:
+
+  sites/versioned:
+    dependencies:
+      '@modules/versioned-v1':
         specifier: workspace:*
         version: link:../../modules/versioned-v1
-      versioned-v2:
+      '@modules/versioned-v2':
         specifier: workspace:*
         version: link:../../modules/versioned-v2
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
-        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
+        version: 2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rslib-builder':
         specifier: ^0.20.8
-        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+        version: 0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@types/node':
         specifier: catalog:silk
         version: 25.9.1
@@ -439,7 +436,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@typescript/native-preview':
         specifier: catalog:silk
-        version: 7.0.0-dev.20260525.1
+        version: 7.0.0-dev.20260526.1
       open:
         specifier: ^11.0.0
         version: 11.0.0
@@ -449,6 +446,9 @@ importers:
       react-dom:
         specifier: catalog:silk
         version: 19.2.6(react@19.2.6)
+      rspress-plugin-api-extractor:
+        specifier: workspace:*
+        version: link:../../plugin/dist/dev
 
 packages:
 
@@ -1584,8 +1584,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@swc/helpers@0.5.21':
-    resolution: {integrity: sha512-jI/VAmtdjB/RnI8GTnokyX7Ug8c+g+ffD6QRLa6XQewtnGyukKkKSk3wLTM3b5cjt1jNh9x0jfVlagdN2gDKQg==}
+  '@swc/helpers@0.5.22':
+    resolution: {integrity: sha512-/e2Ly3Docn9kYByap6TV4oquJ3wQuz3c+kC74riqtkwU9CwTMeuj6t2rW+bRr4pyOx/CYQM4wr0RgaKQwGEz0A==}
 
   '@trpc/server@11.17.0':
     resolution: {integrity: sha512-jbAOUe0PpUTCYqziyu+8vYXZdDXPudZgnEhWCQ2NjKnVEjfE93RqHTt1oycZJv/HNf51YlRXfEEwSIAbb161rw==}
@@ -1673,6 +1673,7 @@ packages:
 
   '@types/parse-path@7.1.0':
     resolution: {integrity: sha512-EULJ8LApcVEPbrfND0cRQqutIOdiIgJ1Mgrhpy755r14xMohPTEpkV/k28SJvuOs9bHRFW8x+KeDAEPiGQPB9Q==}
+    deprecated: This is a stub types definition. parse-path provides its own type definitions, so you do not need this installed.
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -1765,50 +1766,50 @@ packages:
     resolution: {integrity: sha512-9WI52t8ZGLVGrPMBet25yAftqY/n95+zmoUUtJBBQTKDSKUu7OsPTroT2op7U9JatkoRccL0YkWDNMFfC4Sjxg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-x0ClBYc6xQDLXvpRn/zg6SViX/r1F8LXHyfSHmKx4ieiaZiVvGsEww/qzdHind+Y62MIUN3e/XfDFrpRxWDv0g==}
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-7kxHwV+zjANOeDn236ob/2nZy72slfid0ukGd0ApVRmDfG3iob4YEO8TuDet1RxNClis+k9l6zaPBJkujczzkA==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [darwin]
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-CSHbx6HfM+xXqceGFtG4kcqqoQ5xjT1BHO0bqLfLeQtKlMlze59dIV2DbOb5Aj6wm2ACTKU4K9aurJDdHARx1g==}
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-V2RY5nKkNyBQMK39lCdG//VvCVwKhibQBhuelIm8TR4P2EduhJHB42ftr6lEVgZjW03qlrAEE/FWwTV6Wku2vA==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [darwin]
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-0DFKd3EuZ/Z0/mB114mATrlRxQUo7rcpXYgd5CJN7y1dbIgkavbjVamzzJKt3s42tkJGfdys83w6aIHDu6fykw==}
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-IVDSXjEyKgfa1SvwWux77cdb6W4ReycvLM9hYiJv42vzDJRt3g+H4LmaI6Ng+0Lq5syylzpVhJe4nh3logUsag==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [linux]
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-hY2EVAaGc1bsaxthJiNUbzn6ESkMSLBiWRCNhQl8XdhDWew8KhKCjw4DHe0lAYSdxLJBe6fCPpcFjDnoSowBxA==}
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-gEctrS100iZEwZgrJYuVN4pPW922CcozDneNwJkQld3zmFfSeGRLzj9oXCzP1JbMLq2np+DYrIkJ5ErPF1mwlA==}
     engines: {node: '>=16.20.0'}
     cpu: [arm]
     os: [linux]
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-GhC0kXeYxn55Rk3klmWET/Y033AHeMzLBMO58yP7R8m5ZdGiBisejDZnvttzczYJtgT42LNOtVmbtsG/+R8XWw==}
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-3t4r52PTZgRh+dO0me8o4GCPj3PEixtIEC1vqmQxR/JjDunLn4YOFwfDLyNWEflOxauPRKV5pWkSpd6HiBsZfw==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [linux]
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-L2+bsx73FyuEzLNgybtIxhnT9lYYAh9rTRFWZ4wZlJg44DGstjgz4FBKVHBO/cm3Hz7YNWeJESrB9ROUNbffPg==}
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-0uR0M92lNwpgOyGBk+eZAAFuCsa3lc2l3IkvGWMo3fkD+eIBb8NwaqIhKpQ9VGvr6xfjJ3uf210j0Vxhl4HcLQ==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [win32]
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-xJCdFz9smVQVpXYW0vZZJsM0GIANPqSt8eMDRYfDY6M/BcXNXYOAt7tsxnSRyYWnFf9Ci7wKNRZaihZrDJ2m6A==}
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-UvwEPV9tDgV8GAWkp5Kmq2LRKUlhwtrl0PUpMDOKInaXAndMtUCOQ+aFqd015jPmfNPKs84BRQoQYXyeaHVJDw==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
 
-  '@typescript/native-preview@7.0.0-dev.20260525.1':
-    resolution: {integrity: sha512-hZ3BSv2Q45UZPC8mi7YIWNRirdT99eipknsgigp7GfczYisSjfn6/XERgUfspHDWI7k4zM/KK4j/peHWtpqcmg==}
+  '@typescript/native-preview@7.0.0-dev.20260526.1':
+    resolution: {integrity: sha512-ys/rYFNEVb4LZ7zUFxWZ6iv5gnIW29WRv3L9+hJKfAF3d/ekI76B4Ej4dU7odNCFiX85sCotljzq8N0QyruuoA==}
     engines: {node: '>=16.20.0'}
     hasBin: true
 
@@ -3947,6 +3948,7 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   prelude-ls@1.2.1:
@@ -4537,8 +4539,8 @@ packages:
     resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
     engines: {node: '>=14.0.0'}
 
-  tmp@0.2.5:
-    resolution: {integrity: sha512-voyz6MApa1rQGUxT3E+BK7/ROe8itEx7vD8/HEvt4xwXucvQ5G5oeEiHkmHZJuBO21RpOf+YYm9MOivj709jow==}
+  tmp@0.2.6:
+    resolution: {integrity: sha512-5sJPdPjfI5Kx+qbrDesxkglRBxW//g7hCsqspEjwkewGvBMGIKMOTKzLt1hFVJzyadba3lDUN20O9qhvbQUSTA==}
     engines: {node: '>=14.14'}
 
   to-regex-range@5.0.1:
@@ -4829,8 +4831,8 @@ packages:
     resolution: {integrity: sha512-K4jVyjnBdgvc86Y6BkaLZEN933SwYOuBFkdmBu9ZfkcAbdVbpITnDmjvZ/aQjRXQrv5EPkTnD1s39GiiqbngCw==}
     engines: {node: '>= 0.4'}
 
-  which-typed-array@1.1.20:
-    resolution: {integrity: sha512-LYfpUkmqwl0h9A2HL09Mms427Q1RZWuOHsukfVcKRq9q95iQxdw0ix1JQrqbcDR9PH1QDwf5Qo8OZb5lksZ8Xg==}
+  which-typed-array@1.1.21:
+    resolution: {integrity: sha512-zbRA8cVm6io/d5W8uIe2hblzN76/Wm3v/yiythQvr+dpBWeqhPSWIDNj4zOyHi4zKbMK6DN34Xsr9jPHJERAEw==}
     engines: {node: '>= 0.4'}
 
   which@1.3.1:
@@ -5964,24 +5966,24 @@ snapshots:
 
   '@rsbuild/core@2.0.7':
     dependencies:
-      '@rspack/core': 2.0.4(@swc/helpers@0.5.21)
-      '@swc/helpers': 0.5.21
+      '@rspack/core': 2.0.4(@swc/helpers@0.5.22)
+      '@swc/helpers': 0.5.22
     transitivePeerDependencies:
       - '@module-federation/runtime-tools'
 
-  '@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21))':
+  '@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22))':
     dependencies:
-      '@rspack/plugin-react-refresh': 2.0.0(@rspack/core@2.0.4(@swc/helpers@0.5.21))(react-refresh@0.18.0)
+      '@rspack/plugin-react-refresh': 2.0.0(@rspack/core@2.0.4(@swc/helpers@0.5.22))(react-refresh@0.18.0)
       react-refresh: 0.18.0
     optionalDependencies:
       '@rsbuild/core': 2.0.7
     transitivePeerDependencies:
       - '@rspack/core'
 
-  '@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)':
+  '@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)':
     dependencies:
       '@rsbuild/core': 2.0.7
-      rsbuild-plugin-dts: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@rsbuild/core@2.0.7)(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+      rsbuild-plugin-dts: 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@rsbuild/core@2.0.7)(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
     optionalDependencies:
       '@microsoft/api-extractor': 7.58.7(@types/node@25.9.1)
       typescript: 6.0.3
@@ -6037,24 +6039,24 @@ snapshots:
       '@rspack/binding-win32-ia32-msvc': 2.0.4
       '@rspack/binding-win32-x64-msvc': 2.0.4
 
-  '@rspack/core@2.0.4(@swc/helpers@0.5.21)':
+  '@rspack/core@2.0.4(@swc/helpers@0.5.22)':
     dependencies:
       '@rspack/binding': 2.0.4
     optionalDependencies:
-      '@swc/helpers': 0.5.21
+      '@swc/helpers': 0.5.22
 
-  '@rspack/plugin-react-refresh@2.0.0(@rspack/core@2.0.4(@swc/helpers@0.5.21))(react-refresh@0.18.0)':
+  '@rspack/plugin-react-refresh@2.0.0(@rspack/core@2.0.4(@swc/helpers@0.5.22))(react-refresh@0.18.0)':
     dependencies:
       react-refresh: 0.18.0
     optionalDependencies:
-      '@rspack/core': 2.0.4(@swc/helpers@0.5.21)
+      '@rspack/core': 2.0.4(@swc/helpers@0.5.22)
 
-  '@rspress/core@2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.21))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)':
+  '@rspress/core@2.0.13(@rspack/core@2.0.4(@swc/helpers@0.5.22))(@types/mdast@4.0.4)(@types/react@19.2.15)(micromark-util-types@2.0.2)(micromark@4.0.2)':
     dependencies:
       '@mdx-js/mdx': 3.1.1
       '@mdx-js/react': 3.1.1(@types/react@19.2.15)(react@19.2.6)
       '@rsbuild/core': 2.0.7
-      '@rsbuild/plugin-react': 2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21))
+      '@rsbuild/plugin-react': 2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22))
       '@rspress/shared': 2.0.13
       '@shikijs/rehype': 4.1.0
       '@types/unist': 3.0.3
@@ -6204,14 +6206,14 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@savvy-web/lint-staged@1.1.0(dcd03086f064eb4405d2d3ef125adee6)':
+  '@savvy-web/lint-staged@1.1.0(12155112c749fb742d834c9d4370b6f6)':
     dependencies:
       '@effect/cli': 0.75.1(@effect/platform@0.96.1(effect@3.21.2))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.2))(effect@3.21.2))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.2))(effect@3.21.2))(effect@3.21.2)
       '@effect/platform': 0.96.1(effect@3.21.2)
       '@effect/platform-node': 0.106.0(@effect/cluster@0.58.2(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/workflow@0.18.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2)
       '@savvy-web/silk-effects': 0.3.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)
       '@types/node': 25.9.1
-      '@typescript/native-preview': 7.0.0-dev.20260525.1
+      '@typescript/native-preview': 7.0.0-dev.20260526.1
       effect: 3.21.2
       husky: 9.1.7
       jsonc-effect: 0.2.1(effect@3.21.2)
@@ -6234,7 +6236,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@savvy-web/rslib-builder@0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260525.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)':
+  '@savvy-web/rslib-builder@0.20.8(@pnpm/logger@1001.0.1)(@rsbuild/plugin-react@2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22)))(@rslib/core@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3))(@types/node@25.9.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(@typescript/native-preview@7.0.0-dev.20260526.1)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)':
     dependencies:
       '@microsoft/api-extractor': 7.58.7(@types/node@25.9.1)
       '@microsoft/tsdoc': 0.16.0
@@ -6245,21 +6247,21 @@ snapshots:
       '@pnpm/lockfile.fs': 1100.1.1(@pnpm/logger@1001.0.1)
       '@pnpm/workspace.read-manifest': 1000.3.1
       '@rsbuild/core': 2.0.7
-      '@rslib/core': 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3)
+      '@rslib/core': 0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3)
       '@types/node': 25.9.1
       '@typescript-eslint/parser': 8.60.0(eslint@10.4.0(jiti@2.6.1))(typescript@6.0.3)
-      '@typescript/native-preview': 7.0.0-dev.20260525.1
+      '@typescript/native-preview': 7.0.0-dev.20260526.1
       deep-equal: 2.2.3
       eslint: 10.4.0(jiti@2.6.1)
       eslint-plugin-tsdoc: 0.5.2(eslint@10.4.0(jiti@2.6.1))(typescript@6.0.3)
       glob: 13.0.6
       picocolors: 1.1.1
       sort-package-json: 3.6.1
-      tmp: 0.2.5
+      tmp: 0.2.6
       typescript: 6.0.3
       workspace-tools: 0.41.7
     optionalDependencies:
-      '@rsbuild/plugin-react': 2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.21))
+      '@rsbuild/plugin-react': 2.0.0(@rsbuild/core@2.0.7)(@rspack/core@2.0.4(@swc/helpers@0.5.22))
       '@types/react': 19.2.15
       '@types/react-dom': 19.2.3(@types/react@19.2.15)
       react: 19.2.6
@@ -6289,10 +6291,10 @@ snapshots:
       workspaces-effect: 1.1.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)
       yaml-effect: 0.6.0(effect@3.21.2)
 
-  '@savvy-web/vitest@1.3.2(b81cfda2e56aaf2516bfd22bcf9ce72e)':
+  '@savvy-web/vitest@1.3.2(704e37005c3b8fae37206aa6e786a79e)':
     dependencies:
       '@types/node': 25.9.1
-      '@typescript/native-preview': 7.0.0-dev.20260525.1
+      '@typescript/native-preview': 7.0.0-dev.20260526.1
       '@vitest/coverage-v8': 4.1.7(vitest@4.1.7)
       typescript: 6.0.3
       vitest: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@8.0.14(@types/node@25.9.1)(jiti@2.6.1)(sass@1.100.0)(yaml@2.9.0))
@@ -6369,7 +6371,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@swc/helpers@0.5.21':
+  '@swc/helpers@0.5.22':
     dependencies:
       tslib: 2.8.1
 
@@ -6477,8 +6479,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.56.1(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.60.0(typescript@6.0.3)
-      '@typescript-eslint/types': 8.60.0
+      '@typescript-eslint/tsconfig-utils': 8.56.1(typescript@6.0.3)
+      '@typescript-eslint/types': 8.56.1
       debug: 4.4.3
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -6566,36 +6568,36 @@ snapshots:
       '@typescript-eslint/types': 8.60.0
       eslint-visitor-keys: 5.0.1
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260525.1':
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260526.1':
     optional: true
 
-  '@typescript/native-preview@7.0.0-dev.20260525.1':
+  '@typescript/native-preview@7.0.0-dev.20260526.1':
     optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260525.1
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260525.1
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260526.1
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260526.1
 
   '@typescript/vfs@1.6.4(typescript@6.0.3)':
     dependencies:
@@ -7091,7 +7093,7 @@ snapshots:
       side-channel: 1.1.0
       which-boxed-primitive: 1.1.1
       which-collection: 1.0.2
-      which-typed-array: 1.1.20
+      which-typed-array: 1.1.21
 
   deep-extend@0.6.0: {}
 
@@ -7432,7 +7434,7 @@ snapshots:
     dependencies:
       chardet: 0.7.0
       iconv-lite: 0.4.24
-      tmp: 0.2.5
+      tmp: 0.2.6
 
   fast-check@3.23.2:
     dependencies:
@@ -9453,13 +9455,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  rsbuild-plugin-dts@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@rsbuild/core@2.0.7)(@typescript/native-preview@7.0.0-dev.20260525.1)(typescript@6.0.3):
+  rsbuild-plugin-dts@0.21.5(@microsoft/api-extractor@7.58.7(@types/node@25.9.1))(@rsbuild/core@2.0.7)(@typescript/native-preview@7.0.0-dev.20260526.1)(typescript@6.0.3):
     dependencies:
       '@ast-grep/napi': 0.37.0
       '@rsbuild/core': 2.0.7
     optionalDependencies:
       '@microsoft/api-extractor': 7.58.7(@types/node@25.9.1)
-      '@typescript/native-preview': 7.0.0-dev.20260525.1
+      '@typescript/native-preview': 7.0.0-dev.20260526.1
       typescript: 6.0.3
 
   run-applescript@7.1.0: {}
@@ -9798,7 +9800,7 @@ snapshots:
 
   tinyrainbow@3.1.0: {}
 
-  tmp@0.2.5: {}
+  tmp@0.2.6: {}
 
   to-regex-range@5.0.1:
     dependencies:
@@ -10067,7 +10069,7 @@ snapshots:
       is-weakmap: 2.0.2
       is-weakset: 2.0.4
 
-  which-typed-array@1.1.20:
+  which-typed-array@1.1.21:
     dependencies:
       available-typed-arrays: 1.0.7
       call-bind: 1.0.9

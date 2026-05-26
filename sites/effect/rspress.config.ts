@@ -9,13 +9,6 @@ export default defineConfig({
 	root: "docs",
 	title: "Effect Multi-Entry Test",
 	outDir: "dist",
-	builderConfig: {
-		source: {
-			define: {
-				"import.meta.env": "import.meta.env",
-			},
-		},
-	},
 	llms: true,
 	themeConfig: {
 		llmsUI: {

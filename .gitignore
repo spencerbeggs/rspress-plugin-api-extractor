@@ -34,7 +34,6 @@ sites/*/lib/models/
 sites/*/docs/api/
 sites/*/docs/*/api/
 sites/*/.rspress/
-api-docs-snapshot.db
 api-docs-snapshot.db-*
 
 # Claude AI files

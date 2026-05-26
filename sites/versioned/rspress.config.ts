@@ -20,11 +20,6 @@ export default defineConfig({
 		default: "v2",
 		versions: ["v1", "v2"],
 	},
-	builderConfig: {
-		source: {
-			define: { "import.meta.env": "import.meta.env" },
-		},
-	},
 	plugins: [
 		ApiExtractorPlugin({
 			logLevel: "info",

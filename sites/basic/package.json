@@ -1,5 +1,5 @@
 {
-	"name": "basic",
+	"name": "@sites/basic",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -10,8 +10,7 @@
 		"types:check": "tsgo --noEmit"
 	},
 	"dependencies": {
-		"kitchensink": "workspace:*",
-		"rspress-plugin-api-extractor": "workspace:*"
+		"@modules/kitchensink": "workspace:*"
 	},
 	"devDependencies": {
 		"@rspress/core": "^2.0.13",
@@ -22,6 +21,7 @@
 		"@typescript/native-preview": "catalog:silk",
 		"open": "^11.0.0",
 		"react": "catalog:silk",
-		"react-dom": "catalog:silk"
+		"react-dom": "catalog:silk",
+		"rspress-plugin-api-extractor": "workspace:*"
 	}
 }

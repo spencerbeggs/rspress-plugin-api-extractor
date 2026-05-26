@@ -21,11 +21,6 @@ export default defineConfig({
 		{ lang: "en", label: "English" },
 		{ lang: "zh", label: "中文" },
 	],
-	builderConfig: {
-		source: {
-			define: { "import.meta.env": "import.meta.env" },
-		},
-	},
 	plugins: [
 		ApiExtractorPlugin({
 			logLevel: "info",

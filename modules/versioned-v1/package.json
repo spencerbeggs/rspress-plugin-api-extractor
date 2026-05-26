@@ -1,11 +1,11 @@
 {
-	"name": "versioned-v1",
+	"name": "@modules/versioned-v1",
 	"version": "1.0.0",
 	"private": true,
 	"description": "Versioned module v1 — baseline API for version testing",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+		"url": "git+https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
 		"directory": "modules/versioned-v1"
 	},
 	"license": "MIT",
