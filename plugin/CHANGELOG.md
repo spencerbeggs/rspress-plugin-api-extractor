@@ -1,5 +1,11 @@
 # rspress-plugin-api-extractor
 
+## 0.1.1
+
+### Bug Fixes
+
+* [`8afe892`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/8afe89273d7503e08fa114e83c65d1f921bf53e4) Corrects turbo build order.
+
 ## 0.1.0
 
 ### Features
