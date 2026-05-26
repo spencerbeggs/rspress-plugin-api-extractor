@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-15
-updated: 2026-03-17
-last-synced: 2026-03-17
+updated: 2026-05-26
+last-synced: 2026-05-26
 completeness: 85
 related:
   - rspress-plugin-api-extractor/performance-observability.md
@@ -13,8 +13,6 @@ dependencies: []
 ---
 
 # Error Observability System Design
-
-**Status:** Production-ready (Effect Metrics)
 
 ## Table of Contents
 

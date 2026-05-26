@@ -46,13 +46,16 @@ describe("resolveEntryPoints", () => {
 		expect(mockSource?.availableFrom).toEqual(["testing"]);
 	});
 
-	it("sets hasCollision false when no display name collisions exist", () => {
+	it("keeps companion (same-name, different-kind) items as separate entries", () => {
 		const model = loadKitchensinkModel();
 		const apiPackage = model.packages[0];
 		const resolved = resolveEntryPoints(apiPackage);
 
-		const collisions = resolved.filter((r) => r.hasCollision);
-		expect(collisions).toHaveLength(0);
+		// Group resolved items by displayName; companion const+type pairs (and any
+		// other same-name/different-kind items) must survive as distinct entries
+		// keyed on displayName::kind rather than being collapsed.
+		const byKey = new Set(resolved.map((r) => `${r.item.displayName}::${r.item.kind}`));
+		expect(byKey.size).toBe(resolved.length);
 	});
 
 	it("deduplicates availableFrom for function overloads", () => {

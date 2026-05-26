@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
+updated: 2026-05-26
+last-synced: 2026-05-26
 completeness: 90
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -14,8 +14,6 @@ dependencies: []
 ---
 
 # Snapshot Tracking System Design
-
-**Status:** Production-ready (Effect-based)
 
 ## Table of Contents
 
@@ -392,8 +390,8 @@ writing unchanged rows even within the batch.
 
 ### Pre-loaded Snapshot Map
 
-1 query loads all snapshots into a `Map` for O(1) per-file lookup.
-For 339 files this is approximately 5ms total.
+A single query loads all snapshots into a `Map` for O(1) per-file lookup,
+reducing database round-trips from one-per-file to one-per-build.
 
 ### Batch Transaction
 

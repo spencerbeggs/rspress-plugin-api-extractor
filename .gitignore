@@ -43,3 +43,4 @@ api-docs-snapshot.db-*
 .claude/plugins-debug.log
 .playwright-mcp
 docs/superpowers
+.mcp.json

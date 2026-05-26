@@ -32,11 +32,34 @@ import {
 import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
 import { resolveEntryPoints } from "./multi-entry-resolver.js";
 import { OpenGraphResolver } from "./og-resolver.js";
+import type { RouteCandidate } from "./route-collisions.js";
+import { assertNoRouteCollisions } from "./route-collisions.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import type { FileSnapshot } from "./services/SnapshotService.js";
 import { SnapshotService } from "./services/SnapshotService.js";
 
 export type { FileSnapshot } from "./services/SnapshotService.js";
+
+/**
+ * Cross-link priority by API item kind (lower = higher priority). When a bare
+ * name maps to multiple pages (the const+type companion pattern), the bare
+ * cross-link resolves to the higher-priority kind — value declarations win over
+ * type-only declarations, so `Foo` links to the importable schema, not the type.
+ */
+const CROSS_LINK_KIND_PRIORITY: Record<string, number> = {
+	Class: 0,
+	Function: 1,
+	Variable: 2,
+	Enum: 3,
+	Interface: 4,
+	TypeAlias: 5,
+	Namespace: 6,
+};
+
+/** Lower number = higher priority for which page a bare cross-link name resolves to. */
+export function crossLinkKindPriority(kind: string): number {
+	return CROSS_LINK_KIND_PRIORITY[kind] ?? 100;
+}
 
 export interface WorkItem {
 	readonly item: ApiItem;
@@ -45,8 +68,6 @@ export interface WorkItem {
 	readonly namespaceMember?: NamespaceMember;
 	/** Entry points this item is available from */
 	readonly availableFrom?: string[];
-	/** Entry point URL segment, set only when displayName collides */
-	readonly entryPointSegment?: string;
 }
 
 export interface GeneratedPageResult {
@@ -118,7 +139,7 @@ function sanitizeId(displayName: string): string {
 export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItemsResult {
 	const { apiPackage, categories, baseRoute } = input;
 
-	// 0. Resolve entry points into deduplicated items with collision metadata
+	// 0. Resolve entry points into deduplicated items
 	const resolvedItems = resolveEntryPoints(apiPackage);
 
 	// Build a lookup map from "displayName::kind" to ResolvedEntryItem
@@ -131,23 +152,64 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	// 1. Categorize API items by category key (pass resolved items)
 	const items = ApiParser.categorizeApiItems(resolvedItems, categories);
 
+	// 1b. Extract namespace members (needed for both candidates and routes below)
+	const namespaceMembers = ApiParser.extractNamespaceMembers(resolvedItems);
+
+	// 1c. Detect genuine route collisions (same folder + baseName among distinct
+	//     items) and fail the build if any exist. Two distinct API items resolving
+	//     to the same lowercased category route is a user naming/config problem.
+	//     The companion const+type pattern routes to different folders and is NOT a
+	//     collision.
+	const candidates: RouteCandidate[] = [];
+	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
+		for (const item of items[categoryKey] || []) {
+			candidates.push({
+				id: `${item.displayName}::${item.kind}`,
+				displayName: item.displayName,
+				folder: categoryConfig.folderName,
+				baseName: item.displayName.toLowerCase(),
+				kind: String(item.kind),
+				canonicalRef: item.canonicalReference?.toString() ?? item.displayName,
+			});
+		}
+	}
+	for (const nsMember of namespaceMembers) {
+		const nsCategoryEntry = Object.entries(categories).find(([, config]) =>
+			config.itemKinds?.includes(nsMember.item.kind),
+		);
+		if (!nsCategoryEntry) continue;
+		const [, nsCategoryConfig] = nsCategoryEntry;
+		candidates.push({
+			id: nsMember.qualifiedName,
+			displayName: nsMember.qualifiedName,
+			folder: nsCategoryConfig.folderName,
+			baseName: nsMember.qualifiedName.toLowerCase(),
+			kind: String(nsMember.item.kind),
+			canonicalRef: nsMember.item.canonicalReference?.toString() ?? nsMember.qualifiedName,
+		});
+	}
+	// Fail fast: two distinct items must never resolve to the same output route.
+	assertNoRouteCollisions(candidates, baseRoute);
+
 	// 2. Build cross-link routes and kinds maps directly
 	//    (mirrors MarkdownCrossLinker.initialize() logic)
 	const routes = new Map<string, string>();
 	const kinds = new Map<string, string>();
+	// Tracks the cross-link kind priority that currently owns each bare-name route,
+	// so a companion's bare name deterministically resolves to the value page.
+	const routeOwnerPriority = new Map<string, number>();
 
 	for (const [categoryKey, categoryConfig] of Object.entries(categories)) {
 		const categoryItems = items[categoryKey] || [];
 		for (const item of categoryItems) {
-			const lookupKey = `${item.displayName}::${item.kind}`;
-			const resolved = resolvedLookup.get(lookupKey);
-			const segment = resolved?.hasCollision ? resolved.definingEntryPoint : undefined;
-
-			const itemRoute = segment
-				? `${baseRoute}/${categoryConfig.folderName}/${segment}/${item.displayName.toLowerCase()}`
-				: `${baseRoute}/${categoryConfig.folderName}/${item.displayName.toLowerCase()}`;
-			routes.set(item.displayName, itemRoute);
-			kinds.set(item.displayName, item.kind);
+			const itemRoute = `${baseRoute}/${categoryConfig.folderName}/${item.displayName.toLowerCase()}`;
+			const priority = crossLinkKindPriority(String(item.kind));
+			const existingPriority = routeOwnerPriority.get(item.displayName);
+			if (existingPriority === undefined || priority < existingPriority) {
+				routes.set(item.displayName, itemRoute);
+				kinds.set(item.displayName, item.kind);
+				routeOwnerPriority.set(item.displayName, priority);
+			}
 
 			// For classes and interfaces, also add routes for their members
 			if (item.kind === "Class" || item.kind === "Interface") {
@@ -164,8 +226,7 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 		}
 	}
 
-	// 3. Extract namespace members and add their routes with collision detection
-	const namespaceMembers = ApiParser.extractNamespaceMembers(resolvedItems);
+	// 3. Add namespace member routes
 
 	// Track unqualified names to detect collisions across namespaces
 	const unqualifiedNameCounts = new Map<string, number>();
@@ -209,7 +270,6 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 				categoryKey,
 				categoryConfig,
 				...(resolved?.availableFrom != null ? { availableFrom: resolved.availableFrom } : {}),
-				...(resolved?.hasCollision ? { entryPointSegment: resolved.definingEntryPoint } : {}),
 			});
 		}
 	}
@@ -472,16 +532,6 @@ export function generateSinglePage(
 			};
 		}
 
-		// For colliding entry-point items, insert the entry point segment into the route
-		if (workItem.entryPointSegment) {
-			const folderName = workItem.categoryConfig.folderName;
-			const segmentInsertion = `/${folderName}/${workItem.entryPointSegment}/`;
-			page = {
-				routePath: page.routePath.replace(`/${folderName}/`, segmentInsertion),
-				content: page.content,
-			};
-		}
-
 		// Track page generation
 		yield* Metric.increment(BuildMetrics.pagesGenerated);
 
@@ -611,9 +661,9 @@ export function writeSingleFile(
 
 		const absolutePath = path.join(resolvedOutputDir, relativePathWithExt);
 
-		// Use qualified name for namespace members, scoped label for colliding entry-point items
+		// Use qualified name for namespace members, otherwise the display name
 		const baseLabel = namespaceMember ? namespaceMember.qualifiedName : item.displayName;
-		const label = workItem.entryPointSegment ? `${baseLabel} (${workItem.entryPointSegment})` : baseLabel;
+		const label = baseLabel;
 
 		const snapshot: FileSnapshot = {
 			outputDir: resolvedOutputDir,

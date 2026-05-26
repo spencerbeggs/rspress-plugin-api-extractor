@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
+import { ApiModel } from "@microsoft/api-extractor-model";
 import { Effect, Layer, LogLevel, Logger } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
@@ -14,6 +15,7 @@ import type {
 import {
 	buildPipelineForApi,
 	cleanupAndCommit,
+	crossLinkKindPriority,
 	generateSinglePage,
 	prepareWorkItems,
 	writeMetadata,
@@ -100,6 +102,39 @@ describe("prepareWorkItems", () => {
 		});
 		expect(result.workItems).toHaveLength(0);
 		expect(result.crossLinkData.routes.size).toBe(0);
+	});
+
+	it("generates companion pages cleanly and resolves the bare cross-link to the value page", () => {
+		const model = new ApiModel();
+		const pkg = model.loadPackage(
+			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
+		);
+		const { workItems, crossLinkData } = prepareWorkItems({
+			apiPackage: pkg,
+			categories: DEFAULT_CATEGORIES,
+			baseRoute: "/api",
+			packageName: "effect-kit",
+		});
+		for (const route of crossLinkData.routes.values()) {
+			expect(route).not.toContain("/default/");
+			expect(route).not.toContain("/testing/");
+			expect(route).not.toContain("/dispatch/");
+		}
+		const pageRoutes = workItems.map(
+			(wi) => `/api/${wi.categoryConfig.folderName}/${wi.item.displayName.toLowerCase()}`,
+		);
+		expect(pageRoutes).toContain("/api/variable/actionseverity");
+		expect(pageRoutes).toContain("/api/type/actionseverity");
+		expect(crossLinkData.routes.get("ActionSeverity")).toBe("/api/variable/actionseverity");
+		for (const wi of workItems) {
+			expect("routeSuffix" in wi).toBe(false);
+		}
+	});
+
+	it("prioritizes value kinds over type-only kinds for cross-link targets", () => {
+		expect(crossLinkKindPriority("Variable")).toBeLessThan(crossLinkKindPriority("TypeAlias"));
+		expect(crossLinkKindPriority("Class")).toBeLessThan(crossLinkKindPriority("Interface"));
+		expect(crossLinkKindPriority("Namespace")).toBeLessThan(crossLinkKindPriority("SomethingUnknown"));
 	});
 });
 

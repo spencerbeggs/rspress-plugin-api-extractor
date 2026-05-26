@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-03-17
-last-synced: 2026-03-17
+updated: 2026-05-26
+last-synced: 2026-05-26
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -12,6 +12,7 @@ related:
   - rspress-plugin-api-extractor/snapshot-tracking-system.md
   - rspress-plugin-api-extractor/page-generation-system.md
   - rspress-plugin-api-extractor/performance-observability.md
+  - rspress-plugin-api-extractor/type-loading-vfs.md
 dependencies: []
 ---
 
@@ -33,9 +34,9 @@ The rspress-plugin-api-extractor uses a **dual-build architecture** that
 separates Node.js plugin code from React runtime components, combined
 with an **Effect service layer** for doc generation orchestration.
 
-The plugin entry point (`plugin.ts`) is a thin RSPress adapter (252 lines)
-that wires Effect services and delegates all doc generation to
-`build-program.ts` and `build-stages.ts`.
+The plugin entry point (`plugin.ts`) is a thin RSPress adapter that wires
+Effect services and delegates all doc generation to `build-program.ts` and
+`build-stages.ts`.
 
 ## Dual-Bundle Architecture
 
@@ -66,10 +67,11 @@ that wires Effect services and delegates all doc generation to
 
 ### Build Tooling
 
-**Bundler:** Rslib (Rsbuild-based library bundler)
+**Bundler:** Rslib (Rsbuild-based library bundler), configured via
+`RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder`
 **Module System:** ESM with `"module": "esnext"` and
 `"moduleResolution": "bundler"`
-**CSS Processing:** Sass plugin with automatic import injection
+**CSS Processing:** CSS modules (no Sass) for runtime components
 
 ## Effect Service Layer
 
@@ -78,7 +80,7 @@ that wires Effect services and delegates all doc generation to
 The plugin uses Effect's Context/Layer/Tag pattern for dependency injection:
 
 ```text
-plugin.ts (RSPress adapter, 252 lines)
+plugin.ts (RSPress adapter)
   |
   +-> EffectAppLayer (composed Layer stack)
   |     |
@@ -134,14 +136,37 @@ Plugin options are defined as Effect Schemas in `schemas/`:
 - `schemas/opengraph.ts` -- `OpenGraphImageConfig`
 - `schemas/performance.ts` -- `PerformanceConfig`
 
-Options are decoded at plugin factory time:
+Options are decoded at plugin factory time. The exported
+`ApiExtractorPlugin` is the factory function with config helpers attached as
+a namespace:
 
 ```typescript
-export function ApiExtractorPlugin(rawOptions: PluginOptions) {
+function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
   const options = Schema.decodeUnknownSync(PluginOptions)(rawOptions);
   // ...
 }
+
+export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
+  api: { fromFolder, fromModelsDir },
+});
 ```
+
+### Config Helpers
+
+`ApiExtractorPlugin.api.fromFolder` and `ApiExtractorPlugin.api.fromModelsDir`
+(`src/config-helpers.ts`) build `MultiApiConfig` objects by discovering the
+package name, version, `.api.json` model and `tsconfig.json` from a
+`@savvy-web/rslib-builder` `localPaths` package folder:
+
+- `fromFolder(dir, overrides?)` -- one config from a single package folder;
+  caller overrides win over discovery. `baseRoute` accepts a `{dirname}` /
+  `{packageName}` template string or an `(info) => string` callback.
+- `fromModelsDir(parentDir, options?)` -- scans a parent directory and builds
+  one config per subfolder, requiring every non-dotfile subdirectory to be a
+  valid model folder.
+
+The helper return types (`FolderInfo`, `BaseRoute`, `FromFolderOptions`,
+`FromModelsDirOptions`) are re-exported from `src/index.ts`.
 
 ## Plugin Lifecycle
 
@@ -213,8 +238,8 @@ across all hooks:
 
 ### ConfigService.resolve()
 
-The `ConfigServiceLive` (`layers/ConfigServiceLive.ts`, ~600 lines)
-resolves raw plugin options + RSPress config into a `ResolvedBuildContext`:
+The `ConfigServiceLive` (`layers/ConfigServiceLive.ts`) resolves raw plugin
+options + RSPress config into a `ResolvedBuildContext`:
 
 **Inputs:**
 
@@ -248,28 +273,24 @@ Key config types defined via Effect Schema:
 
 ### Rslib Configuration
 
+`rslib.config.ts` delegates to `RSPressPluginBuilder.create()` from
+`@savvy-web/rslib-builder`, which generates the dual-bundle config:
+
 ```typescript
-// rslib.config.ts (simplified)
-export default defineConfig({
-  lib: [
-    // Runtime bundle (React + CSS)
-    {
-      format: "esm",
-      syntax: "es2021",
-      source: { entry: { index: "./src/runtime/index.tsx" } },
-      output: { distPath: { root: "./dist/runtime" } },
-    },
-    // Plugin bundle (Node.js)
-    {
-      format: "esm",
-      syntax: "es2021",
-      source: { entry: { index: "./src/index.ts" } },
-      output: { distPath: { root: "./dist" } },
-    },
-  ],
-  plugins: [pluginReact(), pluginSass()],
+// rslib.config.ts
+export default RSPressPluginBuilder.create({
+  dtsBundledPackages: ["@rspress/core"],
+  apiModel: { suppressWarnings: [ /* ae-forgotten-export rules */ ] },
+  transform({ pkg, target }) { /* rewrite package.json per registry */ },
 });
 ```
+
+`RSPressPluginBuilder` produces up to two RSlib libs — the Node.js plugin
+bundle (always) and the React runtime bundle (auto-detected from
+`src/runtime/index.tsx`) — with the runtime's React, CSS-module and RSPress
+externals handling built in. The `transform` callback rewrites the published
+`package.json` (e.g. the scoped name for GitHub Packages) and strips
+dev-only fields.
 
 ### TypeScript Configuration
 
@@ -306,15 +327,16 @@ cd plugin && pnpm dev   # Rebuilds on file changes
 
 ### Key Source Files
 
-| File | Lines | Purpose |
-| --- | --- | --- |
-| `plugin.ts` | ~252 | RSPress adapter, runtime management |
-| `build-program.ts` | ~167 | Doc generation orchestration |
-| `build-stages.ts` | ~1120 | Stream pipeline, page gen, file writes |
-| `layers/ConfigServiceLive.ts` | ~600 | Config resolution, model loading |
-| `layers/SnapshotServiceLive.ts` | ~148 | SQLite snapshot implementation |
-| `layers/ObservabilityLive.ts` | ~147 | Metrics, logger, build summary |
-| `schemas/config.ts` | ~250 | Effect Schema definitions |
+| File | Purpose |
+| --- | --- |
+| `plugin.ts` | RSPress adapter, runtime management |
+| `build-program.ts` | Doc generation orchestration |
+| `build-stages.ts` | Stream pipeline, page gen, file writes |
+| `config-helpers.ts` | `fromFolder` / `fromModelsDir` config builders |
+| `layers/ConfigServiceLive.ts` | Config resolution, model loading |
+| `layers/SnapshotServiceLive.ts` | SQLite snapshot implementation |
+| `layers/ObservabilityLive.ts` | Metrics, logger, build summary |
+| `schemas/config.ts` | Effect Schema definitions |
 
 ## Related Documentation
 
