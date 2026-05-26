@@ -57,6 +57,3 @@ docs/dist/** linguist-generated=true
 **/*.d.ts linguist-generated=true
 pnpm-lock.yaml linguist-generated=true
 lib/turbo/schema.json linguist-generated=true
-
-# Custom
-api-docs-snapshot.db binary linguist-generated=true

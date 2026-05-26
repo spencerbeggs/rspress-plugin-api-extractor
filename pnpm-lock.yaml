@@ -91,6 +91,7 @@ importers:
       typescript:
         specifier: catalog:silk
         version: 6.0.3
+    publishDirectory: dist/dev
 
   modules/kitchensink:
     devDependencies:
@@ -109,6 +110,7 @@ importers:
       typescript:
         specifier: catalog:silk
         version: 6.0.3
+    publishDirectory: dist/dev
 
   modules/versioned-v1:
     devDependencies:
@@ -127,6 +129,7 @@ importers:
       typescript:
         specifier: catalog:silk
         version: 6.0.3
+    publishDirectory: dist/dev
 
   modules/versioned-v2:
     devDependencies:
@@ -145,6 +148,7 @@ importers:
       typescript:
         specifier: catalog:silk
         version: 6.0.3
+    publishDirectory: dist/dev
 
   plugin:
     dependencies:
@@ -263,7 +267,7 @@ importers:
     dependencies:
       '@modules/kitchensink':
         specifier: workspace:*
-        version: link:../../modules/kitchensink
+        version: link:../../modules/kitchensink/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
@@ -300,7 +304,7 @@ importers:
     dependencies:
       '@modules/effect-kit':
         specifier: workspace:*
-        version: link:../../modules/effect-kit
+        version: link:../../modules/effect-kit/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
@@ -337,7 +341,7 @@ importers:
     dependencies:
       '@modules/kitchensink':
         specifier: workspace:*
-        version: link:../../modules/kitchensink
+        version: link:../../modules/kitchensink/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
@@ -374,10 +378,10 @@ importers:
     dependencies:
       '@modules/kitchensink':
         specifier: workspace:*
-        version: link:../../modules/kitchensink
+        version: link:../../modules/kitchensink/dist/dev
       '@modules/versioned-v1':
         specifier: workspace:*
-        version: link:../../modules/versioned-v1
+        version: link:../../modules/versioned-v1/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13
@@ -414,10 +418,10 @@ importers:
     dependencies:
       '@modules/versioned-v1':
         specifier: workspace:*
-        version: link:../../modules/versioned-v1
+        version: link:../../modules/versioned-v1/dist/dev
       '@modules/versioned-v2':
         specifier: workspace:*
-        version: link:../../modules/versioned-v2
+        version: link:../../modules/versioned-v2/dist/dev
     devDependencies:
       '@rspress/core':
         specifier: ^2.0.13

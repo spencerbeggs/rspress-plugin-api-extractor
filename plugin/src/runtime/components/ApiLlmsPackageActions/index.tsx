@@ -53,7 +53,6 @@ export function ApiLlmsPackageActions(): ReactElement | null {
 	}, [site]);
 
 	// Find portal targets in the DOM, re-search on route changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: page.routePath triggers DOM re-query for new portal targets after navigation
 	useEffect(() => {
 		if (import.meta.env.SSG_MD || !activeScope) {
 			setOutlineTarget(null);
