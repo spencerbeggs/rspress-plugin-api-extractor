@@ -4,24 +4,24 @@
 	"tasks": {
 		"build": {
 			"cache": false,
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build:dev", "^build:prod"],
 			"outputLogs": "full",
 			"outputs": ["dist/**"]
 		},
 		"dev": {
 			"cache": false,
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build:dev"],
 			"interactive": true,
 			"persistent": true
 		},
 		"preview": {
 			"cache": false,
-			"dependsOn": ["build"],
+			"dependsOn": ["^build:dev", "^build:prod"],
 			"persistent": true
 		},
 		"types:check": {
 			"cache": true,
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build:dev", "^build:prod"],
 			"outputLogs": "errors-only",
 			"outputs": []
 		}

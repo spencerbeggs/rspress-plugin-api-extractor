@@ -39,11 +39,15 @@ function getDirs(parentDir: string): string[] {
 // --- Root turbo cache ---
 console.log("\nCleaning root");
 remove(join(rootDir, ".turbo"));
+remove(join(rootDir, "dist"));
+remove(join(rootDir, "node_modules"));
 
 // --- Plugin ---
 console.log("\nCleaning plugin/");
 remove(join(rootDir, "plugin", "dist"));
 remove(join(rootDir, "plugin", ".turbo"));
+remove(join(rootDir, "plugin", ".rslib"));
+remove(join(rootDir, "plugin", "node_modules"));
 
 // --- Modules ---
 const modulesDir = join(rootDir, "modules");
@@ -52,6 +56,8 @@ for (const mod of getDirs(modulesDir)) {
 	console.log(`\nCleaning modules/${mod}/`);
 	remove(join(modDir, "dist"));
 	remove(join(modDir, ".turbo"));
+	remove(join(modDir, "node_modules"));
+	remove(join(modDir, ".rslib"));
 }
 
 // --- Sites ---
@@ -64,9 +70,6 @@ for (const site of getDirs(sitesDir)) {
 	for (const suffix of [".db", ".db-shm", ".db-wal"]) {
 		remove(join(siteDir, `api-docs-snapshot${suffix}`));
 	}
-
-	// dist/ — RSPress build output
-	remove(join(siteDir, "dist"));
 
 	// Generated API docs: docs/api/ and docs/*/api/
 	remove(join(siteDir, "docs", "api"));
@@ -98,6 +101,10 @@ for (const site of getDirs(sitesDir)) {
 
 	// .turbo/ — turbo cache
 	remove(join(siteDir, ".turbo"));
+	// dist/ — RSPress build output
+	remove(join(siteDir, "dist"));
+	remove(join(siteDir, "node_modules"));
+	remove(join(siteDir, ".rslib"));
 }
 
 console.log(`\nDone. Removed ${removedCount} items.\n`);
