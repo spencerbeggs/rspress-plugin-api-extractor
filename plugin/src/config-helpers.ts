@@ -55,7 +55,7 @@ function discoverModel(dir: string, packageName: string): string {
 		);
 	}
 	const unscoped = unscopedName(packageName);
-	const preferred = apiJsonFiles.find((f) => f === `${unscoped}.api.json` || f === `${packageName}.api.json`);
+	const preferred = apiJsonFiles.find((f) => f === `${unscoped}.api.json`);
 	if (preferred) {
 		return path.join(dir, preferred);
 	}
