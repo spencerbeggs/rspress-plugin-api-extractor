@@ -46,9 +46,9 @@
 	},
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
-		"@rslib/core": "^0.21.5",
+		"@rslib/core": "^0.22.0",
 		"@rspress/core": "^2.0.13",
-		"@savvy-web/rslib-builder": "^0.20.8",
+		"@savvy-web/rslib-builder": "^0.20.10",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "catalog:silk",
