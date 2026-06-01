@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
-import * as RuntimeComponents from "../MemberSignature/index.js";
+import { MemberSignature } from "../MemberSignature/index.js";
 
 export interface ApiMemberProps {
 	/** Member signature code (not wrapped in class/interface) */
@@ -52,7 +52,6 @@ export function ApiMember({ code, memberName, summary, id, hast, hasParameters }
 
 	// Browser mode: Use MemberSignature with pre-rendered Shiki HAST
 	if (parsedHast) {
-		const { MemberSignature } = RuntimeComponents;
 		const memberProps: {
 			hast: typeof parsedHast;
 			memberName: string;

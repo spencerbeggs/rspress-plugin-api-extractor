@@ -4,7 +4,7 @@ The plugin ships a set of React components under the `rspress-plugin-api-extract
 
 ## How rendering works
 
-Every runtime component is dual-mode. In the browser it renders interactive UI — syntax-highlighted code with Twoslash hover tooltips, wrap and copy buttons, sortable tables. When RSPress builds the static markdown files used for LLM consumption, the same component emits clean markdown instead. One component, two outputs, chosen at build time. RSPress has to compile the components in both modes, so the `./runtime` export points at source and the package ships that source. That is what lets the dual-mode switch resolve correctly during the site build.
+Every runtime component is dual-mode. In the browser it renders interactive UI — syntax-highlighted code with Twoslash hover tooltips, wrap and copy buttons, sortable tables. When RSPress builds the static markdown files used for LLM consumption, the same component emits clean markdown instead. One component, two outputs, chosen at build time. RSPress recompiles the shipped components for each site build, picking the mode for that build, so the dual-mode switch resolves correctly whether the plugin is linked in this repository or installed from npm.
 
 ## The exported components
 

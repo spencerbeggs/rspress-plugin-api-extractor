@@ -159,7 +159,7 @@ export class ApiParser {
 	 * Extract plain text from a TSDoc DocNode tree (prose form).
 	 *
 	 * Delegates to api-extractor-llms `extractPlainText`. Used internally for
-	 * `@see` reference text, where {@link} targets are flattened to display text.
+	 * `@see` reference text, where `{@link}` targets are flattened to display text.
 	 */
 	private static extractPlainText(node: DocNode): string {
 		return libExtractPlainText(node);

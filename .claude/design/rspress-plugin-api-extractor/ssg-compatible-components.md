@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 85
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -47,18 +47,26 @@ export function Component({ data }: ComponentProps): ReactElement {
 
 The SSG-MD branch returns markdown as a JSX fragment wrapping a string literal — never `dangerouslySetInnerHTML`. The browser branch uses CSS-module class names.
 
-## Why source export
+## Why bundleless per-file output
 
-`import.meta.env.SSG_MD` is only defined when **RSPress** compiles the component during the site build; a bundle pre-compiled by rslib sees `undefined`. The plugin therefore ships the runtime as source: the `./runtime` export points directly at `src/runtime/index.tsx`, and `src/runtime` is listed in the package `files`.
+`import.meta.env.SSG_MD` is only defined when **RSPress** compiles the component during the site build. A single rslib-compiled `runtime/index.js` bundle froze `import.meta.env.SSG_MD` to `undefined`, so the dual-mode branch always took the browser path. The fix emits the runtime **bundleless** — each component is transpiled 1:1 into its own `.js` under `runtime/`, mirroring the `src/runtime/...` tree, and `import.meta.env` is left as a runtime expression that RSPress resolves per site build.
 
-```json
-{
-  "exports": { "./runtime": "./src/runtime/index.tsx" },
-  "files": ["dist", "src/runtime"]
-}
-```
+The mechanism lives in `@savvy-web/rslib-builder`'s `RSPressPluginBuilder` (`createRuntimeLib`), not in the plugin. The plugin's `rslib.config.ts` only passes `dtsBundledPackages`, `apiModel.suppressWarnings` and a package-name `transform`; runtime emission is auto-detected from `src/runtime/index.tsx` and produced by the builder. Key properties of the published runtime:
 
-Because RSPress compiles the source, `import.meta.env.SSG_MD` resolves to `true` or `false` per build mode and the dual-mode branch works. (An earlier design shipped both a pre-compiled `./runtime` and a source `./runtime-source`; that split has been collapsed into the single source export.)
+- Each component compiles to its own `.js` next to its CSS module (e.g. `runtime/components/ApiLlmsPackageActions/index.js`), via `bundle: false` + `outBase: "./src/runtime"`.
+- `react`, `react/jsx-runtime` and `@theme` stay **external** (RSPress provides them); JSX is transpiled to `react/jsx-runtime` calls.
+- `import.meta.env` is preserved by an identity `define` (`{ "import.meta.env": "import.meta.env" }`), so `import.meta.env.SSG_MD` stays a runtime expression.
+- A bundled `runtime/index.d.ts` (types only) is still emitted so the published `./runtime` export's `types` condition resolves.
+
+The published `exports["./runtime"]` is `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }` and the published `files` is `["runtime"]`. (The source `plugin/package.json` keeps `"./runtime": "./src/runtime/index.tsx"` for the dev workspace link; the build rewrites it to the compiled form.) An earlier design shipped both a pre-compiled `./runtime` and a source `./runtime-source`; that split was collapsed, then an interim attempt shipped raw `.tsx` via `copyPatterns` — both are superseded by this bundleless output.
+
+### Layout-invariant component paths
+
+The bundleless layout makes the runtime **component paths in `plugin.ts` layout-invariant**. `ApiLlmsPackageActions` (registered via `globalUIComponents`) and `ApiLlmsViewOptions` (registered via `resolve.alias` over RSPress's `LlmsViewOptions.js`) are referenced by an absolute `.js` path computed from `import.meta.url`. Because each component is emitted next to `index.js` in both the dev (`dist/dev`) and published (flat root) layouts, those paths are a **zero-level** resolve — `path.resolve(pluginDir, "runtime/components/.../index.js")` — that points at a real file in both. RSPress compiles the referenced `.js`, resolving `import.meta.env.SSG_MD`. An earlier `../../src/runtime/...` form only resolved in the linked dev layout and overshot in the published package, breaking the `globalUIComponents` registration and cascading into an `ESModulesLinkingError` for RSPress's `LlmsViewOptions` re-export under `llms: true`. See `llms-integration.md` for the registration sites.
+
+### Avoid `import * as` of sibling runtime modules
+
+In bundleless mode a namespace import of a sibling runtime module (`import * as X from "../Block/index.js"`) forces a webpack namespace-object plus a shared runtime chunk that lands outside `runtime/`, breaking the per-file layout. `ApiSignature`, `ApiExample` and `ApiMember` therefore use named imports of their block components (`import { SignatureBlock }`, `import { ExampleBlock }`, `import { MemberSignature }`), which transpile to clean per-file ESM. See `component-development.md`.
 
 ## Components
 
@@ -96,7 +104,7 @@ Common patterns for the SSG-MD branch:
 
 ## Troubleshooting
 
-- **Component never renders markdown** — confirm it is imported from `rspress-plugin-api-extractor/runtime` (source) and that the `import.meta.env.SSG_MD` branch exists; check the generated `dist/*.md`.
+- **Component never renders markdown** — confirm it is imported from `rspress-plugin-api-extractor/runtime` (the bundleless `.js`, compiled by RSPress) and that the `import.meta.env.SSG_MD` branch exists; check the generated `dist/*.md`.
 - **CSS classes undefined** — use a default import (`import styles from "./index.module.css"`), not a namespace import.
 - **Styles missing on nested elements** — wrap nested selectors in `:global()`.
 - **TS cannot find `*.module.css`** — declare the module in `types/env.d.ts`.
@@ -104,6 +112,6 @@ Common patterns for the SSG-MD branch:
 ## Related documentation
 
 - **Component Development:** `component-development.md` — component conventions, styling and accessibility
-- **Build Architecture:** `build-architecture.md` — dual-bundle build and runtime export
+- **Build Architecture:** `build-architecture.md` — compiled plugin, bundleless runtime and the `./runtime` export
 - **Page Generation System:** `page-generation-system.md` — components used in generated pages
 - **LLMs Integration:** `llms-integration.md` — SSG-MD file generation and the `globalUIComponents` path

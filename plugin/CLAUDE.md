@@ -4,38 +4,25 @@ The publishable `rspress-plugin-api-extractor` package.
 
 ## Architecture
 
-Uses a **custom rslib config** (`@rslib/core` `defineConfig()` directly, NOT
-`@savvy-web/rslib-builder`). Two bundles:
+Built via `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder` (`rslib.config.ts`). The plugin's rslib config is minimal — `dtsBundledPackages`, `apiModel.suppressWarnings`, and a package-name `transform` only (NO `runtime: false`, NO `copyPatterns`, NO `exports`/`files` mutation). The runtime fix lives in `RSPressPluginBuilder`, not here.
 
-| Bundle | Entry | Target | Output |
-| ------ | ----- | ------ | ------ |
-| Runtime | `src/runtime/index.tsx` | web (React) | `dist/runtime/` |
-| Plugin | `src/index.ts` | Node.js | `dist/` |
+| Artifact | Entry | Target | Output |
+| -------- | ----- | ------ | ------ |
+| Plugin | `src/index.ts` | Node.js | `dist/<mode>/` (`index.js`) |
+| Runtime | `src/runtime/` | bundleless per-file JS | `dist/<mode>/runtime/` (compiled by rslib's bundleless transpile; RSPress does the final per-site compile) |
 
-The runtime bundle uses `@rsbuild/plugin-react`, BannerPlugin for CSS
-injection, and CSS modules. The plugin bundle is a single Node.js file with
-external dependencies.
+The React runtime ships **bundleless** (per-file compiled JS), not as raw `.tsx` and not via plugin `copyPatterns`/`runtime: false`. `RSPressPluginBuilder` transpiles each component to its own `.js` under `runtime/`, mirroring `src/runtime/...`, with `react`/`@theme` external and `import.meta.env.SSG_MD` left unresolved for RSPress to fill in per build. It also emits a bundled `runtime/index.d.ts`. The published `./runtime` export is `{ types: "./runtime/index.d.ts", import: "./runtime/index.js" }`; `package.json` `files` is `["runtime"]`.
 
-### Runtime Source Components
+### Runtime ships bundleless
 
-Some runtime components (`ApiLlmsPackageActions`, `ApiLlmsViewOptions`) are
-registered via RSPress's `globalUIComponents` and `resolve.alias` at build
-time. These components are compiled by RSPress from source (not pre-compiled
-by rslib) because they use `import.meta.env.SSG_MD` and RSPress runtime
-hooks (`useSite`, `usePage`).
+Per-file compiled JS (not a single bundled chunk) is required because `import.meta.env.SSG_MD` is resolved only when RSPress compiles the component per site build; the bundleless output keeps the import-meta reference unresolved (external `react`/`@theme`, no inlining) so RSPress's compile produces the correct dual-mode (HTML vs markdown) rendering. `ApiLlmsPackageActions` (`globalUIComponents`) and `ApiLlmsViewOptions` (`resolve.alias`) register against these transpiled component files and use RSPress runtime hooks.
 
-The paths in `plugin.ts` use `../../src/runtime/` relative to `import.meta.url`
-which resolves to `dist/dev/index.js` in development. This is correct because
-`publishConfig.linkDirectory: true` means dev consumers see the `dist/dev/`
-directory as the package root. For published packages, `@savvy-web/rslib-builder`
-transforms the `package.json` and `files` array during the build, so the paths
-resolve correctly in the published structure too. Do not change these paths
-without understanding the build pipeline transformation.
+The component paths in `plugin.ts` are a **zero-level** resolve to the published `.js` — `path.resolve(pluginDir, "runtime/components/<Name>/index.js")`, e.g. `runtime/components/ApiLlmsViewOptions/index.js` — not `src/runtime/.../index.tsx`. It is layout-invariant because the runtime sits next to `index.js` in both the dev (`dist/dev`) and published (flat root) layouts. The old `../../src/runtime/` path only worked in the linked dev layout; in the published flat layout it overshot and broke `llms: true` builds for external consumers. Do not reintroduce the `../../` prefix.
 
 ### Effect Service Layer
 
 The plugin uses Effect-TS for all build orchestration. `plugin.ts` is a thin
-RSPress adapter (~252 lines) that wires an Effect `ManagedRuntime` with a
+RSPress adapter (~380 lines) that wires an Effect `ManagedRuntime` with a
 composed `Layer` stack:
 
 - `ConfigServiceLive` — resolves plugin options + RSPress config into build
@@ -71,9 +58,9 @@ which the global biome rule would rewrite to `.js`.
 ## Source Structure
 
 - `src/index.ts` — main plugin entry (re-exports plugin.ts)
-- `src/plugin.ts` — RSPress adapter (~252 lines), runtime management
+- `src/plugin.ts` — RSPress adapter (~380 lines), runtime management
 - `src/build-program.ts` — doc generation orchestration (5-stage pipeline)
-- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1120 lines)
+- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1220 lines)
 - `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection
 - `src/content-hash.ts` — SHA-256 hashing (pure, standalone)
 - `src/schemas/` — Effect Schema definitions (config, opengraph, performance)

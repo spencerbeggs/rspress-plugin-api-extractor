@@ -21,7 +21,7 @@ dependencies: []
 ## Table of Contents
 
 - [Overview](#overview)
-- [Dual-Bundle Architecture](#dual-bundle-architecture)
+- [Compiled Plugin and Bundleless Runtime](#compiled-plugin-and-bundleless-runtime)
 - [Effect Service Layer](#effect-service-layer)
 - [Shared Library Delegation](#shared-library-delegation)
 - [Plugin Lifecycle](#plugin-lifecycle)
@@ -31,48 +31,31 @@ dependencies: []
 
 ## Overview
 
-The rspress-plugin-api-extractor uses a **dual-build architecture** that
-separates Node.js plugin code from React runtime components, combined
-with an **Effect service layer** for doc generation orchestration.
+The rspress-plugin-api-extractor separates Node.js plugin code from React runtime components, combined with an **Effect service layer** for doc generation orchestration. The two halves ship differently: the plugin code is **compiled** to a single Node.js bundle, while the runtime components are emitted **bundleless** (per-file transpile) so RSPress does the final per-site compile.
 
 The plugin entry point (`plugin.ts`) is a thin RSPress adapter that wires
 Effect services and delegates all doc generation to `build-program.ts` and
 `build-stages.ts`.
 
-## Dual-Bundle Architecture
+## Compiled Plugin and Bundleless Runtime
 
-### 1. Plugin Bundle (Node.js)
+### Plugin code (compiled, Node.js)
 
-**Entry:** `src/index.ts` (re-exports `src/plugin.ts`)
-**Output:** `dist/index.js`
-**Environment:** Node.js (RSPress build process)
+**Entry:** `src/index.ts` (re-exports `src/plugin.ts`). **Output:** `dist/<mode>/index.js`. **Environment:** Node.js (RSPress build process).
 
-**Purpose:**
+The plugin half is bundled to a single Node.js file. It owns the RSPress lifecycle hooks (config, beforeBuild, afterBuild), Effect service layer initialization and runtime management, the doc generation pipeline and the remark plugins for code block processing.
 
-- RSPress plugin lifecycle hooks (config, beforeBuild, afterBuild)
-- Effect service layer initialization and runtime management
-- API documentation generation via build pipeline
-- Remark plugins for code block processing
+### Runtime components (bundleless, React/browser)
 
-### 2. Runtime Bundle (React/Browser)
+**Published export:** `./runtime` → `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }`. **Environment:** Browser (RSPress SSG and client-side).
 
-**Entry:** `src/runtime/index.tsx`
-**Output:** `dist/runtime/index.js` + `dist/runtime/index.css`
-**Environment:** Browser (RSPress SSG and client-side)
+The runtime is **not** compiled into a single `runtime/index.js` bundle, nor shipped as raw `.tsx`. `RSPressPluginBuilder` emits it **bundleless**: each component is transpiled 1:1 into its own `.js` under `dist/<mode>/runtime/`, mirroring the `src/runtime/...` tree, with `react`/`@theme` external and `import.meta.env` left as a runtime expression. **RSPress then compiles each referenced `.js` per site build.** This is required for `import.meta.env.SSG_MD` to resolve correctly (a single bundle froze it to `undefined`, breaking the SSG-MD dual-mode branch) and so the `globalUIComponents` / `resolve.alias` registrations in `plugin.ts` can point at real per-component `.js` files. A bundled `runtime/index.d.ts` (types only) is also emitted so the export's `types` condition resolves. See `ssg-compatible-components.md` for the bundleless mechanism and why component-path resolution is layout-invariant.
 
-**Purpose:**
+The runtime provides the React components that render API documentation: signature/example blocks, parameter and enum tables, the interactive wrap/copy buttons and the Twoslash hover tooltips and error display.
 
-- React components for rendering API documentation
-- Interactive features (wrap buttons, copy buttons, tooltips)
-- Twoslash hover tooltips and error display
+### Build tooling
 
-### Build Tooling
-
-**Bundler:** Rslib (Rsbuild-based library bundler), configured via
-`RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder`
-**Module System:** ESM with `"module": "esnext"` and
-`"moduleResolution": "bundler"`
-**CSS Processing:** CSS modules (no Sass) for runtime components
+**Bundler:** Rslib (Rsbuild-based library bundler), configured via `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder`. The builder auto-detects `src/runtime/index.tsx` and emits the runtime lib bundleless; the plugin's own `rslib.config.ts` does nothing runtime-specific. **Module system:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`. **CSS processing:** CSS modules (no Sass) for runtime components, compiled by RSPress alongside the transpiled JS.
 
 ## Effect Service Layer
 
@@ -291,24 +274,21 @@ Key config types defined via Effect Schema:
 
 ### Rslib Configuration
 
-`rslib.config.ts` delegates to `RSPressPluginBuilder.create()` from
-`@savvy-web/rslib-builder`, which generates the dual-bundle config:
+`rslib.config.ts` delegates to `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder` and is **minimal** — it passes only `dtsBundledPackages`, `apiModel.suppressWarnings` and a package-name `transform`. There is no `runtime: false`, no `copyPatterns` and no `exports`/`files` mutation; the runtime handling lives entirely in the builder:
 
 ```typescript
 // rslib.config.ts
 export default RSPressPluginBuilder.create({
   dtsBundledPackages: ["@rspress/core"],
   apiModel: { suppressWarnings: [ /* ae-forgotten-export rules */ ] },
-  transform({ pkg, target }) { /* rewrite package.json per registry */ },
+  transform({ pkg, target }) {
+    // rewrite package.json per registry (scoped name for GitHub Packages),
+    // strip dev-only fields
+  },
 });
 ```
 
-`RSPressPluginBuilder` produces up to two RSlib libs — the Node.js plugin
-bundle (always) and the React runtime bundle (auto-detected from
-`src/runtime/index.tsx`) — with the runtime's React, CSS-module and RSPress
-externals handling built in. The `transform` callback rewrites the published
-`package.json` (e.g. the scoped name for GitHub Packages) and strips
-dev-only fields.
+`RSPressPluginBuilder` auto-detects `src/runtime/index.tsx` and produces two RSlib libs: the Node.js plugin bundle and the **bundleless** runtime lib (`bundle: false`, `outBase: "./src/runtime"`, `react`/`@theme` external, identity `define` preserving `import.meta.env`). The builder rewrites the published `exports["./runtime"]` to `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }` and sets `files` to `["runtime"]`. The plugin's `transform` only adjusts the package name and strips dev fields. See `ssg-compatible-components.md` for the bundleless mechanism and `createRuntimeLib` in `@savvy-web/rslib-builder`'s `rspress-plugin-builder.ts` for the lib config.
 
 ### TypeScript Configuration
 
