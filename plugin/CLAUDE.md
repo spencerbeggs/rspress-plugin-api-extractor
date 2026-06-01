@@ -58,7 +58,8 @@ Stream.mapEffect(writeSingleFile) -> Stream.runFold`
 - `@effect/platform` + `@effect/platform-node` — cross-platform file I/O
 - `@effect/sql` + `@effect/sql-sqlite-node` — typed SQLite with migrations
 - `type-registry-effect` — npm package type definition loading
-- `@microsoft/api-extractor-model` — parses `.api.json` model files
+- `api-extractor-llms` — shared pure renderer: model loading, TSDoc extraction, type-signature formatting, prose cross-linking (the plugin delegates these to it)
+- `@microsoft/api-extractor-model` — `.api.json` model parsing (direct dep; model loading now flows through `api-extractor-llms`'s `loadApiModel`)
 - `@shikijs/twoslash` — syntax highlighting with type information
 
 ## Biome Override
@@ -85,6 +86,8 @@ which the global biome rule would rewrite to `.js`.
 - `src/runtime/` — React components for SSG-compatible rendering
 - `src/runtime/components/` — UI components (SignatureBlock, etc.)
 - `src/__fixtures__/` — test fixtures (API model JSON, declarations)
+
+`model-loader.ts`, `formatter.ts`, the `ApiParser` TSDoc statics in `loader.ts`, and `MarkdownCrossLinker.addCrossLinks` are thin adapters over `api-extractor-llms`. Page generators, call sites, and `ApiExtractedPackage.extractPlainText` (a distinct `.d.ts` algorithm preserving `{@link}` and code fences) stay plugin-local.
 
 ## Testing
 

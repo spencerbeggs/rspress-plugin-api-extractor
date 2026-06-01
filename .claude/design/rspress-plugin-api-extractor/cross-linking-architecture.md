@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: cross-linking
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 90
 related:
   - rspress-plugin-api-extractor/page-generation-system.md
@@ -119,7 +119,12 @@ into the `VfsRegistry` for scope-keyed retrieval by remark plugins.
 
 Transforms type references in plain markdown text into clickable links.
 Used by page generators to cross-link descriptions, parameter docs, and
-remarks.
+remarks. The class is a thin plugin-local shell: `addCrossLinks` delegates
+the actual link injection to the immutable `CrossLinker` from the shared
+`api-extractor-llms` library (see [addCrossLinks](#addcrosslinks)). The
+route-map management (`setRoutes`/`addRoutes`/`clear`/`sanitizeId`) and the
+test-only `addCrossLinksHtml` stay plugin-local because the library has no
+HTML link variant.
 
 ### Interface
 
@@ -146,14 +151,9 @@ Member routes use `sanitizeId()` for the anchor fragment. Only classes and inter
 
 ### addCrossLinks
 
-Replaces standalone type names in text with markdown links:
+Replaces standalone type names in text with markdown links. The plugin no longer hand-rolls the matching: it builds the library's immutable `CrossLinker` from the current route map and calls its `addLinks(text)`. Each route-map key becomes an `ApiItemRef` whose `name` is the key; `kind`/`slug` are placeholders because the resolver callback reads only `ref.name` and returns the precomputed route (member anchors and namespace-qualified names already baked in). The library owns the longest-first matching, word-boundary regex and backtick/existing-link skipping — the same conflict-avoidance behavior previously implemented in this class.
 
-1. Sort all registered names by length descending.
-2. For each name, build regex: `\b${name}\b(?![a-zA-Z])`.
-3. For each match, check:
-   - Not inside an existing markdown link (`](` or `[` prefix).
-   - Not inside a backtick code span (odd backtick count before offset).
-4. Replace with `[${name}](${route})`.
+If the route map is empty the method returns the input unchanged without constructing a `CrossLinker`.
 
 ### addCrossLinksHtml
 
@@ -381,7 +381,7 @@ const regex = new RegExp(`\\b${name}\\b(?![a-zA-Z])`, "g");
 
 ### Conflict Avoidance
 
-**MarkdownCrossLinker:**
+**MarkdownCrossLinker** (now performed by the library `CrossLinker` it delegates to):
 
 - Skips matches inside existing markdown links (checks for `](` or `[`
   prefix before the match offset).
@@ -408,8 +408,7 @@ false matches in multi-API builds.
 
 ## Backtick Code Span Safety
 
-Both `addCrossLinks()` and the `escapeMdxGenerics()` helper detect
-backtick code spans and skip processing inside them.
+Both the cross-linking path behind `addCrossLinks()` and the `escapeMdxGenerics()` helper detect backtick code spans and skip processing inside them. The backtick-safety logic for cross-linking now lives in the library `CrossLinker` that `addCrossLinks` delegates to; the algorithm below describes its behavior.
 
 ### Problem
 
@@ -424,7 +423,7 @@ Step 2: `[Pipeline](/api/classes/pipeline)`<I, O>`` processes data
 
 ### Solution
 
-**`addCrossLinks()`** counts backtick characters before the match
+The library cross-linker counts backtick characters before the match
 offset. If the count is odd, the match is inside a code span:
 
 ```typescript

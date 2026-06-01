@@ -2,7 +2,7 @@ import type { PathLike } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
 import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
-import { ApiModel as ApiModelClass } from "@microsoft/api-extractor-model";
+import { loadApiModel } from "api-extractor-llms";
 import { isLoadedModel, isVersionConfig } from "./config-utils.js";
 import type { LoadedModel, PackageJson } from "./internal-types.js";
 import type {
@@ -30,16 +30,15 @@ export class ApiModelLoader {
 	 * Load an API model from a path (string, URL, or Buffer)
 	 */
 	private static async loadFromPath(modelPath: PathLike): Promise<ApiPackage> {
-		const apiModel = new ApiModelClass();
-
-		// Resolve the path and ensure it exists
+		// The plugin owns its not-found error contract independently of the
+		// library: resolve + existence-check here so the message stays stable
+		// even if api-extractor-llms changes its internal wording, then
+		// delegate the actual model parse.
 		const resolvedPath = path.resolve(modelPath.toString());
 		if (!fs.existsSync(resolvedPath)) {
 			throw new Error(`API model file not found: ${resolvedPath}`);
 		}
-
-		// Load the package
-		return apiModel.loadPackage(resolvedPath);
+		return loadApiModel(resolvedPath);
 	}
 
 	/**
@@ -92,7 +91,7 @@ export class ApiModelLoader {
 				// Result is LoadedModel with model and optional source
 				const model = result.model;
 				if (model && typeof model === "object" && "packages" in model) {
-					const packages = (model as ApiModelClass).packages;
+					const packages = (model as ApiModel).packages;
 					if (packages.length === 0) {
 						throw new Error("API model returned by function contains no packages");
 					}
@@ -109,7 +108,7 @@ export class ApiModelLoader {
 
 			// Result is plain ApiModel
 			if (result && typeof result === "object" && "packages" in result) {
-				const packages = (result as ApiModelClass).packages;
+				const packages = (result as ApiModel).packages;
 				if (packages.length === 0) {
 					throw new Error("API model returned by function contains no packages");
 				}
