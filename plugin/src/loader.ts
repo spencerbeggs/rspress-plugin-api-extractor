@@ -1,6 +1,16 @@
 import type { ApiClass, ApiInterface, ApiItem, ApiNamespace, ApiPackage } from "@microsoft/api-extractor-model";
-import { ApiDocumentedItem, ApiItemKind, ApiReleaseTagMixin, ReleaseTag } from "@microsoft/api-extractor-model";
+import { ApiDocumentedItem, ApiItemKind } from "@microsoft/api-extractor-model";
 import type { DocNode } from "@microsoft/tsdoc";
+import {
+	extractPlainText as libExtractPlainText,
+	getDeprecation as libGetDeprecation,
+	getExamples as libGetExamples,
+	getParams as libGetParams,
+	getReleaseTag as libGetReleaseTag,
+	getReturns as libGetReturns,
+	getSummary as libGetSummary,
+	hasModifierTag as libHasModifierTag,
+} from "api-extractor-llms";
 import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
 import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
@@ -31,20 +41,7 @@ export class ApiParser {
 	 * Check if an API item has a custom modifier tag
 	 */
 	public static hasModifierTag(item: ApiItem, tagName: string): boolean {
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			if (tsdoc?.modifierTagSet) {
-				// biome-ignore lint/suspicious/noExplicitAny: TSDoc modifier tags require dynamic property access
-				const modifierTags = (tsdoc.modifierTagSet as any).nodes || [];
-				for (const tag of modifierTags) {
-					// biome-ignore lint/suspicious/noExplicitAny: TSDoc tag requires dynamic property access
-					if ((tag as any).tagName === `@${tagName}`) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
+		return libHasModifierTag(item, tagName);
 	}
 
 	/**
@@ -159,239 +156,55 @@ export class ApiParser {
 	}
 
 	/**
-	 * Recursively extract plain text from a TSDoc DocNode tree
+	 * Extract plain text from a TSDoc DocNode tree (prose form).
+	 *
+	 * Delegates to api-extractor-llms `extractPlainText`. Used internally for
+	 * `@see` reference text, where {@link} targets are flattened to display text.
 	 */
 	private static extractPlainText(node: DocNode): string {
-		const parts: string[] = [];
-
-		// Use any to access node-specific properties dynamically
-		// biome-ignore lint/suspicious/noExplicitAny: TSDoc node types require dynamic property access
-		const nodeAny = node as any;
-
-		// Handle different node types
-		if (node.kind === "PlainText") {
-			// DocPlainText has a text property
-			return nodeAny.text || "";
-		}
-
-		if (node.kind === "SoftBreak") {
-			return " ";
-		}
-
-		if (node.kind === "CodeSpan") {
-			// DocCodeSpan has a code property
-			return `\`${nodeAny.code || ""}\``;
-		}
-
-		if (node.kind === "LinkTag") {
-			// DocLinkTag - extract the link text or code destination
-			if (nodeAny.linkText) {
-				return ApiParser.extractPlainText(nodeAny.linkText);
-			}
-			if (nodeAny.codeDestination?.memberReferences?.[0]?.memberIdentifier) {
-				return nodeAny.codeDestination.memberReferences[0].memberIdentifier.identifier || "";
-			}
-			return "";
-		}
-
-		// For nodes with children, recursively extract text
-		if (node.getChildNodes && typeof node.getChildNodes === "function") {
-			const children = node.getChildNodes();
-			for (const child of children) {
-				const childText = ApiParser.extractPlainText(child);
-				if (childText) {
-					parts.push(childText);
-				}
-			}
-		}
-
-		return parts.join("");
+		return libExtractPlainText(node);
 	}
 
 	/**
 	 * Get the summary text from an API item's TSDoc comment
 	 */
 	public static getSummary(item: ApiItem): string {
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			if (tsdoc?.summarySection) {
-				// Extract plain text from the summary section's DocNode tree
-				const summary = ApiParser.extractPlainText(tsdoc.summarySection);
-				// Clean up any extra whitespace and newlines
-				return summary.replace(/\s+/g, " ").trim();
-			}
-		}
-		return "";
+		return libGetSummary(item);
 	}
 
 	/**
 	 * Get the release tag (public, beta, alpha, internal) from an API item
 	 */
 	public static getReleaseTag(item: ApiItem): string {
-		if (ApiReleaseTagMixin.isBaseClassOf(item)) {
-			const releaseTag = item.releaseTag;
-			switch (releaseTag) {
-				case ReleaseTag.Public:
-					return "Public";
-				case ReleaseTag.Beta:
-					return "Beta";
-				case ReleaseTag.Alpha:
-					return "Alpha";
-				case ReleaseTag.Internal:
-					return "Internal";
-				default:
-					return "Public";
-			}
-		}
-		return "Public";
+		return libGetReleaseTag(item);
 	}
 
 	/**
 	 * Get parameter documentation from an API item's TSDoc comment
 	 */
 	public static getParams(item: ApiItem): Array<{ name: string; type?: string; description: string }> {
-		const paramList: Array<{ name: string; type?: string; description: string }> = [];
-
-		// Extract parameter types from excerpt if available
-		const paramTypes = new Map<string, string>();
-		// biome-ignore lint/suspicious/noExplicitAny: API Extractor types require dynamic property access
-		const parameters = (item as any).parameters;
-		if (parameters && Array.isArray(parameters)) {
-			for (const param of parameters) {
-				// biome-ignore lint/suspicious/noExplicitAny: API Extractor types require dynamic property access
-				const paramExcerpt = (param as any).parameterTypeExcerpt;
-				if (paramExcerpt?.text) {
-					// biome-ignore lint/suspicious/noExplicitAny: API Extractor types require dynamic property access
-					const paramName = (param as any).name || "";
-					paramTypes.set(paramName, paramExcerpt.text.trim());
-				}
-			}
-		}
-
-		// Extract parameter descriptions from TSDoc
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			if (tsdoc?.params) {
-				// Iterate through param blocks
-				for (const paramBlock of tsdoc.params.blocks) {
-					// biome-ignore lint/suspicious/noExplicitAny: TSDoc param block requires dynamic property access
-					const paramAny = paramBlock as any;
-					const paramName = paramAny.parameterName || "";
-					const description = ApiParser.extractPlainText(paramAny.content);
-
-					const paramType = paramTypes.get(paramName);
-					paramList.push({
-						name: paramName,
-						...(paramType != null ? { type: paramType } : {}),
-						description: description.replace(/\s+/g, " ").trim(),
-					});
-				}
-
-				return paramList;
-			}
-		}
-
-		// If no TSDoc params but we have parameter types, return them with empty descriptions
-		if (paramTypes.size > 0) {
-			for (const [name, type] of paramTypes.entries()) {
-				paramList.push({
-					name,
-					type,
-					description: "",
-				});
-			}
-		}
-
-		return paramList;
+		return libGetParams(item);
 	}
 
 	/**
 	 * Get return value documentation from an API item's TSDoc comment
 	 */
 	public static getReturns(item: ApiItem): { description: string } | null {
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			if (tsdoc?.returnsBlock) {
-				// biome-ignore lint/suspicious/noExplicitAny: TSDoc returns block requires dynamic property access
-				const returnsAny = tsdoc.returnsBlock as any;
-				const description = ApiParser.extractPlainText(returnsAny.content);
-
-				return {
-					description: description.replace(/\s+/g, " ").trim(),
-				};
-			}
-		}
-		return null;
+		return libGetReturns(item);
 	}
 
 	/**
 	 * Get code examples from an API item's TSDoc comment
 	 */
 	public static getExamples(item: ApiItem): Array<{ language: string; code: string }> {
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			const examples: Array<{ language: string; code: string }> = [];
-
-			// Iterate through custom blocks looking for @example tags
-			// biome-ignore lint/suspicious/noExplicitAny: TSDoc custom blocks require dynamic property access
-			for (const customBlock of (tsdoc?.customBlocks as any) || []) {
-				// biome-ignore lint/suspicious/noExplicitAny: TSDoc block tag requires dynamic property access
-				const blockTag = (customBlock as any).blockTag;
-
-				// Check if this is an @example block
-				if (blockTag?.tagNameWithUpperCase === "@EXAMPLE") {
-					// The content is a DocSection with child nodes
-					// biome-ignore lint/suspicious/noExplicitAny: TSDoc content requires dynamic property access
-					const content = (customBlock as any).content;
-
-					// Look for DocFencedCode nodes
-					// biome-ignore lint/suspicious/noExplicitAny: TSDoc nodes require dynamic property access
-					for (const node of (content as any).nodes || []) {
-						if (node.kind === "FencedCode") {
-							// biome-ignore lint/suspicious/noExplicitAny: TSDoc fenced code requires dynamic property access
-							const fencedCode = node as any;
-							examples.push({
-								language: fencedCode.language || "typescript",
-								code: fencedCode.code || "",
-							});
-						}
-					}
-
-					// If no fenced code blocks found, extract plain text as fallback
-					if (examples.length === 0) {
-						const text = ApiParser.extractPlainText(content);
-						if (text.trim()) {
-							examples.push({
-								language: "typescript",
-								code: text.trim(),
-							});
-						}
-					}
-				}
-			}
-
-			return examples;
-		}
-		return [];
+		return libGetExamples(item);
 	}
 
 	/**
 	 * Get deprecation message from an API item's TSDoc comment
 	 */
 	public static getDeprecation(item: ApiItem): { message: string } | null {
-		if (item instanceof ApiDocumentedItem) {
-			const tsdoc = item.tsdocComment;
-			if (tsdoc?.deprecatedBlock) {
-				// biome-ignore lint/suspicious/noExplicitAny: TSDoc deprecated block requires dynamic property access
-				const deprecatedAny = tsdoc.deprecatedBlock as any;
-				const message = ApiParser.extractPlainText(deprecatedAny.content);
-
-				return {
-					message: message.replace(/\s+/g, " ").trim(),
-				};
-			}
-		}
-		return null;
+		return libGetDeprecation(item);
 	}
 
 	/**

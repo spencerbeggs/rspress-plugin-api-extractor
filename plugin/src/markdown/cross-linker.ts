@@ -1,3 +1,6 @@
+import type { ApiItemRef } from "api-extractor-llms";
+import { CrossLinker as LibCrossLinker } from "api-extractor-llms";
+
 /**
  * Minimal shape of an API item needed for cross-linking.
  * Structural subtype of ApiItem — only the properties actually accessed.
@@ -133,40 +136,33 @@ export class MarkdownCrossLinker {
 	 * Skips matches inside backtick code spans and existing markdown links.
 	 */
 	public addCrossLinks(text: string): string {
-		let result = text;
-
-		// Sort by length descending to match longer names first (e.g., "HookEvent" before "Hook")
-		const sortedNames = Array.from(this.apiItemRoutes.keys()).sort((a, b) => b.length - a.length);
-
-		for (const name of sortedNames) {
-			const route = this.apiItemRoutes.get(name);
-			if (!route) continue;
-
-			// Match the type name when it's a standalone word (not part of another word)
-			// Also match when followed by generic brackets, array brackets, or type operators
-			const regex = new RegExp(`\\b${name}\\b(?![a-zA-Z])`, "g");
-
-			result = result.replace(regex, (match, offset: number) => {
-				const beforeMatch = result.substring(0, offset);
-				// Don't linkify if it's already in a markdown link
-				if (beforeMatch.endsWith("](") || beforeMatch.endsWith("[")) {
-					return match;
-				}
-				// Don't linkify inside backtick code spans
-				const backtickCount = (beforeMatch.match(/`/g) || []).length;
-				if (backtickCount % 2 === 1) {
-					return match;
-				}
-				return `[${match}](${route})`;
-			});
+		if (this.apiItemRoutes.size === 0) {
+			return text;
 		}
-
-		return result;
+		// The library CrossLinker is immutable: build it from the current route
+		// map. routeFor returns the precomputed route (including member anchors
+		// and namespace-qualified names), so kind/slug are placeholders.
+		const refs: ApiItemRef[] = Array.from(this.apiItemRoutes.keys()).map((name) => ({
+			name,
+			kind: "type" as const,
+			slug: name.toLowerCase(),
+		}));
+		const linker = new LibCrossLinker(
+			refs,
+			(ref) =>
+				// Unreachable fallback: every ref.name came from apiItemRoutes.keys().
+				this.apiItemRoutes.get(ref.name) ?? "",
+		);
+		return linker.addLinks(text);
 	}
 
 	/**
 	 * Add cross-links to type references in code (HTML format)
 	 * Use this when the text will be rendered as HTML (e.g., in React components)
+	 *
+	 * Note: intentionally hand-rolled and test-only — the upstream library's
+	 * CrossLinker emits markdown links only, so the HTML path has no library
+	 * equivalent.
 	 */
 	public addCrossLinksHtml(text: string): string {
 		let result = text;

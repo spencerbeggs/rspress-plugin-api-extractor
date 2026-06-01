@@ -3,14 +3,15 @@ status: current
 module: rspress-plugin-api-extractor
 category: source-mapping
 created: 2026-05-26
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 85
 related:
   - rspress-plugin-api-extractor/multi-entry-point-support.md
   - rspress-plugin-api-extractor/multi-entry-resolution.md
   - rspress-plugin-api-extractor/type-loading-vfs.md
   - rspress-plugin-api-extractor/import-generation-system.md
+  - rspress-plugin-api-extractor/build-architecture.md
 dependencies: []
 ---
 
@@ -32,6 +33,8 @@ Factory methods:
 - `ApiExtractedPackage.fromPackage(apiPackage, packageName)` — build from an in-memory `ApiPackage`.
 
 `fromPackage` walks the package's entry points, derives each entry's file name (`index.d.ts` for the main entry, `<name>.d.ts` for named entries) and calls `generateDeclarations(entryPoint)` to populate the entries map passed to the `VirtualPackage` constructor.
+
+`ApiExtractedPackage` keeps its OWN private `extractPlainText` and does NOT delegate to the `api-extractor-llms` library helper of the same name. The two share a name but are different algorithms: this one PRESERVES `{@link X.Y}` TSDoc syntax and reconstructs fenced code blocks (needed for faithful `.d.ts`/JSDoc reconstruction), whereas the library helper flattens `{@link}` to display text and drops code fences (for prose TSDoc extraction). They are not interchangeable. The plugin's other shells that DO delegate to the library are summarized in `build-architecture.md`.
 
 ## VFS layout
 
@@ -73,3 +76,4 @@ Single-entry packages are detected automatically (`entries.size <= 1`) and use t
 - **Multi-Entry Resolution:** `multi-entry-resolution.md` — deduplication and route collisions
 - **Type Loading & VFS:** `type-loading-vfs.md` — external package type loading and VFS consumption
 - **Import Generation System:** `import-generation-system.md` — prepending external imports to entry declarations
+- **Build Architecture:** `build-architecture.md` — `api-extractor-llms` delegation boundaries (and why this doc's `extractPlainText` is not one of them)

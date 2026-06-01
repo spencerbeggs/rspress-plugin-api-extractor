@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -23,6 +23,7 @@ dependencies: []
 - [Overview](#overview)
 - [Dual-Bundle Architecture](#dual-bundle-architecture)
 - [Effect Service Layer](#effect-service-layer)
+- [Shared Library Delegation](#shared-library-delegation)
 - [Plugin Lifecycle](#plugin-lifecycle)
 - [Configuration System](#configuration-system)
 - [Build Tooling](#build-tooling)
@@ -167,6 +168,23 @@ package name, version, `.api.json` model and `tsconfig.json` from a
 
 The helper return types (`FolderInfo`, `BaseRoute`, `FromFolderOptions`,
 `FromModelsDirOptions`) are re-exported from `src/index.ts`.
+
+## Shared Library Delegation
+
+The plugin depends on the published **`api-extractor-llms`** package and delegates its pure, reusable logic to it, keeping plugin-specific shells as thin adapters. The delegation happens at four boundaries; the page generators are unaffected because they still consume `ApiParser.*` and `markdownCrossLinker` by the same names.
+
+| Plugin shell | Delegates to | Stays plugin-local |
+| --- | --- | --- |
+| `ApiModelLoader.loadFromPath` (`model-loader.ts`) | `loadApiModel(path)` | existence check + not-found error contract |
+| `TypeSignatureFormatter` (`formatter.ts`) | extends the library `TypeSignatureFormatter` (`format`/`stripExportDeclare`/`needsSpaceBefore` inherited) | positional constructor, test-only `addLinks`/`escapeRegExp` |
+| `ApiParser` TSDoc statics (`loader.ts`) | `lib*`-aliased helpers (`getSummary`, `getReleaseTag`, `getParams`, `getReturns`, `getExamples`, `getDeprecation`, `hasModifierTag`, prose `extractPlainText`) | non-TSDoc statics with no library equivalent: `categorizeApiItems`, `extractNamespaceMembers`, `getInheritance`, `getSeeReferences`, `getSourceLink` |
+| `MarkdownCrossLinker.addCrossLinks` (`markdown/cross-linker.ts`) | the library's immutable `CrossLinker` (see `cross-linking-architecture.md`) | class shape (`setRoutes`/`addRoutes`/`clear`/`sanitizeId`) and test-only `addCrossLinksHtml` (library has no HTML variant) |
+
+**Not delegated — looks similar, is not.** `ApiExtractedPackage` (`api-extracted-package.ts`) keeps its OWN private `extractPlainText`. Despite the shared name with the library helper, it is a different algorithm for declaration reconstruction: it PRESERVES `{@link X.Y}` TSDoc syntax and reconstructs fenced code blocks for `.d.ts`/JSDoc output, whereas the library's `extractPlainText` flattens `{@link}` to display text and drops code fences. The two are not interchangeable. `CrossLinkerService` (`Context.Tag`, no Live layer) is also unchanged.
+
+### Stage 2 output convergence (deferred)
+
+A "Stage 2" that would emit the MDX pages on top of the library's `renderItem` body was evaluated and **deferred**. The page generators emit MDX with JSX components (`<ApiSignature>`, `<ParametersTable>`, `<ApiMember>`, `<ApiExample>`) carrying dual `code`/`source` props for Shiki + Twoslash, so the library's plain-markdown body is not a clean substring of the generated output. Converging would require the library to expose a structured `bodyParts(item)` API. The full diff and decision are recorded at `docs/superpowers/notes/2026-06-01-renderitem-vs-pagegen-diff.md`.
 
 ## Plugin Lifecycle
 
