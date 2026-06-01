@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 90
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -312,9 +312,7 @@ llms.txt files.
 
 **Location:** `src/runtime/components/ApiLlmsPackageActions/index.tsx`
 
-Registered as a `globalUIComponent` in the `config()` hook. Renders
-package-scoped LLM actions injected into RSPress's existing UI via
-React portals.
+Registered as a `globalUIComponent` in the `config()` hook by absolute path to its **transpiled** file. Renders package-scoped LLM actions injected into RSPress's existing UI via React portals. The path is a zero-level `path.resolve(pluginDir, "runtime/components/ApiLlmsPackageActions/index.js")` — the per-component `.js` emitted by the bundleless runtime build, not the `src/runtime/.../index.tsx` source. It is layout-invariant because the runtime is emitted next to `index.js` in both the dev (`dist/dev`) and published (flat root) layouts. RSPress compiles the referenced `.js`, resolving `import.meta.env.SSG_MD` and the RSPress runtime hooks it uses (see `ssg-compatible-components.md`).
 
 **Behavior:**
 
@@ -355,6 +353,10 @@ RSPress internals.
 **Alias setup in config() hook:**
 
 ```typescript
+const customLlmsViewOptions = path.resolve(
+  pluginDir,
+  "runtime/components/ApiLlmsViewOptions/index.js",
+);
 const originalLlmsViewOptions = path.join(
   rspressCoreDir,
   "dist/theme/components/Llms/LlmsViewOptions.js",
@@ -364,9 +366,7 @@ updatedConfig.builderConfig.resolve.alias = {
 };
 ```
 
-The alias points the original RSPress component file to the plugin's
-source `.tsx` file, which RSPress's bundler compiles during the site
-build.
+The alias points the original RSPress component file to the plugin's **transpiled** `.js`, which RSPress's bundler compiles during the site build. `customLlmsViewOptions` is the same zero-level `path.resolve(pluginDir, "runtime/components/.../index.js")` as the `globalUIComponents` registration — layout-invariant because the bundleless runtime is emitted next to `index.js` in both the dev and published layouts. The earlier `../../src/runtime/...` form pointed into a nonexistent path in the published package, making this alias target unresolvable. RSPress 2.0 still ships `LlmsViewOptions.js`; the "export not found" failures under `llms: true` were a cascade from the broken alias target, not a RSPress API removal.
 
 **Page-level options** are derived from the `viewOptions` config
 (defaults: `markdownLink`, `chatgpt`, `claude`). Uses RSPress's

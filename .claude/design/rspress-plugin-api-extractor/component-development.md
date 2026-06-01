@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-01
+last-synced: 2026-06-01
 completeness: 85
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -28,7 +28,7 @@ dependencies:
 
 ## Overview
 
-This guide covers conventions for the React components in the runtime bundle (`src/runtime/`). Every component must be SSG-MD compatible (render markdown when `import.meta.env.SSG_MD` is set) — see `ssg-compatible-components.md` for the dual-mode pattern. This document focuses on organization, registration and styling.
+This guide covers conventions for the React components in the runtime tree (`src/runtime/`). Every component must be SSG-MD compatible (render markdown when `import.meta.env.SSG_MD` is set) — see `ssg-compatible-components.md` for the dual-mode pattern. This document focuses on organization, registration and styling.
 
 ## Component Organization
 
@@ -55,7 +55,7 @@ src/runtime/components/
 └── shared/                # variables.css, _twoslash.css, types.ts
 ```
 
-Colocating logic and styles keeps related files together and lets rslib bundle each component's CSS. See `src/runtime/components/` for the authoritative tree.
+Colocating logic and styles keeps related files together. The runtime is emitted **bundleless** — `RSPressPluginBuilder` transpiles each component to its own `.js` next to its CSS module under `runtime/`, and RSPress does the final per-site compile (resolving `import.meta.env.SSG_MD`); see `ssg-compatible-components.md`. See `src/runtime/components/` for the authoritative tree.
 
 ## Registration
 
@@ -66,7 +66,11 @@ import { MemberSignature, ParametersTable, SignatureBlock }
   from "rspress-plugin-api-extractor/runtime";
 ```
 
-`ApiLlmsPackageActions` and `ApiLlmsViewOptions` are the exception: they are registered through RSPress's `globalUIComponents` / `resolve.alias` (compiled from source by RSPress) rather than imported into MDX, because they use RSPress runtime hooks and would pull `react-dom` into the pre-imported runtime. See `llms-integration.md`.
+`ApiLlmsPackageActions` and `ApiLlmsViewOptions` are the exception: they are registered through RSPress's `globalUIComponents` / `resolve.alias` (pointed at their transpiled `runtime/components/.../index.js` files and compiled by RSPress) rather than imported into MDX, because they use RSPress runtime hooks and would pull `react-dom` into the pre-imported runtime. See `llms-integration.md`.
+
+### Avoid `import * as` of sibling runtime modules
+
+Because the runtime is emitted bundleless, a namespace import of a sibling runtime module (`import * as RuntimeComponents from "../<Block>/index.js"`) forces a webpack namespace-object plus a shared runtime chunk that lands outside `runtime/`, breaking the per-file layout. Use named imports of sibling components instead: `ApiSignature`, `ApiExample` and `ApiMember` import `{ SignatureBlock }` / `{ ExampleBlock }` / `{ MemberSignature }`, which transpile to clean per-file ESM.
 
 Props are declared as exported TypeScript interfaces with JSDoc so the API is type-checked and self-documenting.
 
@@ -126,6 +130,6 @@ A default import is required to match RSPress's `namedExport: false` CSS-module 
 
 ## Related Documentation
 
-- **Build Architecture:** `build-architecture.md` — dual-bundle build and runtime export
+- **Build Architecture:** `build-architecture.md` — compiled plugin, bundleless runtime and the `./runtime` export
 - **SSG-Compatible Components:** `ssg-compatible-components.md` — dual-mode (markdown vs HTML) rendering
 - **LLMs Integration:** `llms-integration.md` — the `globalUIComponents` registration path

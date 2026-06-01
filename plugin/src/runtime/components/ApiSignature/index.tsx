@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
-import * as RuntimeComponents from "../SignatureBlock/index.js";
+import { SignatureBlock } from "../SignatureBlock/index.js";
 
 export interface ApiSignatureProps {
 	/** Display code (clean, no Twoslash directives) */
@@ -58,7 +58,6 @@ export function ApiSignature({
 	// Browser mode: Use SignatureBlock with pre-rendered Shiki HAST
 	// The heading is output by the page generator as markdown (## Signature)
 	if (parsedHast) {
-		const { SignatureBlock } = RuntimeComponents;
 		return createElement(SignatureBlock, { hast: parsedHast, hasParameters: hasTableBelow });
 	}
 

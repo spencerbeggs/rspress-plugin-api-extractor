@@ -264,10 +264,12 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 					updatedConfig.builderConfig.resolve = {};
 				}
 				const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-				const customLlmsViewOptions = path.resolve(
-					pluginDir,
-					"../../src/runtime/components/ApiLlmsViewOptions/index.tsx",
-				);
+				// The runtime is emitted bundleless next to `index.js` (mirroring the
+				// `src/runtime` tree), so each component has its own published `.js`
+				// file. This zero-level resolve is layout-invariant across the dev
+				// (`dist/dev`) and published (flat root) layouts. RSPress compiles the
+				// referenced file, resolving `import.meta.env.SSG_MD` per build.
+				const customLlmsViewOptions = path.resolve(pluginDir, "runtime/components/ApiLlmsViewOptions/index.js");
 				// Use createRequire to resolve from the bundled plugin's location,
 				// which has @rspress/core in its node_modules tree
 				const pluginRequire = createRequire(import.meta.url);
@@ -348,16 +350,17 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				(updatedConfig.themeConfig as Record<string, unknown>).apiExtractorScopes = scopes;
 
 				// Register the scope-aware LLM actions component as a global UI component.
-				// Resolve the absolute path from this file's location. In the bundled
-				// plugin (dist/index.js), import.meta.url points to the dist file, so
-				// ../src/runtime/ navigates to the source runtime directory.
+				// The runtime is emitted bundleless next to `index.js`, so this
+				// zero-level resolve to the component's published `.js` is layout-
+				// invariant across the dev and published package shapes. RSPress
+				// compiles it, resolving `import.meta.env.SSG_MD` per build.
 				if (!updatedConfig.globalUIComponents) {
 					updatedConfig.globalUIComponents = [];
 				}
 				const llmsComponentPluginDir = path.dirname(fileURLToPath(import.meta.url));
 				const llmsComponentPath = path.resolve(
 					llmsComponentPluginDir,
-					"../../src/runtime/components/ApiLlmsPackageActions/index.tsx",
+					"runtime/components/ApiLlmsPackageActions/index.js",
 				);
 				updatedConfig.globalUIComponents.push(llmsComponentPath);
 			}

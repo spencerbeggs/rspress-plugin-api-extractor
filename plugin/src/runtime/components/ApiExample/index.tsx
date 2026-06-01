@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
-import * as RuntimeComponents from "../ExampleBlock/index.js";
+import { ExampleBlock } from "../ExampleBlock/index.js";
 
 export interface ApiExampleProps {
 	/** Example code (no Twoslash directives) */
@@ -42,7 +42,6 @@ export function ApiExample({ code, hast }: ApiExampleProps): ReactElement {
 
 	// Browser mode: Use ExampleBlock with pre-rendered Shiki HAST
 	if (parsedHast) {
-		const { ExampleBlock } = RuntimeComponents;
 		return createElement(ExampleBlock, { hast: parsedHast, code: code.trim() });
 	}
 

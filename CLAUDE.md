@@ -32,11 +32,12 @@ pnpm dev                  # Start basic site dev server
 
 ### plugin/
 
-The publishable package. Uses a **custom rslib config with `@rslib/core`
-directly** (NOT `@savvy-web/rslib-builder`). Exports two entry points:
+The publishable package. Builds via `RSPressPluginBuilder.create()` from
+`@savvy-web/rslib-builder` (the runtime is emitted bundleless per-file under
+`dist/<mode>/runtime/`; see `plugin/CLAUDE.md`). Exports two entry points:
 
-- `.` — Main plugin (`dist/index.js`)
-- `./runtime` — React components for SSG-compatible rendering (`dist/runtime/index.js`)
+- `.` — Main plugin (`dist/<mode>/index.js`)
+- `./runtime` — React components for SSG-compatible rendering, bundleless per-file under `dist/<mode>/runtime/`
 
 ### modules/
 
