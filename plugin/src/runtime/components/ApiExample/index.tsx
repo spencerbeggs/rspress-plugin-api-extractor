@@ -31,13 +31,6 @@ export function ApiExample({ code, hast }: ApiExampleProps): ReactElement {
 		const header = "```typescript\n";
 		const footer = "\n```\n";
 		return <>{`${header}${code.trim()}${footer}`}</>;
-		// return (
-		// 	<pre>
-		// 		<code className="language-typescript" lang="typescript">
-		// 			{code.trim()}
-		// 		</code>
-		// 	</pre>
-		// );
 	}
 
 	// Browser mode: Use ExampleBlock with pre-rendered Shiki HAST
