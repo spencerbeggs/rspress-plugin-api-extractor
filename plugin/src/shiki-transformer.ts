@@ -234,10 +234,10 @@ export class ShikiCrossLinker {
 		// The root contains a <pre> element, which contains a <code> element, which contains the line spans
 		// Find the <code> element
 		const preElement = node.children.find((child) => child.type === "element" && child.tagName === "pre");
-		if (!preElement || preElement.type !== "element") return node;
+		if (preElement?.type !== "element") return node;
 
 		const codeElement = preElement.children.find((child) => child.type === "element" && child.tagName === "code");
-		if (!codeElement || codeElement.type !== "element") return node;
+		if (codeElement?.type !== "element") return node;
 
 		// Find all line elements
 		for (const lineElement of codeElement.children) {
@@ -263,7 +263,7 @@ export class ShikiCrossLinker {
 				if (members) {
 					for (const spanElement of lineElement.children) {
 						if (spanElement.type !== "element" || spanElement.tagName !== "span") continue;
-						if (!spanElement.children || spanElement.children.length !== 1) continue;
+						if (spanElement.children?.length !== 1) continue;
 
 						const textNode = spanElement.children[0];
 						if (textNode.type !== "text") continue;
@@ -465,10 +465,10 @@ export class ShikiCrossLinker {
 		// The root contains a <pre> element, which contains a <code> element, which contains the line spans
 		// Find the <code> element
 		const preElement = node.children.find((child) => child.type === "element" && child.tagName === "pre");
-		if (!preElement || preElement.type !== "element") return node;
+		if (preElement?.type !== "element") return node;
 
 		const codeElement = preElement.children.find((child) => child.type === "element" && child.tagName === "code");
-		if (!codeElement || codeElement.type !== "element") return node;
+		if (codeElement?.type !== "element") return node;
 
 		// Find all line elements
 		for (const lineElement of codeElement.children) {
@@ -494,7 +494,7 @@ export class ShikiCrossLinker {
 				if (members) {
 					for (const spanElement of lineElement.children) {
 						if (spanElement.type !== "element" || spanElement.tagName !== "span") continue;
-						if (!spanElement.children || spanElement.children.length !== 1) continue;
+						if (spanElement.children?.length !== 1) continue;
 
 						const textNode = spanElement.children[0];
 						if (textNode.type !== "text") continue;
@@ -713,7 +713,7 @@ export class ShikiCrossLinker {
 
 			// Look at the next sibling span
 			const nextChild = node.children[i + 1];
-			if (!nextChild || nextChild.type !== "element" || nextChild.tagName !== "span") {
+			if (nextChild?.type !== "element" || nextChild.tagName !== "span") {
 				continue;
 			}
 
@@ -882,7 +882,7 @@ export class ShikiCrossLinker {
 
 		// Handle regular text nodes (non-Twoslash)
 		const textChild = node.children[0];
-		if (!textChild || textChild.type !== "text") {
+		if (textChild?.type !== "text") {
 			return;
 		}
 
@@ -1010,13 +1010,13 @@ export class ShikiCrossLinker {
 		const popupContainer = element.children.find(
 			(c) => c.type === "element" && (c as Element).properties?.class?.toString().includes("twoslash-popup-container"),
 		);
-		if (!popupContainer || popupContainer.type !== "element") return null;
+		if (popupContainer?.type !== "element") return null;
 
 		// Find the code element inside
 		const codeElement = (popupContainer as Element).children.find(
 			(c) => c.type === "element" && (c as Element).tagName === "code",
 		);
-		if (!codeElement || codeElement.type !== "element") return null;
+		if (codeElement?.type !== "element") return null;
 
 		// Extract text content from the tooltip
 		const getText = (node: ElementContent): string => {

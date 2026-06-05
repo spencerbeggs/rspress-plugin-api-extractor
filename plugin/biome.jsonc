@@ -1,6 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas15/schema.json",
-	"extends": ["@savvy-web/lint-staged/biome/silk.jsonc"],
+	"extends": ["@savvy-web/silk/biome"],
 	"root": false,
 	"overrides": [
 		{
