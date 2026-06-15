@@ -7,7 +7,7 @@ import { DataSource } from "../lib/data-source.js";
  *
  * @example
  * ```typescript
- * import { MockSource } from "kitchensink/testing";
+ * import { MockSource } from "@modules/kitchensink/testing";
  *
  * const source = new MockSource("users", [
  * 	{ id: 1, name: "Alice" },

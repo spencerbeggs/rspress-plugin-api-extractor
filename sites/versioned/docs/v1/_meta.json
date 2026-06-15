@@ -1,0 +1,10 @@
+[
+	{ "type": "file", "name": "index", "label": "Docs v1" },
+	{
+		"type": "dir",
+		"name": "api",
+		"label": "API Reference",
+		"collapsible": true,
+		"collapsed": true
+	}
+]

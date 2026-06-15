@@ -21,20 +21,19 @@
 		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
-		"build": "turbo run build:dev build:prod",
-		"build:dev": "rslib build --config-loader native --env-mode dev",
-		"build:prod": "rslib build --config-loader native --env-mode npm",
+		"build:dev": "node savvy.build.ts --target dev",
+		"build:meta": "node savvy.build.ts --target meta",
+		"build:prod": "node savvy.build.ts --target prod",
 		"types:check": "tsgo --noEmit"
 	},
 	"devDependencies": {
-		"@rslib/core": "^0.22.0",
-		"@savvy-web/rslib-builder": "^0.21.3",
+		"@savvy-web/bundler": "^0.5.0",
 		"@types/node": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk",
 		"typescript": "catalog:silk"
 	},
 	"publishConfig": {
-		"directory": "dist/dev",
+		"directory": "dist/dev/pkg",
 		"linkDirectory": true
 	}
 }

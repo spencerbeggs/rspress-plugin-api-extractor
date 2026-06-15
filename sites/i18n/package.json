@@ -13,13 +13,11 @@
 		"@modules/kitchensink": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.13",
-		"@savvy-web/rslib-builder": "^0.21.3",
+		"@rspress/core": "^2.0.14",
 		"@types/node": "catalog:silk",
 		"@types/react": "catalog:silk",
 		"@types/react-dom": "catalog:silk",
 		"@typescript/native-preview": "catalog:silk",
-		"open": "^11.0.0",
 		"react": "catalog:silk",
 		"react-dom": "catalog:silk",
 		"rspress-plugin-api-extractor": "workspace:*"

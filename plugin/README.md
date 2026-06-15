@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/rspress-plugin-api-extractor?label=npm&color=cb3837)](https://www.npmjs.com/package/rspress-plugin-api-extractor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-4caf50.svg)](https://opensource.org/licenses/MIT)
-[![Node.js %3E%3D24.1.0](https://img.shields.io/badge/Node.js-%3E%3D24.1.0-5fa04e.svg)](https://nodejs.org/)
+[![Node.js %3E%3D24.11.0](https://img.shields.io/badge/Node.js-%3E%3D24.11.0-5fa04e.svg)](https://nodejs.org/)
 [![TypeScript 6.0](https://img.shields.io/badge/TypeScript-6.0-3178c6.svg)](https://www.typescriptlang.org/)
 
 An [RSPress](https://rspress.dev/) 2.0 plugin that generates interactive API documentation from [Microsoft API Extractor](https://api-extractor.com/) models. Point it at your `.api.json` files and you get a documentation site: syntax-highlighted signatures, Twoslash hover tooltips, type references that cross-link between pages and copy-paste code examples.
@@ -57,7 +57,7 @@ The plugin reads your `.api.json` model and writes one MDX page per public API i
 
 - [Getting started](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/01-getting-started.md) — Install, minimal config, first build.
 - [Configuration](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/02-configuration.md) — Full plugin-options reference.
-- [Config helpers](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/03-config-helpers.md) — `fromFolder` and `fromModelsDir` for discovering config from package folders.
+- [Config helpers](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/03-config-helpers.md) — `api.fromDir` and `apis.fromDir` for discovering config from package folders.
 - [Single package](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/04-single-package.md) — The single-API recipe.
 - [Multi-package](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/05-multi-package.md) — The multi-API portal recipe.
 - [Versioned](https://github.com/spencerbeggs/rspress-plugin-api-extractor/blob/main/docs/06-versioned.md) — Documenting major versions side by side.

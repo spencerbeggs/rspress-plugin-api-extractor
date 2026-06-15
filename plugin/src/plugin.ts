@@ -8,7 +8,7 @@ import type { RspressPlugin, UserConfig } from "@rspress/core";
 import { Effect, Layer, ManagedRuntime, Schema } from "effect";
 import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
-import { fromFolder, fromModelsDir } from "./config-helpers.js";
+import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
@@ -372,8 +372,11 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 /**
  * RSPress plugin for generating API documentation from API Extractor model
- * files. Config helpers are available under `ApiExtractorPlugin.api`.
+ * files. Config helpers are available under `ApiExtractorPlugin.api` (single
+ * package → one config for the `api:` option) and `ApiExtractorPlugin.apis`
+ * (parent directory → array for the `apis:` option).
  */
 export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
-	api: { fromFolder, fromModelsDir },
+	api: { fromDir },
+	apis: { fromDir: fromParentDir },
 });

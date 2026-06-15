@@ -15,12 +15,14 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./runtime": "./src/runtime/index.tsx"
+		"./runtime": "./src/runtime/index.tsx",
+		"./tsconfig/rspress.json": "./public/tsconfig/rspress.json"
 	},
-	"files": ["runtime"],
 	"scripts": {
-		"build:dev": "rslib build --config-loader native --env-mode dev",
-		"build:prod": "rslib build --config-loader native --env-mode npm",
+		"build:dev": "node savvy.build.ts --target dev",
+		"build:meta": "node savvy.build.ts --target meta",
+		"build:prod": "node savvy.build.ts --target prod",
+		"prepare": "node savvy.build.ts --target dev",
 		"types:check": "tsgo --noEmit"
 	},
 	"dependencies": {
@@ -38,6 +40,7 @@
 		"image-size": "^2.0.2",
 		"mdast-util-from-markdown": "^2.0.3",
 		"mdast-util-to-hast": "^13.2.1",
+		"open": "^11.0.0",
 		"prettier": "^3.8.3",
 		"react-markdown": "^10.1.0",
 		"semver-effect": "^0.2.1",
@@ -47,9 +50,9 @@
 	},
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
-		"@rslib/core": "^0.22.0",
-		"@rspress/core": "^2.0.13",
-		"@savvy-web/rslib-builder": "^0.21.3",
+		"@rspress/core": "^2.0.14",
+		"@savvy-web/rspress-builder": "^0.1.0",
+		"@tsdown/css": "^0.22.2",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "catalog:silk",
@@ -60,7 +63,6 @@
 		"mdast-util-mdx-jsx": "^3.2.0",
 		"react": "catalog:silk",
 		"react-dom": "catalog:silk",
-		"sass": "^1.100.0",
 		"unified": "^11.0.5",
 		"unist-util-visit": "^5.1.0"
 	},
@@ -70,27 +72,15 @@
 		"react-dom": "catalog:silkPeers"
 	},
 	"engines": {
-		"node": ">=24.1.0"
+		"node": ">=24.11.0"
 	},
 	"publishConfig": {
 		"access": "public",
-		"directory": "dist/dev",
+		"directory": "dist/dev/pkg",
 		"linkDirectory": true,
-		"targets": [
-			{
-				"protocol": "npm",
-				"registry": "https://npm.pkg.github.com/",
-				"directory": "dist/github",
-				"access": "public",
-				"provenance": true
-			},
-			{
-				"protocol": "npm",
-				"registry": "https://registry.npmjs.org/",
-				"directory": "dist/npm",
-				"access": "public",
-				"provenance": true
-			}
-		]
+		"targets": {
+			"npm": true,
+			"github": "@spencerbeggs/rspress-plugin-api-extractor"
+		}
 	}
 }

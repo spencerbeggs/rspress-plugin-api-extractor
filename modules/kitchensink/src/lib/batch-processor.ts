@@ -31,7 +31,7 @@ import { Pipeline } from "./pipeline.js";
  *
  * @example
  * ```typescript
- * import { BatchProcessor, Pipeline, JsonSource } from "kitchensink";
+ * import { BatchProcessor, Pipeline, JsonSource } from "@modules/kitchensink";
  *
  * const pipeline = Pipeline.create(
  * 	new JsonSource("./data/records.json"),
@@ -98,7 +98,7 @@ export class BatchProcessor<T> {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { BatchProcessor, Pipeline, JsonSource } from "kitchensink";
+	 * import { BatchProcessor, Pipeline, JsonSource } from "@modules/kitchensink";
 	 *
 	 * const pipeline = Pipeline.create(
 	 * 	new JsonSource("./data/numbers.json"),

@@ -13,7 +13,7 @@ Use the `Pipeline.create` static factory to construct a pipeline from a
 from the arguments.
 
 ```typescript with-api
-import { Pipeline, JsonSource } from "kitchensink";
+import { Pipeline, JsonSource } from "@modules/kitchensink";
 
 const source = new JsonSource("./data/records.json");
 //    ^?
@@ -30,7 +30,7 @@ After executing the pipeline, the `status` getter reflects the current
 lifecycle state. Hover over `PipelineStatus` to navigate to the enum docs.
 
 ```typescript with-api
-import { Pipeline, JsonSource, PipelineStatus } from "kitchensink";
+import { Pipeline, JsonSource, PipelineStatus } from "@modules/kitchensink";
 
 const pipeline = Pipeline.create(
  new JsonSource("./data/records.json"),
@@ -50,8 +50,8 @@ count, and timeout. The `batchSize` getter/setter lets you adjust it after
 construction.
 
 ```typescript with-api
-import { Pipeline, JsonSource } from "kitchensink";
-import type { PipelineOptions } from "kitchensink";
+import { Pipeline, JsonSource } from "@modules/kitchensink";
+import type { PipelineOptions } from "@modules/kitchensink";
 
 const opts: PipelineOptions = { batchSize: 50, retryCount: 2, timeout: 5000 };
 //    ^?

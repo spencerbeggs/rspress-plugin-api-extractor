@@ -1,6 +1,6 @@
 # Multi-package
 
-A multi-API portal documents several packages from one RSPress site. Use the `apis` array in place of `api`. Each entry has the same shape as a single-API config, and you give each one a distinct `baseRoute` so the packages do not collide.
+A multi-API portal documents several packages from one RSPress site. Use the `apis` array in place of `api`. Each entry has the same shape as a single-API config. Each package is namespaced by its own name by default — with no `baseRoute`, an entry mounts at `/{packageName}/api` — so the packages do not collide out of the box. Set `baseRoute` on an entry only when you want to override that default.
 
 ## Explicit portal
 
@@ -41,7 +41,7 @@ export default defineConfig({
 });
 ```
 
-This mirrors the `multi` example site. The first package has no `baseRoute`, so its pages sit at the root; the second is prefixed with `/versioned`. Give every package after the first its own `baseRoute`, or set `baseRoute` on all of them, so their category folders never overlap.
+This mirrors the `multi` example site. The first package has no `baseRoute`, so its pages mount at its own namespace, `/kitchensink/api`; the second overrides the default with `/versioned`. You only need to set `baseRoute` when you want a route other than the per-package default.
 
 ## Required fields differ from single-API mode
 
@@ -49,7 +49,7 @@ In `apis` mode, `model` is required on every entry. There is no `versions` field
 
 ## Portal from a directory of models
 
-When your packages sit in a predictable folder layout, the [config helpers](./03-config-helpers.md) build the `apis` array for you. `fromModelsDir` scans a parent directory and returns one config per subfolder:
+When your packages sit in a predictable folder layout, the [config helpers](./03-config-helpers.md) build the `apis` array for you. `apis.fromDir` scans a parent directory and returns one config per subfolder:
 
 ```ts
 import { dirname } from "node:path";
@@ -64,7 +64,7 @@ export default defineConfig({
   plugins: [
     ApiExtractorPlugin({
       apis: [
-        ...ApiExtractorPlugin.api.fromModelsDir("lib/models", {
+        ...ApiExtractorPlugin.apis.fromDir("lib/models", {
           cwd: __dirname,
           theme: { light: "github-light-default", dark: "github-dark-default" },
         }),
@@ -74,7 +74,7 @@ export default defineConfig({
 });
 ```
 
-Each subfolder becomes one package, with its `baseRoute` defaulting to the folder name. The shared options — here, `theme` — apply to every package. To include only some folders, call `fromFolder` per package instead of scanning the whole directory.
+Each subfolder becomes one package, with its `baseRoute` defaulting to `/{packageName}/api` unless you override it. The shared options — here, `theme` — apply to every package. To include only some folders, call `api.fromDir` per package instead of scanning the whole directory.
 
 ## Per-package LLMs files
 
@@ -82,6 +82,6 @@ With LLMs enabled, a multi-package portal writes scoped `llms*.txt` files under 
 
 ## Next steps
 
-- [Config helpers](./03-config-helpers.md) — `fromFolder` and `fromModelsDir` in depth.
+- [Config helpers](./03-config-helpers.md) — `api.fromDir` and `apis.fromDir` in depth.
 - [Multi-entry points](./08-multi-entry-points.md) — when a single package exposes more than one entry point.
 - [Troubleshooting](./11-troubleshooting.md) — what a route collision looks like and how to fix it.

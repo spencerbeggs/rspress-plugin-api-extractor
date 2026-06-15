@@ -28,7 +28,7 @@ export namespace Filters {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { Filters } from "kitchensink";
+	 * import { Filters } from "@modules/kitchensink";
 	 *
 	 * const onlyEven = Filters.where<number>((n) => n % 2 === 0);
 	 * console.log(onlyEven([1, 2, 3, 4, 5])); // [2, 4]

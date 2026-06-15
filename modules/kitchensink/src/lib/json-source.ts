@@ -17,7 +17,7 @@ import type { DataSourceError } from "./errors.js";
  *
  * @example
  * ```typescript
- * import { JsonSource } from "kitchensink";
+ * import { JsonSource } from "@modules/kitchensink";
  *
  * const source = new JsonSource("./data/records.json");
  * await source.connect();

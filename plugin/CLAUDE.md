@@ -4,14 +4,15 @@ The publishable `rspress-plugin-api-extractor` package.
 
 ## Architecture
 
-Built via `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder` (`rslib.config.ts`). The plugin's rslib config is minimal — `dtsBundledPackages`, `apiModel.suppressWarnings`, and a package-name `transform` only (NO `runtime: false`, NO `copyPatterns`, NO `exports`/`files` mutation). The runtime fix lives in `RSPressPluginBuilder`, not here.
+Built via `definePlugin()` from `@savvy-web/rspress-builder` (`plugin/savvy.build.ts`, a self-executing module that calls `runBuild`). The config passes `runtime: true`, `dtsBundledPackages`, `apiModel.tsdoc.suppressWarnings`, and a `transform` that rewrites the scoped package name per registry and strips dev-only fields. The runtime emission lives in `@savvy-web/rspress-builder`, not here. Published via `publishConfig.directory` (`dist/dev/pkg`) — there is no `files` field.
 
 | Artifact | Entry | Target | Output |
 | -------- | ----- | ------ | ------ |
-| Plugin | `src/index.ts` | Node.js | `dist/<mode>/` (`index.js`) |
-| Runtime | `src/runtime/` | bundleless per-file JS | `dist/<mode>/runtime/` (compiled by rslib's bundleless transpile; RSPress does the final per-site compile) |
+| Plugin | `src/index.ts` | Node.js | per-file `.js` under `dist/<mode>/pkg/` (`index.js`, `serve.js`, etc.) |
+| Runtime | `src/runtime/` | bundleless per-file JS | `dist/<mode>/pkg/runtime/` (RSPress does the final per-site compile) |
+| API model | — | `.api.json` | `dist/<mode>/meta/` |
 
-The React runtime ships **bundleless** (per-file compiled JS), not as raw `.tsx` and not via plugin `copyPatterns`/`runtime: false`. `RSPressPluginBuilder` transpiles each component to its own `.js` under `runtime/`, mirroring `src/runtime/...`, with `react`/`@theme` external and `import.meta.env.SSG_MD` left unresolved for RSPress to fill in per build. It also emits a bundled `runtime/index.d.ts`. The published `./runtime` export is `{ types: "./runtime/index.d.ts", import: "./runtime/index.js" }`; `package.json` `files` is `["runtime"]`.
+The React runtime ships **bundleless** (per-file compiled JS), not as raw `.tsx`. The builder transpiles each component to its own `.js` under `runtime/`, mirroring `src/runtime/...`, with `react`/`@theme` external and `import.meta.env.SSG_MD` left unresolved for RSPress to fill in per build. It also emits a bundled `runtime/index.d.ts`. The published `./runtime` export is `{ types: "./runtime/index.d.ts", import: "./runtime/index.js" }`.
 
 ### Runtime ships bundleless
 
@@ -48,6 +49,7 @@ Stream.mapEffect(writeSingleFile) -> Stream.runFold`
 - `api-extractor-llms` — shared pure renderer: model loading, TSDoc extraction, type-signature formatting, prose cross-linking (the plugin delegates these to it)
 - `@microsoft/api-extractor-model` — `.api.json` model parsing (direct dep; model loading now flows through `api-extractor-llms`'s `loadApiModel`)
 - `@shikijs/twoslash` — syntax highlighting with type information
+- `open` — best-effort browser launch for the `serve()` dev/preview runner
 
 ## Biome Override
 
@@ -57,8 +59,9 @@ which the global biome rule would rewrite to `.js`.
 
 ## Source Structure
 
-- `src/index.ts` — main plugin entry (re-exports plugin.ts)
+- `src/index.ts` — main plugin entry (re-exports plugin.ts, serve.ts)
 - `src/plugin.ts` — RSPress adapter (~380 lines), runtime management
+- `src/serve.ts` — public `serve(options?)` dev/preview RSPress server runner (exports `ServeOptions`/`ServeMode`/`ResolvedServeConfig`/`isServerReady`/`resolveServeConfig`); used by the sites' `lib/scripts/dev.mts` and `preview.mts`
 - `src/build-program.ts` — doc generation orchestration (5-stage pipeline)
 - `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1220 lines)
 - `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection

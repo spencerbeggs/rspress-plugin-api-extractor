@@ -23,7 +23,7 @@ export function createMockData<T>(count: number): T[];
  *
  * @example
  * ```typescript
- * import { createMockData } from "kitchensink/testing";
+ * import { createMockData } from "@modules/kitchensink/testing";
  *
  * const items = createMockData(3, { id: 0, active: true });
  * console.log(items);

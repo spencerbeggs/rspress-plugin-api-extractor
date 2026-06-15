@@ -1,0 +1,12 @@
+[
+	{
+		"text": "Kitchen Sink",
+		"link": "/kitchensink",
+		"activeMatch": "^/kitchensink/?(.*)/?$"
+	},
+	{
+		"text": "Effect Kit",
+		"link": "/effect-kit",
+		"activeMatch": "^/effect-kit/?(.*)/?$"
+	}
+]

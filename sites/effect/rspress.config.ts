@@ -1,9 +1,5 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "@rspress/core";
 import { ApiExtractorPlugin } from "rspress-plugin-api-extractor";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
 	root: "docs",
@@ -19,18 +15,7 @@ export default defineConfig({
 	plugins: [
 		ApiExtractorPlugin({
 			logLevel: "info",
-			apis: [
-				ApiExtractorPlugin.api.fromFolder("lib/models/effect-kit", {
-					cwd: __dirname,
-					name: "Effect Kit",
-					baseRoute: "/api",
-					apiFolder: "api",
-					theme: {
-						light: "github-light-default",
-						dark: "github-dark-default",
-					},
-				}),
-			],
+			api: ApiExtractorPlugin.api.fromDir("./lib/models/effect-kit"),
 		}),
 	],
 	route: {

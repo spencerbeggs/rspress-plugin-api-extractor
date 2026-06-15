@@ -11,7 +11,7 @@
 	},
 	{
 		"type": "dir",
-		"name": "versioned",
-		"label": "Versioned Module"
+		"name": "effect-kit",
+		"label": "Effect Kit"
 	}
 ]

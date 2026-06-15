@@ -32,20 +32,23 @@ pnpm dev                  # Start basic site dev server
 
 ### plugin/
 
-The publishable package. Builds via `RSPressPluginBuilder.create()` from
-`@savvy-web/rslib-builder` (the runtime is emitted bundleless per-file under
-`dist/<mode>/runtime/`; see `plugin/CLAUDE.md`). Exports two entry points:
+The publishable package. Builds via `definePlugin()` from
+`@savvy-web/rspress-builder` (`plugin/savvy.build.ts`); the runtime is emitted
+bundleless per-file under `dist/<mode>/pkg/runtime/` (see `plugin/CLAUDE.md`).
+Exports three entry points:
 
-- `.` — Main plugin (`dist/<mode>/index.js`)
-- `./runtime` — React components for SSG-compatible rendering, bundleless per-file under `dist/<mode>/runtime/`
+- `.` — Main plugin (per-file output under `dist/<mode>/pkg/`)
+- `./runtime` — React components for SSG-compatible rendering, bundleless per-file under `dist/<mode>/pkg/runtime/`
+- `./tsconfig/rspress.json` — RSPress tsconfig that sites extend from (`plugin/public/tsconfig/rspress.json`)
 
 ### modules/
 
-Test fixture modules using `@savvy-web/rslib-builder` to build demo TypeScript
-libraries. Each produces dual outputs:
+Test fixture modules using `defineBuild()` from `@savvy-web/bundler`
+(`savvy.build.ts`) to build demo TypeScript libraries. Each produces dual
+outputs:
 
 - `dist/dev/` — Development build with source maps
-- `dist/npm/` — Production build with API Extractor model (`.api.json`)
+- `dist/prod/` — Production build with API Extractor model (`.api.json` under `dist/<mode>/meta/`)
 
 **kitchensink** — Comprehensive module exercising all API Extractor item kinds
 (classes, interfaces, enums, functions, type aliases, variables, namespaces).
@@ -134,9 +137,10 @@ The source `package.json` in `plugin/` is marked `"private": true` — **this is
 intentional and correct**. The `publishConfig` field controls how the package is
 published. Never manually set `"private": false` in the source `package.json`.
 
-The module workspaces use rslib-builder which transforms `package.json` during
-build — sets `"private": false` based on `publishConfig.access`, rewrites
-`exports`, and strips dev-only fields.
+The savvy-web builders transform `package.json` during build — set
+`"private": false` based on `publishConfig`, rewrite `exports`, and strip
+dev-only fields (the plugin's `transform` in `plugin/savvy.build.ts` also
+rewrites the scoped package name per registry).
 
 ### Publish Targets
 
@@ -167,14 +171,19 @@ installed source.
 
 | Package | Purpose | GitHub | Local Source |
 | ------- | ------- | ------ | ------------ |
-| rslib-builder | Build pipeline for modules (dual output, package.json transform) | [savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder) | `node_modules/@savvy-web/rslib-builder/` |
+| bundler | Build pipeline for modules (tsdown-based, dual output, package.json transform) | [savvy-web/bundler](https://github.com/savvy-web/bundler) | `modules/*/node_modules/@savvy-web/bundler/` |
+| rspress-builder | RSPress-plugin build pipeline (built on bundler, runtime emission) | [savvy-web/rspress-builder](https://github.com/savvy-web/rspress-builder) | `plugin/node_modules/@savvy-web/rspress-builder/` |
 | commitlint | Conventional commit + DCO enforcement | [savvy-web/commitlint](https://github.com/savvy-web/commitlint) | `node_modules/@savvy-web/commitlint/` |
 | changesets | Versioning, changelogs, release management | [savvy-web/changesets](https://github.com/savvy-web/changesets) | `node_modules/@savvy-web/changesets/` |
 | lint-staged | Pre-commit file linting via Biome | [savvy-web/lint-staged](https://github.com/savvy-web/lint-staged) | `node_modules/@savvy-web/lint-staged/` |
 | vitest | Vitest config factory with project support | [savvy-web/vitest](https://github.com/savvy-web/vitest) | `node_modules/@savvy-web/vitest/` |
 
-TypeScript configuration extends from rslib-builder:
-`@savvy-web/rslib-builder/tsconfig/ecma/lib.json`
+TypeScript configurations extend per workspace type:
+
+- Plugin → `@savvy-web/rspress-builder/tsconfig/plugin.json`
+- Modules → `@savvy-web/bundler/tsconfig/ecma.json`
+- Sites → `rspress-plugin-api-extractor/tsconfig/rspress.json`
+- Root → `@savvy-web/silk/tsconfig/node/root.json`
 
 ## Commands
 

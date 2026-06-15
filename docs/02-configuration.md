@@ -56,7 +56,7 @@ ApiExtractorPlugin({
 | `model` | path, URL or loader fn | required unless `versions` is set | The `.api.json` model. |
 | `packageJson` | path, URL or loader fn | — | The package's `package.json` for version and dependency detection. |
 | `baseRoute` | string | — | Route prefix for all pages of this API. |
-| `apiFolder` | string or `null` | — | Folder segment to nest pages under (for example `api`). |
+| `apiFolder` | string or `null` | `"api"` | Folder segment to nest pages under. Set to `null` to write categories at the route root. |
 | `versions` | record | — | Per-version models for RSPress multiVersion. See the versioned recipe. |
 | `theme` | string or `{ light, dark }` | — | Shiki theme for code blocks. |
 | `categories` | category record | built-in defaults | Override how API items are grouped. |
@@ -72,7 +72,7 @@ ApiExtractorPlugin({
 
 ## Multi-API config (`apis`)
 
-Each entry in `apis` has the same shape as the single-API config, with two differences. `model` is required, because multi-API mode has no `versions` field, and you usually set `baseRoute` per entry so the packages do not collide. See the [multi-package recipe](./05-multi-package.md).
+Each entry in `apis` has the same shape as the single-API config, with two differences. `model` is required, because multi-API mode has no `versions` field, and each entry defaults to its own `/{packageName}/api` route so the packages do not collide — set `baseRoute` per entry only to override that default. See the [multi-package recipe](./05-multi-package.md).
 
 ```ts
 ApiExtractorPlugin({

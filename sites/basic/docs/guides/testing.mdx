@@ -12,7 +12,7 @@ assertion helpers: `MockSource`, `TestPipeline`, `createMockData`, and
 external connections and resolves immediately.
 
 ```typescript with-api
-import { MockSource } from "kitchensink/testing";
+import { MockSource } from "@modules/kitchensink/testing";
 
 const source = new MockSource("users", [
  { id: 1, name: "Alice" },
@@ -33,7 +33,7 @@ that generates copies of a template. Hover over each call to see which overload
 TypeScript resolves.
 
 ```typescript with-api
-import { createMockData } from "kitchensink/testing";
+import { createMockData } from "@modules/kitchensink/testing";
 
 // Overload 1: generate N empty objects cast to T
 const blanks = createMockData<{ id: number }>(3);
@@ -51,8 +51,8 @@ asserting on written records. `TestPipeline` extends `Pipeline` with execution
 logging.
 
 ```typescript with-api
-import { MockSource, TestPipeline, createMockData, createTestSink } from "kitchensink/testing";
-import { Pipeline } from "kitchensink";
+import { MockSource, TestPipeline, createMockData, createTestSink } from "@modules/kitchensink/testing";
+import { Pipeline } from "@modules/kitchensink";
 
 const data = createMockData(5, { id: 0, value: "x" });
 const source = new MockSource("fixture", data);

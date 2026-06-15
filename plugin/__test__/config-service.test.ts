@@ -81,6 +81,42 @@ describe("ConfigServiceLive.resolve", () => {
 		expect(result.pageConcurrency).toBeGreaterThan(0);
 	});
 
+	it("mounts single-API at /api when baseRoute is omitted (api.fromDir default)", async () => {
+		const options: PluginOptions = {
+			api: { packageName: "example-module", model: fixtureModel },
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+
+		expect(result.apiConfigs).toHaveLength(1);
+		expect(result.apiConfigs[0].baseRoute).toBe("/api");
+	});
+
+	it("auto-namespaces multi-API by package when baseRoute is omitted (apis.fromDir default)", async () => {
+		const options: PluginOptions = {
+			apis: [
+				{ packageName: "api-a", model: fixtureModel },
+				{ packageName: "@scope/api-b", model: fixtureModel },
+			],
+		};
+
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+
+		expect(result.apiConfigs).toHaveLength(2);
+		const routes = result.apiConfigs.map((c) => c.baseRoute).sort();
+		expect(routes).toEqual(["/api-a/api", "/api-b/api"]);
+	});
+
 	it("fails with ConfigValidationError when both api and apis provided", async () => {
 		const options: PluginOptions = {
 			api: { packageName: "foo", model: fixtureModel },

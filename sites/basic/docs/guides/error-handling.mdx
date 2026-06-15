@@ -13,7 +13,7 @@ pipeline is in a terminal failed state. Use `instanceof` narrowing to handle
 it specifically.
 
 ```typescript with-api
-import { Pipeline, JsonSource, PipelineError } from "kitchensink";
+import { Pipeline, JsonSource, PipelineError } from "@modules/kitchensink";
 
 const pipeline = Pipeline.create(
  new JsonSource("./data.json"),
@@ -40,7 +40,7 @@ try {
 fetch fails. Hover over `DataSourceError` to see the class docs.
 
 ```typescript with-api
-import { DataSource, DataSourceError } from "kitchensink";
+import { DataSource, DataSourceError } from "@modules/kitchensink";
 
 class FailingSource extends DataSource<string> {
  readonly name = "FailingSource";
@@ -73,7 +73,7 @@ the code block renders without a build failure.
 
 ```typescript with-api
 // @errors: 2322
-import { Pipeline, JsonSource } from "kitchensink";
+import { Pipeline, JsonSource } from "@modules/kitchensink";
 
 const pipeline = Pipeline.create(
  new JsonSource("./data.json"),

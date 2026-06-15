@@ -34,7 +34,7 @@ import type { PipelineOptions, Transform } from "./interfaces.js";
  *
  * @example
  * ```typescript
- * import { Pipeline, JsonSource, PipelineStatus } from "kitchensink";
+ * import { Pipeline, JsonSource, PipelineStatus } from "@modules/kitchensink";
  *
  * const source = new JsonSource("./data/records.json");
  * const pipeline = Pipeline.create(source, (record) => ({
@@ -49,7 +49,7 @@ import type { PipelineOptions, Transform } from "./interfaces.js";
  *
  * @example
  * ```typescript
- * import { Pipeline, JsonSource } from "kitchensink";
+ * import { Pipeline, JsonSource } from "@modules/kitchensink";
  *
  * // Configure batch size via options
  * const source = new JsonSource("./data/items.json");
@@ -118,7 +118,7 @@ export class Pipeline<In, Out> {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { Pipeline, JsonSource } from "kitchensink";
+	 * import { Pipeline, JsonSource } from "@modules/kitchensink";
 	 *
 	 * const pipeline = Pipeline.create(
 	 * 	new JsonSource("./data/records.json"),
@@ -206,7 +206,7 @@ export class Pipeline<In, Out> {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { Pipeline, JsonSource, PipelineError } from "kitchensink";
+	 * import { Pipeline, JsonSource, PipelineError } from "@modules/kitchensink";
 	 *
 	 * const pipeline = Pipeline.create(
 	 * 	new JsonSource("./data.json"),
@@ -257,7 +257,7 @@ export class Pipeline<In, Out> {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { Pipeline, JsonSource } from "kitchensink";
+	 * import { Pipeline, JsonSource } from "@modules/kitchensink";
 	 *
 	 * const pipeline = Pipeline.create(
 	 * 	new JsonSource("./data.json"),

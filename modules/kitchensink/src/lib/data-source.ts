@@ -17,7 +17,7 @@ import type { DataSourceError } from "./errors.js";
  *
  * @example
  * ```typescript
- * import { DataSource } from "kitchensink";
+ * import { DataSource } from "@modules/kitchensink";
  *
  * class NumberSource extends DataSource<number> {
  * 	readonly name = "NumberSource";

@@ -12,7 +12,7 @@ Any function matching `(input: In) => Out` satisfies `Transform<In, Out>`.
 Hover over the variable to confirm the inferred type.
 
 ```typescript with-api
-import type { Transform } from "kitchensink";
+import type { Transform } from "@modules/kitchensink";
 
 const stringify: Transform<number, string> = (n) => String(n);
 //    ^?
@@ -27,7 +27,7 @@ const double: Transform<number, number> = (n) => n * 2;
 filter arrays. Use them directly or compose them into a pipeline stage.
 
 ```typescript with-api
-import { Filters, Pipeline, JsonSource } from "kitchensink";
+import { Filters, Pipeline, JsonSource } from "@modules/kitchensink";
 
 const onlyPositive = Filters.where<number>((n) => n > 0);
 //    ^?
@@ -48,7 +48,7 @@ example is intentionally partial.
 
 ```typescript with-api
 // @noErrors
-import type { Middleware, Transform } from "kitchensink";
+import type { Middleware, Transform } from "@modules/kitchensink";
 
 function withLogging<T, O>(transform: Transform<T, O>): Transform<T, O> {
  return (input) => {

@@ -13,7 +13,7 @@ to a `Uint8Array`. `Codecs.streaming` is an `@alpha` async iterable API — hove
 over it to see the stability notice.
 
 ```typescript with-api
-import { Codecs, JsonSource } from "kitchensink";
+import { Codecs, JsonSource } from "@modules/kitchensink";
 
 const jsonStr = Codecs.json({ id: 1, name: "Alice" });
 //    ^?
@@ -33,7 +33,7 @@ const stream = Codecs.streaming(source);
 `Filters.fuzzy` is `@beta` — its interface may change in a future minor release.
 
 ```typescript with-api
-import { Filters } from "kitchensink";
+import { Filters } from "@modules/kitchensink";
 
 const onlyActive = Filters.where<{ id: number; active: boolean }>(
  (item) => item.active,
@@ -61,7 +61,7 @@ instruments all public methods with structured logging. Hover over
 `BatchProcessor` to see the decorator note.
 
 ```typescript with-api
-import { BatchProcessor, Pipeline, JsonSource } from "kitchensink";
+import { BatchProcessor, Pipeline, JsonSource } from "@modules/kitchensink";
 
 const pipeline = Pipeline.create(
  new JsonSource("./data/numbers.json"),
