@@ -10,7 +10,7 @@
 		},
 		"dev": {
 			"cache": false,
-			"dependsOn": [],
+			"dependsOn": ["^build:meta"],
 			"persistent": true
 		},
 		"preview": {

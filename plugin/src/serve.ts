@@ -1,4 +1,4 @@
-import { execSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 
 /** Which RSPress server `serve` runs. */
 export type ServeMode = "dev" | "preview";
@@ -99,11 +99,16 @@ export function resolveServeConfig(options: ServeOptions = {}): ResolvedServeCon
 
 /**
  * Best-effort kill of any process listening on `port` (frees a stale dev/preview
- * server). Uses `lsof`, so it is a no-op on platforms without it (e.g. Windows).
+ * server). Invokes `lsof` directly via `execFileSync` (no shell), so the port is
+ * never interpolated into a shell string. A no-op on platforms without `lsof`
+ * (e.g. Windows) or for a non-positive-integer port.
  */
 function killProcessOnPort(port: number): void {
+	if (!Number.isInteger(port) || port <= 0) {
+		return;
+	}
 	try {
-		const result = execSync(`lsof -ti:${port}`, { encoding: "utf-8" });
+		const result = execFileSync("lsof", ["-t", "-i", `:${port}`], { encoding: "utf-8" });
 		const pids = result.trim().split("\n").filter(Boolean);
 		for (const pid of pids) {
 			process.kill(Number(pid), "SIGTERM");
