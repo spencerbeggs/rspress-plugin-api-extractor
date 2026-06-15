@@ -101,6 +101,18 @@ npx rspress build
 
 The first build generates every page; later builds only rewrite pages whose content changed.
 
+If you would rather drive the server from a script — to free a stale port and open the browser at a specific page once the server is ready — the package exports a `serve` helper:
+
+```ts
+// scripts/dev.mts
+import { serve } from "rspress-plugin-api-extractor";
+
+await serve({ mode: "dev", openPath: "/api/" });
+// Frees the port, runs `rspress dev`, opens http://localhost:4173/api/ when ready
+```
+
+`serve` accepts `mode` (`"dev"` or `"preview"`), `port`, `open`, `openPath`, `packageManager`, `cwd` and a `readyWhen` predicate; all are optional. It defaults to `pnpm rspress dev` on port `4173` and skips opening a browser when `NO_OPEN` is set.
+
 ## Next steps
 
 - [Versioned](./06-versioned.md) — keep this single package and add RSPress multiVersion.

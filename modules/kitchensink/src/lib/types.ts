@@ -13,7 +13,7 @@
  *
  * @example
  * ```typescript
- * import type { Middleware } from "kitchensink";
+ * import type { Middleware } from "@modules/kitchensink";
  *
  * const logger: Middleware<string> = (data, next) => {
  * 	console.log("before:", data);

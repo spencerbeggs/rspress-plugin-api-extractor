@@ -13,7 +13,7 @@ contents as a typed array. Hover over `JsonSource` below to see its full
 signature.
 
 ```typescript with-api
-import { JsonSource } from "kitchensink";
+import { JsonSource } from "@modules/kitchensink";
 
 const source = new JsonSource("./data/users.json");
 //    ^?
@@ -32,7 +32,7 @@ In practice you compose a source with a `Pipeline` rather than calling
 
 ```typescript with-api
 // ---cut---
-import { Pipeline, JsonSource } from "kitchensink";
+import { Pipeline, JsonSource } from "@modules/kitchensink";
 
 const source = new JsonSource("./data/products.json");
 const pipeline = Pipeline.create(
@@ -53,7 +53,7 @@ Extend the abstract `DataSource<T>` class and implement `connect` and `fetch`.
 The `name` property appears in logs and error messages.
 
 ```typescript with-api
-import { DataSource } from "kitchensink";
+import { DataSource } from "@modules/kitchensink";
 
 class NumberSource extends DataSource<number> {
  readonly name = "NumberSource";

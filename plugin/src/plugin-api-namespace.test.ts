@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ApiExtractorPlugin } from "./plugin.js";
 
-describe("ApiExtractorPlugin.api namespace", () => {
-	it("exposes fromFolder and fromModelsDir", () => {
-		expect(typeof ApiExtractorPlugin.api.fromFolder).toBe("function");
-		expect(typeof ApiExtractorPlugin.api.fromModelsDir).toBe("function");
+describe("ApiExtractorPlugin config-helper namespaces", () => {
+	it("exposes api.fromDir for single-API configs", () => {
+		expect(typeof ApiExtractorPlugin.api.fromDir).toBe("function");
+	});
+
+	it("exposes apis.fromDir for multi-API parent-directory scans", () => {
+		expect(typeof ApiExtractorPlugin.apis.fromDir).toBe("function");
 	});
 
 	it("is still callable as the plugin factory", () => {

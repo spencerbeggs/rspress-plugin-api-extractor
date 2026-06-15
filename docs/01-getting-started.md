@@ -16,6 +16,14 @@ The plugin is a peer of `@rspress/core` and `react` / `react-dom`. If you alread
 npm install @rspress/core react react-dom
 ```
 
+The package also ships a base RSPress tsconfig you can extend in your site's `tsconfig.json`:
+
+```json
+{
+  "extends": ["rspress-plugin-api-extractor/tsconfig/rspress.json"]
+}
+```
+
 ## What you need first
 
 The plugin reads a Microsoft [API Extractor](https://api-extractor.com/) model — a `.api.json` file that describes your package's public API. You produce this file when you build your library. If you build with [@savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder), set `apiModel: true` and the model lands next to your `dist/` output. Otherwise run API Extractor yourself with `"docModel": { "enabled": true }` in `api-extractor.json`.
@@ -88,7 +96,7 @@ On the first run the plugin reads the model, writes one MDX page per public API 
 
 ## Where pages land
 
-With the config above and no `baseRoute` set, pages are written under your docs root and served at routes like `/class/mylibrary` and `/function/create`. Set `apiFolder` to nest everything under a folder — `apiFolder: "api"` puts pages at `/api/class/mylibrary` — and set `baseRoute` to prefix the whole API. The single-package recipe walks through these placement options.
+With the config above, `apiFolder` defaults to `"api"`, so pages are served under `/api` at routes like `/api/class/mylibrary` and `/api/function/create`. Set `apiFolder: null` to drop the folder and serve pages at the docs root, or set `baseRoute` to prefix the whole API. The single-package recipe walks through these placement options.
 
 ## Next steps
 

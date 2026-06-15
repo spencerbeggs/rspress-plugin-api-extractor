@@ -18,7 +18,7 @@ export const VERSION: string = "1.0.0";
  * Spread this object into user-supplied options to fill in any omitted fields:
  *
  * ```typescript
- * import { DEFAULT_PIPELINE_OPTIONS } from "kitchensink";
+ * import { DEFAULT_PIPELINE_OPTIONS } from "@modules/kitchensink";
  *
  * const opts: PipelineOptions = { ...DEFAULT_PIPELINE_OPTIONS, batchSize: 50 };
  * ```

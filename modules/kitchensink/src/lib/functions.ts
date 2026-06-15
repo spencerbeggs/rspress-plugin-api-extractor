@@ -30,7 +30,7 @@ import { Pipeline } from "./pipeline.js";
  *
  * @example
  * ```typescript
- * import { createPipeline, JsonSource } from "kitchensink";
+ * import { createPipeline, JsonSource } from "@modules/kitchensink";
  *
  * const pipeline = createPipeline(
  * 	new JsonSource("./data/records.json"),
@@ -142,7 +142,7 @@ export function decode<T>(buffer: Uint8Array, format: DataFormat): T {
  *
  * @example
  * ```typescript
- * import { validate } from "kitchensink";
+ * import { validate } from "@modules/kitchensink";
  *
  * interface Config {
  * 	host: string;

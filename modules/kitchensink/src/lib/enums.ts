@@ -7,7 +7,7 @@
  *
  * @example
  * ```typescript
- * import { PipelineStatus } from "kitchensink";
+ * import { PipelineStatus } from "@modules/kitchensink";
  *
  * function isPipelineActive(status: PipelineStatus): boolean {
  * 	return status === PipelineStatus.Running || status === PipelineStatus.Paused;
@@ -43,7 +43,7 @@ export enum PipelineStatus {
  *
  * @example
  * ```typescript
- * import { DataFormat } from "kitchensink";
+ * import { DataFormat } from "@modules/kitchensink";
  *
  * const format: DataFormat = DataFormat.JSON;
  * ```

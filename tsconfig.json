@@ -1,14 +1,4 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
-	"compilerOptions": {
-		"composite": true,
-		"declaration": true,
-		"module": "node20",
-		"outDir": "dist",
-		"resolveJsonModule": true,
-		"strict": true,
-		"strictNullChecks": true,
-		"target": "es2023"
-	},
-	"include": ["*.ts", "lib/**/*.ts", "lib/**/*.mts"]
+	"extends": ["@savvy-web/silk/tsconfig/node/root.json"]
 }

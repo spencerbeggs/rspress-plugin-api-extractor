@@ -2,52 +2,61 @@
 	"$schema": "https://turborepo.com/schema.v2.json",
 	"globalPassThroughEnv": ["GITHUB_ACTIONS", "CI"],
 	"tasks": {
-		"//#types:check": {
-			"cache": true,
-			"dependsOn": [],
-			"inputs": ["*.ts", "src/**/*.ts", "lib/**/*.ts", "lib/**/*.mts"],
-			"outputLogs": "full",
-			"outputs": []
-		},
 		"build:dev": {
-			"cache": false,
-			"dependsOn": [],
+			"cache": true,
+			"dependsOn": ["^build:dev"],
 			"inputs": [
 				"$TURBO_DEFAULT$",
 				"$TURBO_ROOT$/package.json",
+				"$TURBO_ROOT$/pnpm-workspace.yaml",
+				"$TURBO_ROOT$/pnpm-lock.yaml",
 				"$TURBO_ROOT$/tsconfig.json",
+				"README.md",
+				"LICENSE",
 				"package.json",
 				"tsconfig.json",
-				"src/**/*.ts"
+				"*.ts",
+				"*.mts",
+				"*.cts",
+				"public/**/*",
+				"lib/**/*",
+				"src/**/*"
 			],
-			"outputLogs": "full",
-			"outputs": ["dist/dev/**"]
+			"outputLogs": "errors-only",
+			"outputs": ["dist/dev/pkg/**"]
+		},
+		"build:meta": {
+			"cache": true,
+			"dependsOn": ["build:dev"],
+			"inputs": ["$TURBO_DEFAULT$", "dist/dev/pkg/**"],
+			"outputs": ["dist/dev/meta/**"]
 		},
 		"build:prod": {
 			"cache": true,
-			"dependsOn": ["types:check"],
+			"dependsOn": ["types:check", "build:meta"],
 			"inputs": [
 				"$TURBO_DEFAULT$",
 				"$TURBO_ROOT$/package.json",
-				"$TURBO_ROOT$/tsconfig.json",
-				"$TURBO_ROOT$/pnpm-lock.yaml",
 				"$TURBO_ROOT$/pnpm-workspace.yaml",
-				"action.yml",
+				"$TURBO_ROOT$/pnpm-lock.yaml",
+				"$TURBO_ROOT$/tsconfig.json",
+				"README.md",
+				"LICENSE",
 				"package.json",
 				"tsconfig.json",
-				"src/**/*.ts",
-				"lib/**/*.ts",
-				"lib/**/*.mts",
-				"README.md",
-				"LICENSE"
+				"*.ts",
+				"*.mts",
+				"*.cts",
+				"public/**/*",
+				"lib/**/*",
+				"src/**/*"
 			],
 			"outputLogs": "full",
-			"outputs": ["dist/npm/**"]
+			"outputs": ["dist/prod/**"]
 		},
 		"dev": {
 			"cache": false,
 			"dependsOn": ["build:dev"],
-			"interactive": true,
 			"persistent": true
 		},
 		"preview": {
@@ -57,19 +66,27 @@
 		},
 		"types:check": {
 			"cache": true,
-			"dependsOn": [],
+			"dependsOn": ["^build:dev"],
 			"inputs": [
 				"$TURBO_DEFAULT$",
-				"!**/*.md",
-				"!.changeset/**",
-				"!.claude/**",
-				"!.github/**",
-				"!.husky/**",
-				"!.vscode/**"
+				"*.ts",
+				"*.mts",
+				"*.cts",
+				"src/**/*.ts",
+				"src/**/*.tsx",
+				"src/**/*.mts",
+				"src/**/*.cts",
+				"lib/**/*.ts",
+				"lib/**/*.tsx",
+				"lib/**/*.mts",
+				"lib/**/*.cts",
+				"__test__/**/*.ts",
+				"__test__/**/*.tsx",
+				"__test__/**/*.mts",
+				"__test__/**/*.cts"
 			],
 			"outputLogs": "errors-only",
-			"outputs": []
+			"outputs": ["dist/.tsbuildinfo.lib"]
 		}
-	},
-	"ui": "tui"
+	}
 }

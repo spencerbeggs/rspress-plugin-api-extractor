@@ -19,8 +19,8 @@ import { Pipeline } from "../lib/pipeline.js";
  *
  * @example
  * ```typescript
- * import { Pipeline } from "kitchensink";
- * import { MockSource, TestPipeline } from "kitchensink/testing";
+ * import { Pipeline } from "@modules/kitchensink";
+ * import { MockSource, TestPipeline } from "@modules/kitchensink/testing";
  *
  * const source = new MockSource("numbers", [1, 2, 3]);
  * const pipeline = new TestPipeline(source, (n: number) => n * 2);

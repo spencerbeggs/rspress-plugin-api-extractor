@@ -1,9 +1,5 @@
-import path, { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "@rspress/core";
 import { ApiExtractorPlugin } from "rspress-plugin-api-extractor";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
 	root: "docs",
@@ -13,7 +9,7 @@ export default defineConfig({
 	themeConfig: {
 		llmsUI: {
 			viewOptions: ["markdownLink", "chatgpt", "claude"],
-			placement: "title",
+			placement: "outline",
 		},
 	},
 	multiVersion: {
@@ -26,16 +22,9 @@ export default defineConfig({
 			api: {
 				packageName: "versioned-module",
 				versions: {
-					v1: {
-						model: path.join(__dirname, "lib/models/versioned-v1/versioned-v1.api.json"),
-						packageJson: path.join(__dirname, "lib/models/versioned-v1/package.json"),
-					},
-					v2: {
-						model: path.join(__dirname, "lib/models/versioned-v2/versioned-v2.api.json"),
-						packageJson: path.join(__dirname, "lib/models/versioned-v2/package.json"),
-					},
+					v1: ApiExtractorPlugin.api.fromDir("./lib/models/v1"),
+					v2: ApiExtractorPlugin.api.fromDir("./lib/models/v2"),
 				},
-				theme: { light: "github-light-default", dark: "github-dark-default" },
 			},
 		}),
 	],

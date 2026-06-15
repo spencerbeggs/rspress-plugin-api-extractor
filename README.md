@@ -38,7 +38,7 @@ User-facing documentation for the plugin lives in [`docs/`](./docs):
 
 - [Getting started](./docs/01-getting-started.md) — Install, minimal config, first build.
 - [Configuration](./docs/02-configuration.md) — Full plugin-options reference.
-- [Config helpers](./docs/03-config-helpers.md) — `fromFolder` and `fromModelsDir`.
+- [Config helpers](./docs/03-config-helpers.md) — `api.fromDir` and `apis.fromDir`.
 - [Single package](./docs/04-single-package.md) — The single-API recipe.
 - [Multi-package](./docs/05-multi-package.md) — The multi-API portal recipe.
 - [Versioned](./docs/06-versioned.md) — Documenting major versions side by side.
@@ -71,7 +71,7 @@ pnpm run typecheck     # Type-check every workspace
 
 ## Requirements
 
-- Node.js >=24.1.0
+- Node.js >=24.11.0
 - pnpm (this repository uses pnpm workspaces)
 
 ## License

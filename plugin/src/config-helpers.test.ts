@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { fromFolder, fromModelsDir } from "./config-helpers.js";
+import { fromDir, fromParentDir } from "./config-helpers.js";
 
 /** Write a fake rslib-builder localPaths model folder under `root`. */
 function writeModelFolder(
@@ -43,7 +43,7 @@ function writeModelFolder(
 	return dir;
 }
 
-describe("fromFolder", () => {
+describe("api.fromDir", () => {
 	let root: string;
 	beforeEach(() => {
 		root = fs.mkdtempSync(path.join(os.tmpdir(), "ax-helpers-"));
@@ -52,38 +52,43 @@ describe("fromFolder", () => {
 		fs.rmSync(root, { recursive: true, force: true });
 	});
 
-	it("derives packageName, model, packageJson, tsconfig, name and default baseRoute", () => {
+	it("derives packageName, model, packageJson, tsconfig and name", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder(path.join(root, "sdk"));
+		const cfg = fromDir(path.join(root, "sdk"));
 		expect(cfg.packageName).toBe("vitest-agent-sdk");
 		expect(cfg.name).toBe("vitest-agent-sdk");
 		expect(cfg.model).toBe(path.join(root, "sdk", "vitest-agent-sdk.api.json"));
 		expect(cfg.packageJson).toBe(path.join(root, "sdk", "package.json"));
 		expect(cfg.tsconfig).toBe(path.join(root, "sdk", "tsconfig.json"));
-		expect(cfg.baseRoute).toBe("/sdk");
+	});
+
+	it("leaves baseRoute unset when omitted (plugin applies its own default)", () => {
+		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
+		const cfg = fromDir(path.join(root, "sdk"));
+		expect(cfg.baseRoute).toBeUndefined();
 	});
 
 	it("applies a template string baseRoute with {dirname}", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder(path.join(root, "sdk"), { baseRoute: "reference/{dirname}" });
+		const cfg = fromDir(path.join(root, "sdk"), { baseRoute: "reference/{dirname}" });
 		expect(cfg.baseRoute).toBe("/reference/sdk");
 	});
 
 	it("supports the {packageName} token", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder(path.join(root, "sdk"), { baseRoute: "reference/{packageName}" });
+		const cfg = fromDir(path.join(root, "sdk"), { baseRoute: "reference/{packageName}" });
 		expect(cfg.baseRoute).toBe("/reference/vitest-agent-sdk");
 	});
 
 	it("normalizes a leading slash in templates", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder(path.join(root, "sdk"), { baseRoute: "/reference/{dirname}" });
+		const cfg = fromDir(path.join(root, "sdk"), { baseRoute: "/reference/{dirname}" });
 		expect(cfg.baseRoute).toBe("/reference/sdk");
 	});
 
-	it("supports a callback baseRoute receiving FolderInfo", () => {
+	it("supports a callback baseRoute receiving DirInfo", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk", version: "2.1.0" });
-		const cfg = fromFolder(path.join(root, "sdk"), {
+		const cfg = fromDir(path.join(root, "sdk"), {
 			baseRoute: (info) => `reference/${info.dirname}/${info.version}`,
 		});
 		expect(cfg.baseRoute).toBe("/reference/sdk/2.1.0");
@@ -91,7 +96,7 @@ describe("fromFolder", () => {
 
 	it("omits tsconfig when no tsconfig.json is present", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk", tsconfig: false });
-		const cfg = fromFolder(path.join(root, "sdk"));
+		const cfg = fromDir(path.join(root, "sdk"));
 		expect(cfg.tsconfig).toBeUndefined();
 	});
 
@@ -101,14 +106,14 @@ describe("fromFolder", () => {
 			apiJsonName: "bar.api.json",
 			extraApiJson: ["legacy.api.json"],
 		});
-		const cfg = fromFolder(path.join(root, "bar"));
+		const cfg = fromDir(path.join(root, "bar"));
 		expect(cfg.packageName).toBe("@scope/bar");
 		expect(cfg.model).toBe(path.join(root, "bar", "bar.api.json"));
 	});
 
 	it("lets caller overrides win over discovery and passes extra fields through", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder(path.join(root, "sdk"), {
+		const cfg = fromDir(path.join(root, "sdk"), {
 			name: "SDK",
 			apiFolder: "api",
 			theme: { light: "github-light", dark: "github-dark" },
@@ -121,23 +126,23 @@ describe("fromFolder", () => {
 
 	it("resolves a relative dir against the cwd option", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk" });
-		const cfg = fromFolder("sdk", { cwd: root });
+		const cfg = fromDir("sdk", { cwd: root });
 		expect(cfg.model).toBe(path.join(root, "sdk", "vitest-agent-sdk.api.json"));
 		expect((cfg as Record<string, unknown>).cwd).toBeUndefined();
 	});
 
 	it("throws when the directory does not exist", () => {
-		expect(() => fromFolder(path.join(root, "missing"))).toThrow(/directory not found/);
+		expect(() => fromDir(path.join(root, "missing"))).toThrow(/directory not found/);
 	});
 
 	it("throws when package.json has no name", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk", noName: true });
-		expect(() => fromFolder(path.join(root, "sdk"))).toThrow(/no "name" field/);
+		expect(() => fromDir(path.join(root, "sdk"))).toThrow(/no "name" field/);
 	});
 
 	it("throws when no *.api.json is present", () => {
 		writeModelFolder(root, "sdk", { packageName: "vitest-agent-sdk", noModel: true });
-		expect(() => fromFolder(path.join(root, "sdk"))).toThrow(/no \*\.api\.json model found/);
+		expect(() => fromDir(path.join(root, "sdk"))).toThrow(/no \*\.api\.json model found/);
 	});
 
 	it("throws when multiple *.api.json files match no name", () => {
@@ -146,11 +151,11 @@ describe("fromFolder", () => {
 			apiJsonName: "alpha.api.json",
 			extraApiJson: ["beta.api.json"],
 		});
-		expect(() => fromFolder(path.join(root, "sdk"))).toThrow(/multiple \*\.api\.json files/);
+		expect(() => fromDir(path.join(root, "sdk"))).toThrow(/multiple \*\.api\.json files/);
 	});
 });
 
-describe("fromModelsDir", () => {
+describe("apis.fromDir", () => {
 	let root: string;
 	let models: string;
 	beforeEach(() => {
@@ -166,7 +171,7 @@ describe("fromModelsDir", () => {
 		writeModelFolder(models, "sdk", { packageName: "vitest-agent-sdk" });
 		writeModelFolder(models, "plugin", { packageName: "vitest-agent-plugin" });
 
-		const configs = fromModelsDir(models, {
+		const configs = fromParentDir(models, {
 			baseRoute: "reference/{dirname}",
 			apiFolder: "api",
 			theme: { light: "github-light", dark: "github-dark" },
@@ -181,15 +186,15 @@ describe("fromModelsDir", () => {
 		}
 	});
 
-	it("defaults baseRoute to {dirname} when omitted", () => {
+	it("leaves baseRoute unset per entry when omitted (plugin namespaces by package)", () => {
 		writeModelFolder(models, "sdk", { packageName: "vitest-agent-sdk" });
-		const configs = fromModelsDir(models);
-		expect(configs[0]?.baseRoute).toBe("/sdk");
+		const configs = fromParentDir(models);
+		expect(configs[0]?.baseRoute).toBeUndefined();
 	});
 
 	it("resolves parentDir against the cwd option", () => {
 		writeModelFolder(models, "sdk", { packageName: "vitest-agent-sdk" });
-		const configs = fromModelsDir("lib/models", { cwd: root });
+		const configs = fromParentDir("lib/models", { cwd: root });
 		expect(configs).toHaveLength(1);
 		expect(configs[0]?.model).toBe(path.join(models, "sdk", "vitest-agent-sdk.api.json"));
 	});
@@ -199,7 +204,7 @@ describe("fromModelsDir", () => {
 		fs.writeFileSync(path.join(models, ".gitkeep"), "");
 		fs.writeFileSync(path.join(models, "README.md"), "# models");
 		fs.mkdirSync(path.join(models, ".cache"));
-		const configs = fromModelsDir(models);
+		const configs = fromParentDir(models);
 		expect(configs).toHaveLength(1);
 		expect(configs[0]?.packageName).toBe("vitest-agent-sdk");
 	});
@@ -208,14 +213,14 @@ describe("fromModelsDir", () => {
 		writeModelFolder(models, "sdk", { packageName: "vitest-agent-sdk" });
 		fs.mkdirSync(path.join(models, "junk"));
 		fs.writeFileSync(path.join(models, "junk", "notes.txt"), "hi");
-		expect(() => fromModelsDir(models)).toThrow(/"junk".*is not a valid model folder/);
+		expect(() => fromParentDir(models)).toThrow(/"junk".*is not a valid model folder/);
 	});
 
 	it("throws when no model folders are found", () => {
-		expect(() => fromModelsDir(models)).toThrow(/no model folders found/);
+		expect(() => fromParentDir(models)).toThrow(/no model folders found/);
 	});
 
 	it("throws when parentDir does not exist", () => {
-		expect(() => fromModelsDir(path.join(root, "nope"))).toThrow(/directory not found/);
+		expect(() => fromParentDir(path.join(root, "nope"))).toThrow(/directory not found/);
 	});
 });

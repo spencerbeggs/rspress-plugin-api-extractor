@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-06-01
-last-synced: 2026-06-01
+updated: 2026-06-15
+last-synced: 2026-06-15
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -21,7 +21,7 @@ dependencies: []
 ## Table of Contents
 
 - [Overview](#overview)
-- [Compiled Plugin and Bundleless Runtime](#compiled-plugin-and-bundleless-runtime)
+- [Per-file Plugin and Bundleless Runtime](#per-file-plugin-and-bundleless-runtime)
 - [Effect Service Layer](#effect-service-layer)
 - [Shared Library Delegation](#shared-library-delegation)
 - [Plugin Lifecycle](#plugin-lifecycle)
@@ -31,31 +31,31 @@ dependencies: []
 
 ## Overview
 
-The rspress-plugin-api-extractor separates Node.js plugin code from React runtime components, combined with an **Effect service layer** for doc generation orchestration. The two halves ship differently: the plugin code is **compiled** to a single Node.js bundle, while the runtime components are emitted **bundleless** (per-file transpile) so RSPress does the final per-site compile.
+The rspress-plugin-api-extractor separates Node.js plugin code from React runtime components, combined with an **Effect service layer** for doc generation orchestration. Both halves are emitted **per-file** (each `src/*.ts(x)` transpiled 1:1 to its own `.js`, mirroring the source tree); they differ by **environment and externals**, not by bundling strategy. The plugin half targets Node.js with its dependencies external; the runtime half targets the browser with `react`/`@theme` external, CSS modules and `import.meta.env` preserved so RSPress does the final per-site compile.
 
 The plugin entry point (`plugin.ts`) is a thin RSPress adapter that wires
 Effect services and delegates all doc generation to `build-program.ts` and
 `build-stages.ts`.
 
-## Compiled Plugin and Bundleless Runtime
+## Per-file Plugin and Bundleless Runtime
 
-### Plugin code (compiled, Node.js)
+### Plugin code (Node.js)
 
-**Entry:** `src/index.ts` (re-exports `src/plugin.ts`). **Output:** `dist/<mode>/index.js`. **Environment:** Node.js (RSPress build process).
+**Entry:** `src/index.ts` (a barrel re-exporting `plugin.ts`, the `serve.ts` API and the public config schemas). **Output:** `dist/dev/pkg/` (the published package root — see [Build Tooling](#build-tooling)). **Environment:** Node.js (RSPress build process).
 
-The plugin half is bundled to a single Node.js file. It owns the RSPress lifecycle hooks (config, beforeBuild, afterBuild), Effect service layer initialization and runtime management, the doc generation pipeline and the remark plugins for code block processing.
+The plugin half is emitted **per-file**: every `src/*.ts` becomes its own `.js` under `dist/dev/pkg/`, mirroring the source tree (e.g. `plugin.js`, `build-program.js`, `layers/ConfigServiceLive.js`), with sibling imports preserved as relative `./...js` specifiers and `dependencies` left external. It owns the RSPress lifecycle hooks (config, beforeBuild, afterBuild), Effect service layer initialization and runtime management, the doc generation pipeline and the remark plugins for code block processing. A bundled `index.d.ts` is emitted alongside, inlining the declarations of any `dtsBundledPackages` (here `@rspress/core`).
 
 ### Runtime components (bundleless, React/browser)
 
 **Published export:** `./runtime` → `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }`. **Environment:** Browser (RSPress SSG and client-side).
 
-The runtime is **not** compiled into a single `runtime/index.js` bundle, nor shipped as raw `.tsx`. `RSPressPluginBuilder` emits it **bundleless**: each component is transpiled 1:1 into its own `.js` under `dist/<mode>/runtime/`, mirroring the `src/runtime/...` tree, with `react`/`@theme` external and `import.meta.env` left as a runtime expression. **RSPress then compiles each referenced `.js` per site build.** This is required for `import.meta.env.SSG_MD` to resolve correctly (a single bundle froze it to `undefined`, breaking the SSG-MD dual-mode branch) and so the `globalUIComponents` / `resolve.alias` registrations in `plugin.ts` can point at real per-component `.js` files. A bundled `runtime/index.d.ts` (types only) is also emitted so the export's `types` condition resolves. See `ssg-compatible-components.md` for the bundleless mechanism and why component-path resolution is layout-invariant.
+The runtime is **not** compiled into a single `runtime/index.js` bundle, nor shipped as raw `.tsx`. `definePlugin` (from `@savvy-web/rspress-builder`) emits it **bundleless**: each component is transpiled 1:1 into its own `.js` under `runtime/`, mirroring the `src/runtime/...` tree, with `react`/`@theme` external and `import.meta.env` left as a runtime expression. **RSPress then compiles each referenced `.js` per site build.** This is required for `import.meta.env.SSG_MD` to resolve correctly (a single bundle froze it to `undefined`, breaking the SSG-MD dual-mode branch) and so the `globalUIComponents` / `resolve.alias` registrations in `plugin.ts` can point at real per-component `.js` files. A bundled `runtime/index.d.ts` (types only) is also emitted so the export's `types` condition resolves. See `ssg-compatible-components.md` for the bundleless mechanism and why component-path resolution is layout-invariant.
 
 The runtime provides the React components that render API documentation: signature/example blocks, parameter and enum tables, the interactive wrap/copy buttons and the Twoslash hover tooltips and error display.
 
 ### Build tooling
 
-**Bundler:** Rslib (Rsbuild-based library bundler), configured via `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder`. The builder auto-detects `src/runtime/index.tsx` and emits the runtime lib bundleless; the plugin's own `rslib.config.ts` does nothing runtime-specific. **Module system:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`. **CSS processing:** CSS modules (no Sass) for runtime components, compiled by RSPress alongside the transpiled JS.
+**Builder:** `@savvy-web/rspress-builder`'s `definePlugin()`, which is built on the tsdown-based `@savvy-web/bundler`. The plugin builds via a self-executing `plugin/savvy.build.ts` that calls `definePlugin(...)` and hands the config to `runBuild`. `definePlugin` produces the two-entry shape automatically — the Node plugin entry (`.`) and the bundleless React runtime (`./runtime`); the plugin half is not a single bundle but per-file JS. **Module system:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`. **CSS processing:** CSS modules (no Sass) for runtime components, compiled by RSPress alongside the transpiled JS.
 
 ## Effect Service Layer
 
@@ -131,26 +131,21 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 }
 
 export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
-  api: { fromFolder, fromModelsDir },
+  api: { fromDir },
+  apis: { fromDir: fromParentDir },
 });
 ```
 
 ### Config Helpers
 
-`ApiExtractorPlugin.api.fromFolder` and `ApiExtractorPlugin.api.fromModelsDir`
-(`src/config-helpers.ts`) build `MultiApiConfig` objects by discovering the
-package name, version, `.api.json` model and `tsconfig.json` from a
-`@savvy-web/rslib-builder` `localPaths` package folder:
+`ApiExtractorPlugin.api.fromDir` and `ApiExtractorPlugin.apis.fromDir` (`src/config-helpers.ts`, internally `fromDir` and `fromParentDir`) build `MultiApiConfig` objects by discovering the package name, version, `.api.json` model and `tsconfig.json` from a built module package folder (the per-package model dirs the modules emit via `@savvy-web/bundler`'s `meta.localPaths`). They are exposed under two namespaces matching the plugin option they feed:
 
-- `fromFolder(dir, overrides?)` -- one config from a single package folder;
-  caller overrides win over discovery. `baseRoute` accepts a `{dirname}` /
-  `{packageName}` template string or an `(info) => string` callback.
-- `fromModelsDir(parentDir, options?)` -- scans a parent directory and builds
-  one config per subfolder, requiring every non-dotfile subdirectory to be a
-  valid model folder.
+- `api.fromDir(dir, overrides?)` -- one config from a single package folder, for use under the `api:` option or as an element of `apis:`. Caller overrides win over discovery.
+- `apis.fromDir(parentDir, options?)` -- scans a parent directory and builds one config per subfolder for the `apis:` option, requiring every non-dotfile subdirectory to be a valid model folder.
 
-The helper return types (`FolderInfo`, `BaseRoute`, `FromFolderOptions`,
-`FromModelsDirOptions`) are re-exported from `src/index.ts`.
+The helpers no longer inject a default `baseRoute`. When the caller omits it the route is left unset and the plugin applies a context-aware default during resolution in `ConfigServiceLive`: under `api:` it mounts at `/api` (`baseRoute ?? "/"`), under `apis:` at `/{packageName}/api` (`baseRoute ?? "/${unscopedName(packageName)}"`), in both cases appending `apiFolder ?? "api"`. This fixes a bug where a single-API site using the helper generated docs at `/{dirname}/api` instead of `/api`. Callers can still pass an explicit `baseRoute` -- a `{dirname}` / `{packageName}` template string or an `(info: DirInfo) => string` callback -- to override.
+
+The helper types (`DirInfo`, `BaseRoute`, `FromDirOptions`) are re-exported from `src/index.ts`; both helpers share `FromDirOptions`.
 
 ## Shared Library Delegation
 
@@ -272,23 +267,30 @@ Key config types defined via Effect Schema:
 
 ## Build Tooling
 
-### Rslib Configuration
+### `savvy.build.ts` and `definePlugin`
 
-`rslib.config.ts` delegates to `RSPressPluginBuilder.create()` from `@savvy-web/rslib-builder` and is **minimal** — it passes only `dtsBundledPackages`, `apiModel.suppressWarnings` and a package-name `transform`. There is no `runtime: false`, no `copyPatterns` and no `exports`/`files` mutation; the runtime handling lives entirely in the builder:
+`plugin/savvy.build.ts` is a self-executing build script: it calls `definePlugin(...)` from `@savvy-web/rspress-builder`, exports the resulting config and, under `import.meta.main`, hands it to `runBuild`. `definePlugin` is deliberately small (RSPress plugins have a fixed shape) — the plugin passes `runtime: true`, `dtsBundledPackages: ["@rspress/core"]`, `apiModel.tsdoc.suppressWarnings` (the `ae-forgotten-export` rules) and a `transform`:
 
 ```typescript
-// rslib.config.ts
-export default RSPressPluginBuilder.create({
+// plugin/savvy.build.ts (abridged)
+const config = definePlugin({
+  runtime: true,
   dtsBundledPackages: ["@rspress/core"],
-  apiModel: { suppressWarnings: [ /* ae-forgotten-export rules */ ] },
-  transform({ pkg, target }) {
-    // rewrite package.json per registry (scoped name for GitHub Packages),
-    // strip dev-only fields
+  apiModel: { tsdoc: { suppressWarnings: [ /* ae-forgotten-export rules */ ] } },
+  transform({ pkg, targetGroup }) {
+    // GitHub Packages target: rename to @spencerbeggs/rspress-plugin-api-extractor
+    // strip dev-only fields (devDependencies, scripts, publishConfig, …)
   },
 });
+export default config;
+if (import.meta.main) await runBuild(config, { cwd: import.meta.dirname, argv: process.argv.slice(2) });
 ```
 
-`RSPressPluginBuilder` auto-detects `src/runtime/index.tsx` and produces two RSlib libs: the Node.js plugin bundle and the **bundleless** runtime lib (`bundle: false`, `outBase: "./src/runtime"`, `react`/`@theme` external, identity `define` preserving `import.meta.env`). The builder rewrites the published `exports["./runtime"]` to `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }` and sets `files` to `["runtime"]`. The plugin's `transform` only adjusts the package name and strips dev fields. See `ssg-compatible-components.md` for the bundleless mechanism and `createRuntimeLib` in `@savvy-web/rslib-builder`'s `rspress-plugin-builder.ts` for the lib config.
+`definePlugin` produces the fixed two-entry shape — the Node plugin entry (`.`) and the **bundleless** React runtime (`./runtime`, `react`/`@theme` external). It applies the `import.meta.env` identity `define` (replacements are merged *after* it, so a user key can override intentionally) that keeps `import.meta.env.SSG_MD` a runtime expression for RSPress to resolve per site. The published `exports` (`./`, `./runtime`, `./tsconfig/rspress.json`) and `private: false` are produced by the builder's manifest handling plus the plugin's `transform`. See `ssg-compatible-components.md` for the bundleless mechanism and the `definePlugin` surface in `@savvy-web/rspress-builder` for the full option set.
+
+### Build output layout and the local link
+
+The plugin emits the same per-file flat package shape into several roots. The dev build writes `dist/dev/pkg`, and the plugin's `publishConfig` (`directory: "dist/dev/pkg"`, `linkDirectory: true`) makes **that directory the workspace link target** — sites depending on `rspress-plugin-api-extractor` via `workspace:*` import the built per-file JS from `dist/dev/pkg`, not the `src/` sources. The production build emits one **published** root per registry under `dist/prod/<target>/pkg` (`npm`, `github`), selected by `transform`'s `targetGroup` and recorded in `dist/prod/targets.json`. The source `plugin/package.json` keeps `private: true` with `src/`-pointing `exports`; the build rewrites these to the compiled form (`private: false`, `index.js` / `runtime/index.js`, plus the `tsconfig/rspress.json` export). Every one of these `pkg` roots carries the identical per-file flat layout (the runtime sits next to `index.js`), which is what makes the runtime component paths layout-invariant — see [Per-file Plugin and Bundleless Runtime](#per-file-plugin-and-bundleless-runtime) and `ssg-compatible-components.md`.
 
 ### TypeScript Configuration
 
@@ -297,6 +299,8 @@ The plugin uses a standalone `tsconfig.json` with
 
 - Root config uses `"module": "node20"` (incompatible with API Extractor)
 - API Extractor requires `"moduleResolution": "bundler"`
+
+The package also publishes a standalone **RSPress tsconfig** at `rspress-plugin-api-extractor/tsconfig/rspress.json` (source `plugin/public/tsconfig/rspress.json`), which the documentation sites extend from. It is a standard RSPress/React-JSX bundler-resolution config (`jsx: react-jsx`, `module: esnext`, `verbatimModuleSyntax`) and is exported as a third entry point alongside `.` and `./runtime`.
 
 ### Component Registration
 
@@ -323,14 +327,23 @@ pnpm dev                # Start basic site dev server
 cd plugin && pnpm dev   # Rebuilds on file changes
 ```
 
+### Dev and preview servers (`serve`)
+
+The plugin exports a `serve(options?: ServeOptions): Promise<void>` runner (`src/serve.ts`) from the main entry, used by every site's `lib/scripts/dev.mts` / `preview.mts` (they just call `serve({ mode, openPath })`). It frees the target port (best-effort `lsof`), spawns `pnpm rspress dev|preview --port <port>`, streams output and opens a browser once the server is ready. Readiness is detected from RSPress's `Local:` address line (cross-mode), with a dev `built in` fallback (`isServerReady(mode, output)`). `open` is a lazy dynamic import and a plugin dependency.
+
+`ServeOptions`, `ServeMode`, `ResolvedServeConfig` and the pure helpers `isServerReady` and `resolveServeConfig` are exported from `rspress-plugin-api-extractor`. The two pure helpers carry the testable logic (readiness predicate, default/config resolution); the spawning side effects are not unit-tested. See `src/serve.ts` for the option defaults (`port`, `open`, `openPath`, `packageManager`, `cwd`, `readyWhen`).
+
 ### Key Source Files
 
 | File | Purpose |
 | --- | --- |
+| `savvy.build.ts` | Build script: `definePlugin` config + `runBuild` |
+| `index.ts` | Public barrel: plugin, `serve` API, config schemas/types |
 | `plugin.ts` | RSPress adapter, runtime management |
+| `serve.ts` | `serve` dev/preview runner + pure config/readiness helpers |
 | `build-program.ts` | Doc generation orchestration |
 | `build-stages.ts` | Stream pipeline, page gen, file writes |
-| `config-helpers.ts` | `fromFolder` / `fromModelsDir` config builders |
+| `config-helpers.ts` | `fromDir` / `fromParentDir` config builders |
 | `layers/ConfigServiceLive.ts` | Config resolution, model loading |
 | `layers/SnapshotServiceLive.ts` | SQLite snapshot implementation |
 | `layers/ObservabilityLive.ts` | Metrics, logger, build summary |
