@@ -1,5 +1,11 @@
 # rspress-plugin-api-extractor
 
+## 0.2.1
+
+### Bug Fixes
+
+* [`df28b81`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/df28b81b974223295c7856c0208b8f956675b358) Moved `unist-util-visit` package to a direct dependency.
+
 ## 0.2.0
 
 ### Breaking Changes
