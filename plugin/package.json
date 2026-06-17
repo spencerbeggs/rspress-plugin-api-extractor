@@ -46,7 +46,8 @@
 		"semver-effect": "^0.2.1",
 		"shiki": "^4.1.0",
 		"type-registry-effect": "^0.2.3",
-		"typescript": "catalog:silk"
+		"typescript": "catalog:silk",
+		"unist-util-visit": "^5.1.0"
 	},
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
@@ -63,8 +64,7 @@
 		"mdast-util-mdx-jsx": "^3.2.0",
 		"react": "catalog:silk",
 		"react-dom": "catalog:silk",
-		"unified": "^11.0.5",
-		"unist-util-visit": "^5.1.0"
+		"unified": "^11.0.5"
 	},
 	"peerDependencies": {
 		"@rspress/core": "^2.0.0",

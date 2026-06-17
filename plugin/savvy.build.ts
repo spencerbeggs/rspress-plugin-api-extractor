@@ -2,7 +2,7 @@ import { definePlugin, runBuild } from "@savvy-web/rspress-builder";
 
 const config = definePlugin({
 	runtime: true,
-	dtsBundledPackages: ["@rspress/core"],
+	dtsBundledPackages: ["@rspress/core", "@type/mdast", "@type/unist"],
 	apiModel: {
 		tsdoc: {
 			suppressWarnings: [
