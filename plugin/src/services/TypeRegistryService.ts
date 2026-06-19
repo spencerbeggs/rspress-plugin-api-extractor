@@ -15,6 +15,16 @@ export interface TypeRegistryResult {
 }
 
 export interface TypeRegistryServiceShape {
+	/**
+	 * Resolve each package's version spec (range / npm tag) to an exact
+	 * published version, dropping any package that cannot be resolved
+	 * (unpublished or workspace-only). The CDN backing {@link loadPackages}
+	 * requires exact versions, so callers should resolve before loading.
+	 */
+	readonly resolveVersions: (
+		packages: ReadonlyArray<ExternalPackageSpec>,
+	) => Effect.Effect<ReadonlyArray<ExternalPackageSpec>>;
+
 	readonly loadPackages: (
 		packages: ReadonlyArray<ExternalPackageSpec>,
 	) => Effect.Effect<TypeRegistryResult, TypeRegistryError>;

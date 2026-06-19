@@ -249,6 +249,42 @@ export function resolvePackageVersionConflicts(packages: ExternalPackageSpec[]):
 }
 
 /**
+ * Resolve each external package's version spec to an exact, published version.
+ *
+ * The type registry's CDN (jsDelivr) requires an exact version — its flat-file
+ * API 404s on semver ranges (`^4.1.0`), npm tags, and unpublished/workspace
+ * versions. This helper maps each spec through the supplied `resolve` function
+ * and drops any package whose resolution fails. Failures are the intended skip
+ * signal: a workspace-only or unpublished package (e.g. `@scope/pkg@1.0.0` that
+ * was never pushed to the registry) resolves to an error and is omitted, so it
+ * never poisons the batch load. Input order is preserved for survivors.
+ *
+ * @param packages - External package specs (typically post-deduplication)
+ * @param resolve - Resolver mapping a spec to its exact published version
+ * @returns Effect yielding the resolved specs with unresolvable packages dropped
+ *
+ * @example
+ * ```ts
+ * // [{ name: "vitest", version: "^4.1.0" }] -> [{ name: "vitest", version: "4.1.9" }]
+ * // an unpublished workspace package resolves to an error and is dropped
+ * ```
+ */
+export function resolveExternalPackageVersions<R>(
+	packages: ReadonlyArray<ExternalPackageSpec>,
+	resolve: (pkg: ExternalPackageSpec) => Effect.Effect<string, unknown, R>,
+): Effect.Effect<ExternalPackageSpec[], never, R> {
+	return Effect.forEach(
+		packages,
+		(pkg) =>
+			resolve(pkg).pipe(
+				Effect.map((version): ExternalPackageSpec | null => ({ name: pkg.name, version })),
+				Effect.catchAll(() => Effect.succeed<ExternalPackageSpec | null>(null)),
+			),
+		{ concurrency: 5 },
+	).pipe(Effect.map((results) => results.filter((spec): spec is ExternalPackageSpec => spec !== null)));
+}
+
+/**
  * Strip range prefixes from a version string to get a clean semver.
  */
 function stripRangePrefix(version: string): string {

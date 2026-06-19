@@ -541,21 +541,37 @@ export function ConfigServiceLive(
 							Effect.gen(function* () {
 								if (allExternalPackages.length > 0) {
 									const typesStart = performance.now();
-									const result = yield* typeRegistry.loadPackages(allExternalPackages);
-									const cache = yield* typeRegistry.createTypeScriptCache(allExternalPackages, resolvedCompilerOptions);
 
-									// Merge external package VFS into combined VFS
-									for (const [filePath, content] of result.vfs.entries()) {
-										combinedVfs.set(filePath, content);
+									// Resolve version specs (ranges / npm tags) to exact published
+									// versions and drop unpublished / workspace-only packages: the CDN
+									// backing both loadPackages and createTypeScriptCache requires exact
+									// versions and 404s on ranges or unpublished packages.
+									const resolvedPackages = yield* typeRegistry.resolveVersions(allExternalPackages);
+									const droppedCount = allExternalPackages.length - resolvedPackages.length;
+									if (droppedCount > 0) {
+										yield* Effect.logDebug(
+											`Skipped ${droppedCount} unresolvable external package(s) (unpublished or workspace-only)`,
+										);
 									}
 
-									yield* Effect.logDebug(
-										`Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`,
-									);
-									return cache;
+									if (resolvedPackages.length > 0) {
+										const result = yield* typeRegistry.loadPackages(resolvedPackages);
+										const cache = yield* typeRegistry.createTypeScriptCache(resolvedPackages, resolvedCompilerOptions);
+
+										// Merge external package VFS into combined VFS
+										for (const [filePath, content] of result.vfs.entries()) {
+											combinedVfs.set(filePath, content);
+										}
+
+										yield* Effect.logDebug(
+											`Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`,
+										);
+										return cache;
+									}
 								}
 
-								// No external packages - still create TypeScript cache for lib files
+								// No external packages (or none resolvable) - still create
+								// TypeScript cache for lib files
 								return yield* typeRegistry.createTypeScriptCache([], resolvedCompilerOptions);
 							}),
 						);

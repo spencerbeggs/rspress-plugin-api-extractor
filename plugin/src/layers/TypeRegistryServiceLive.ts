@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { PackageSpec, TypeRegistry } from "type-registry-effect";
 import { NodeLayer, createTypeScriptCache } from "type-registry-effect/node";
 import type ts from "typescript";
+import { resolveExternalPackageVersions } from "../config-utils.js";
 import { TypeRegistryError as PluginTypeRegistryError } from "../errors.js";
 import { TypeRegistryService } from "../services/TypeRegistryService.js";
 
@@ -15,6 +16,11 @@ import { TypeRegistryService } from "../services/TypeRegistryService.js";
  * automatically tracked by the upstream library.
  */
 export const TypeRegistryServiceLive = Layer.succeed(TypeRegistryService, {
+	resolveVersions: (packages) =>
+		resolveExternalPackageVersions(packages, (pkg) => TypeRegistry.resolveVersion(pkg.name, pkg.version)).pipe(
+			Effect.provide(NodeLayer),
+		),
+
 	loadPackages: (packages) =>
 		Effect.gen(function* () {
 			if (packages.length === 0) {

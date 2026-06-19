@@ -284,6 +284,7 @@ describe("ConfigServiceLive.resolve", () => {
 
 	it("recovers from TypeRegistryError", async () => {
 		const FailingTypeRegistryLayer = Layer.succeed(TypeRegistryService, {
+			resolveVersions: (packages) => Effect.succeed(packages),
 			loadPackages: () =>
 				Effect.fail(
 					new TypeRegistryError({
