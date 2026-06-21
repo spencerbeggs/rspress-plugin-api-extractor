@@ -293,7 +293,6 @@ describe("ConfigServiceLive.resolve", () => {
 						reason: "Network error",
 					}),
 				),
-			createTypeScriptCache: () => Effect.succeed(new Map()),
 		});
 
 		const options: PluginOptions = {

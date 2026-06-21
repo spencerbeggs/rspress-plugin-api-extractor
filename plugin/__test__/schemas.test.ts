@@ -134,7 +134,7 @@ describe("Config leaf schemas", () => {
 	it("decodes AutoDetectDependencies with defaults", () => {
 		const decode = Schema.decodeUnknownSync(AutoDetectDependencies);
 		const result = decode({});
-		expect(result.dependencies).toBe(false);
+		expect(result.dependencies).toBe(true);
 		expect(result.devDependencies).toBe(false);
 		expect(result.peerDependencies).toBe(true);
 		expect(result.autoDependencies).toBe(true);

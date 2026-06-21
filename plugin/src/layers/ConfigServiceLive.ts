@@ -7,7 +7,6 @@ import { Effect, Layer, Metric } from "effect";
 import type { ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
-import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "../api-extracted-package.js";
 import { CategoryResolver } from "../category-resolver.js";
 import {
@@ -535,19 +534,28 @@ export function ConfigServiceLive(
 						);
 
 						// --- 6. External type loading (recoverable) ---
-						let tsEnvCache = new Map<string, VirtualTypeScriptEnvironment>();
+						// Twoslash builds its own per-block TypeScript environment from the
+						// combined VFS, so we only need to fetch the external declarations and
+						// merge them in here — no separate TypeScript-cache pre-build.
+						//
+						// First-party packages (the ones being documented) are served from their
+						// generated virtual VFS, which is authoritative — their published version
+						// may not exist (an optimistic next version) and, if it did, fetching it
+						// would clobber the api.json-derived declarations. Exclude them.
+						const documentedPackageNames = new Set(apiConfigs.map((config) => config.packageName));
+						const externalPackagesToLoad = allExternalPackages.filter((pkg) => !documentedPackageNames.has(pkg.name));
 
 						const typeLoadResult = yield* Effect.either(
 							Effect.gen(function* () {
-								if (allExternalPackages.length > 0) {
+								if (externalPackagesToLoad.length > 0) {
 									const typesStart = performance.now();
 
 									// Resolve version specs (ranges / npm tags) to exact published
 									// versions and drop unpublished / workspace-only packages: the CDN
-									// backing both loadPackages and createTypeScriptCache requires exact
-									// versions and 404s on ranges or unpublished packages.
-									const resolvedPackages = yield* typeRegistry.resolveVersions(allExternalPackages);
-									const droppedCount = allExternalPackages.length - resolvedPackages.length;
+									// backing loadPackages requires exact versions and 404s on ranges
+									// or unpublished packages.
+									const resolvedPackages = yield* typeRegistry.resolveVersions(externalPackagesToLoad);
+									const droppedCount = externalPackagesToLoad.length - resolvedPackages.length;
 									if (droppedCount > 0) {
 										yield* Effect.logDebug(
 											`Skipped ${droppedCount} unresolvable external package(s) (unpublished or workspace-only)`,
@@ -556,7 +564,6 @@ export function ConfigServiceLive(
 
 									if (resolvedPackages.length > 0) {
 										const result = yield* typeRegistry.loadPackages(resolvedPackages);
-										const cache = yield* typeRegistry.createTypeScriptCache(resolvedPackages, resolvedCompilerOptions);
 
 										// Merge external package VFS into combined VFS
 										for (const [filePath, content] of result.vfs.entries()) {
@@ -566,29 +573,15 @@ export function ConfigServiceLive(
 										yield* Effect.logDebug(
 											`Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`,
 										);
-										return cache;
 									}
 								}
-
-								// No external packages (or none resolvable) - still create
-								// TypeScript cache for lib files
-								return yield* typeRegistry.createTypeScriptCache([], resolvedCompilerOptions);
 							}),
 						);
 
-						if (typeLoadResult._tag === "Right") {
-							tsEnvCache = typeLoadResult.right;
-						} else {
+						if (typeLoadResult._tag === "Left") {
 							yield* Effect.logWarning(
 								`Failed to load external types: ${typeLoadResult.left.message}. Continuing with empty VFS.`,
 							);
-							// Still create TypeScript cache for lib files
-							const fallbackCache = yield* Effect.either(
-								typeRegistry.createTypeScriptCache([], resolvedCompilerOptions),
-							);
-							if (fallbackCache._tag === "Right") {
-								tsEnvCache = fallbackCache.right;
-							}
 						}
 
 						// --- 7. Twoslash init ---
@@ -597,7 +590,7 @@ export function ConfigServiceLive(
 							combinedVfs,
 							undefined,
 							undefined,
-							tsEnvCache,
+							undefined,
 							resolvedCompilerOptions,
 						);
 						yield* Effect.logDebug(`Initializing Twoslash: ${(performance.now() - twoslashStartMs).toFixed(0)}ms`);
@@ -663,7 +656,6 @@ export function ConfigServiceLive(
 							apiConfigs,
 							combinedVfs,
 							highlighter,
-							tsEnvCache,
 							resolvedCompilerOptions,
 							ogResolver,
 							shikiCrossLinker,

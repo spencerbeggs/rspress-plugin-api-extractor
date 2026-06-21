@@ -27,7 +27,11 @@ export type ExternalPackageSpec = Schema.Schema.Type<typeof ExternalPackageSpec>
 
 export const AutoDetectDependencies = Schema.mutable(
 	Schema.Struct({
-		dependencies: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+		// `dependencies` defaults to true: a package's documented type surface is
+		// usually written against its runtime dependencies (e.g. effect, @effect/*),
+		// so those declarations must be in the VFS for Twoslash to resolve them.
+		// Unresolvable specs (workspace-only / unpublished) are dropped during load.
+		dependencies: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 		devDependencies: Schema.optionalWith(Schema.Boolean, { default: () => false }),
 		peerDependencies: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 		autoDependencies: Schema.optionalWith(Schema.Boolean, { default: () => true }),

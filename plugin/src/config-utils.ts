@@ -155,20 +155,22 @@ export function extractTypeUtilities(packageJson: PackageJson | undefined): Exte
  *   devDependencies: { "type-fest": "^4.0.0" }
  * };
  *
- * // Default: only peerDependencies + type utilities
+ * // Default: dependencies + peerDependencies + type utilities (devDependencies excluded).
+ * // The documented type surface is usually written against runtime dependencies,
+ * // so those must be loaded for Twoslash to resolve them.
  * extractAutoDetectedPackages(pkg);
- * // Returns: [{ name: "zod", version: "^3.22.4" }, { name: "type-fest", version: "^4.0.0" }]
- *
- * // Include all dependency types
- * extractAutoDetectedPackages(pkg, { dependencies: true, peerDependencies: true, autoDependencies: true });
  * // Returns: [{ name: "effect", ... }, { name: "zod", ... }, { name: "type-fest", ... }]
+ *
+ * // Opt out of dependencies (peerDependencies + type utilities only)
+ * extractAutoDetectedPackages(pkg, { dependencies: false });
+ * // Returns: [{ name: "zod", version: "^3.22.4" }, { name: "type-fest", version: "^4.0.0" }]
  * ```
  */
 export function extractAutoDetectedPackages(
 	packageJson: PackageJson | undefined,
 	options: AutoDetectDependencies = {},
 ): ExternalPackageSpec[] {
-	const { dependencies = false, devDependencies = false, peerDependencies = true, autoDependencies = true } = options;
+	const { dependencies = true, devDependencies = false, peerDependencies = true, autoDependencies = true } = options;
 
 	const packages: ExternalPackageSpec[] = [];
 

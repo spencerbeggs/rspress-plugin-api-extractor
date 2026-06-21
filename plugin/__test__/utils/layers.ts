@@ -65,7 +65,6 @@ export const MockPathDerivationServiceLayer = Layer.succeed(PathDerivationServic
 export const MockTypeRegistryServiceLayer = Layer.succeed(TypeRegistryService, {
 	resolveVersions: (packages) => Effect.succeed(packages),
 	loadPackages: (_packages) => Effect.succeed({ vfs: new Map() }),
-	createTypeScriptCache: (_packages, _compilerOptions) => Effect.succeed(new Map()),
 });
 
 /**

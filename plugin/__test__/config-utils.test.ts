@@ -207,19 +207,29 @@ describe("extractAutoDetectedPackages", () => {
 		},
 	};
 
-	it("should extract only peerDependencies and type utilities by default", () => {
+	it("should extract dependencies, peerDependencies, and type utilities by default (not devDependencies)", () => {
 		const result = extractAutoDetectedPackages(packageJson);
 
 		expect(result).toEqual([
+			{ name: "effect", version: "^3.0.0" },
 			{ name: "zod", version: "^3.22.4" },
 			{ name: "type-fest", version: "^4.0.0" },
 		]);
+		// devDependencies (vitest) are not auto-detected
+		expect(result).not.toContainEqual({ name: "vitest", version: "^1.0.0" });
 	});
 
-	it("should include dependencies when option is true", () => {
-		const result = extractAutoDetectedPackages(packageJson, { dependencies: true });
+	it("should include dependencies by default", () => {
+		const result = extractAutoDetectedPackages(packageJson);
 
 		expect(result).toContainEqual({ name: "effect", version: "^3.0.0" });
+	});
+
+	it("should exclude dependencies when option is false", () => {
+		const result = extractAutoDetectedPackages(packageJson, { dependencies: false });
+
+		expect(result).not.toContainEqual({ name: "effect", version: "^3.0.0" });
+		expect(result).toContainEqual({ name: "zod", version: "^3.22.4" });
 	});
 
 	it("should include devDependencies when option is true", () => {

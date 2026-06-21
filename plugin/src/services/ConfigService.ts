@@ -3,7 +3,6 @@ import type { ApiPackage } from "@microsoft/api-extractor-model";
 import type { Effect, Scope } from "effect";
 import { Context } from "effect";
 import type { Highlighter, ShikiTransformer } from "shiki";
-import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type { ApiModelLoadError, ConfigValidationError, TypeRegistryError } from "../errors.js";
 import type { PackageJson, TypeResolutionCompilerOptions } from "../internal-types.js";
 import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
@@ -51,7 +50,6 @@ export interface ResolvedBuildContext {
 	readonly apiConfigs: ReadonlyArray<ResolvedApiConfig>;
 	readonly combinedVfs: ReadonlyMap<string, string>;
 	readonly highlighter: Highlighter;
-	readonly tsEnvCache: ReadonlyMap<string, VirtualTypeScriptEnvironment>;
 	readonly resolvedCompilerOptions: TypeResolutionCompilerOptions;
 	readonly ogResolver: OpenGraphResolver | null;
 	readonly shikiCrossLinker: ShikiCrossLinker;
