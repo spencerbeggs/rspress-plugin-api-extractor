@@ -51,7 +51,7 @@
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "^2.0.14",
-		"@savvy-web/rspress-builder": "^0.8.0",
+		"@savvy-web/rspress-builder": "^0.9.0",
 		"@tsdown/css": "^0.22.2",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
@@ -78,8 +78,7 @@
 		"directory": "dist/dev/pkg",
 		"linkDirectory": true,
 		"targets": {
-			"npm": true,
-			"github": "@spencerbeggs/rspress-plugin-api-extractor"
+			"npm": true
 		}
 	}
 }
