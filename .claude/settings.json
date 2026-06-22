@@ -11,6 +11,7 @@
 	},
 	"enableAllProjectMcpServers": true,
 	"enabledPlugins": {
+		"silk@savvy-web-systems": true,
 		"design-docs@spencerbeggs": true
 	},
 	"plansDirectory": ".claude/plans"

@@ -72,8 +72,6 @@ export namespace Filters {
 	 * This function is part of the staged fuzzy-search API and may change
 	 * in a future minor release before it is promoted to stable.
 	 *
-	 * @beta
-	 *
 	 * @typeParam T - The type of items in the array.
 	 *
 	 * @param pattern - The substring to search for within the property value.
@@ -81,7 +79,7 @@ export namespace Filters {
 	 * @returns A {@link Transform} that accepts a `T[]` and returns the items
 	 *   whose `key` property contains `pattern`.
 	 *
-	 * @public
+	 * @beta
 	 */
 	export function fuzzy<T>(pattern: string, key: keyof T): Transform<T[], T[]> {
 		return (items) => items.filter((item) => String(item[key]).includes(pattern));

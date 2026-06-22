@@ -7,6 +7,11 @@ import { SignatureCode } from "../SignatureCode/index.js";
 import { SignatureToolbar } from "../SignatureToolbar/index.js";
 import styles from "./index.module.css";
 
+/**
+ * Props for {@link SignatureBlock}.
+ *
+ * @internal
+ */
 export interface SignatureBlockProps {
 	/** Pre-generated HAST (Hypertext Abstract Syntax Tree) from Shiki */
 	hast: Root | null;
@@ -19,8 +24,10 @@ export interface SignatureBlockProps {
 }
 
 /**
- * Interactive signature block with wrap button
- * Displays syntax-highlighted TypeScript signatures with hover tooltips
+ * Interactive signature block with wrap button.
+ * Displays syntax-highlighted TypeScript signatures with hover tooltips.
+ *
+ * @internal
  */
 export function SignatureBlock({
 	hast,

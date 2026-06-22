@@ -1,5 +1,3 @@
-import type { DataSourceError } from "./errors.js";
-
 /**
  * Abstract base class for all data sources in a pipeline.
  *
@@ -11,7 +9,7 @@ import type { DataSourceError } from "./errors.js";
  *
  * @typeParam T - The type of records produced by this data source.
  *
- * @throws {@link DataSourceError} if the underlying resource cannot be accessed.
+ * @throws `DataSourceError` if the underlying resource cannot be accessed.
  *
  * @see Pipeline
  *
@@ -66,7 +64,7 @@ export abstract class DataSource<T> {
 	 *
 	 * @returns A promise that resolves when the connection is ready.
 	 *
-	 * @throws {@link DataSourceError} if the connection cannot be established.
+	 * @throws `DataSourceError` if the connection cannot be established.
 	 *
 	 * @virtual
 	 */
@@ -82,7 +80,7 @@ export abstract class DataSource<T> {
 	 *
 	 * @returns A promise that resolves with an array of records of type `T`.
 	 *
-	 * @throws {@link DataSourceError} if the data cannot be read or parsed.
+	 * @throws `DataSourceError` if the data cannot be read or parsed.
 	 *
 	 * @virtual
 	 */

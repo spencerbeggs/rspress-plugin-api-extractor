@@ -3,7 +3,11 @@ import path from "node:path";
 import { normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import type { MultiApiConfig } from "./schemas/index.js";
 
-/** Metadata discovered from a single rslib-builder localPaths package folder. */
+/**
+ * Metadata discovered from a single rslib-builder localPaths package folder.
+ *
+ * @public
+ */
 export interface DirInfo {
 	/** Absolute path to the package folder. */
 	dir: string;
@@ -31,10 +35,16 @@ export interface DirInfo {
  * package it yields the scope too (e.g. `@scope/bar`), which is rarely what you
  * want inside a URL path. Prefer `{dirname}` (the folder name, which is the
  * unscoped name in the rslib-builder layout) or the callback form.
+ *
+ * @public
  */
 export type BaseRoute = string | ((info: DirInfo) => string);
 
-/** Overrides for `api.fromDir`. Any MultiApiConfig field wins over discovery. */
+/**
+ * Overrides for `api.fromDir`. Any `MultiApiConfig` field wins over discovery.
+ *
+ * @public
+ */
 export type FromDirOptions = Omit<Partial<MultiApiConfig>, "baseRoute"> & {
 	baseRoute?: BaseRoute;
 	/** Base for resolving a relative `dir`. Defaults to process.cwd(). */

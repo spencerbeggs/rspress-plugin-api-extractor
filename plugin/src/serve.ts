@@ -1,9 +1,17 @@
 import { execFileSync, spawn } from "node:child_process";
 
-/** Which RSPress server `serve` runs. */
+/**
+ * Which RSPress server {@link serve} runs.
+ *
+ * @public
+ */
 export type ServeMode = "dev" | "preview";
 
-/** Options for {@link serve}. All fields are optional with sensible defaults. */
+/**
+ * Options for {@link serve}. All fields are optional with sensible defaults.
+ *
+ * @public
+ */
 export interface ServeOptions {
 	/** Which RSPress server to run. Defaults to `"dev"`. */
 	mode?: ServeMode;
@@ -31,7 +39,11 @@ export interface ServeOptions {
 	readyWhen?: (output: string) => boolean;
 }
 
-/** Fully resolved {@link ServeOptions} with defaults applied. */
+/**
+ * Fully resolved {@link ServeOptions} with defaults applied.
+ *
+ * @public
+ */
 export interface ResolvedServeConfig {
 	mode: ServeMode;
 	port: number;
@@ -56,6 +68,11 @@ const DEFAULT_PORT = 4173;
  * "ready ... built in" line, kept as a fallback in case the address-line format
  * changes. Pure and exported so it can be unit-tested and reused as a
  * {@link ServeOptions.readyWhen} building block.
+ *
+ * @param mode - the server mode (`"dev"` or `"preview"`)
+ * @param output - a chunk of combined stdout/stderr from the server process
+ * @returns `true` when the server appears to be listening
+ * @public
  */
 export function isServerReady(mode: ServeMode, output: string): boolean {
 	if (output.includes("Local:")) {
@@ -71,6 +88,10 @@ export function isServerReady(mode: ServeMode, output: string): boolean {
  * Resolve {@link ServeOptions} into a concrete {@link ResolvedServeConfig},
  * applying all defaults. Pure (modulo reading `process.env`) and exported so
  * the resolution logic can be unit-tested without spawning a server.
+ *
+ * @param options - optional serve options; all fields have sensible defaults
+ * @returns a fully resolved config with all defaults applied
+ * @public
  */
 export function resolveServeConfig(options: ServeOptions = {}): ResolvedServeConfig {
 	const mode: ServeMode = options.mode ?? "dev";
@@ -137,6 +158,10 @@ function killProcessOnPort(port: number): void {
  * returned promise resolves once the server is ready and the browser has been
  * opened; it does not resolve when the server stops. Port-freeing and browser
  * opening are best-effort and never reject.
+ *
+ * @param options - optional serve options; all fields have sensible defaults
+ * @returns a promise that resolves once the server is ready and the browser has been opened
+ * @public
  */
 export async function serve(options: ServeOptions = {}): Promise<void> {
 	const config = resolveServeConfig(options);

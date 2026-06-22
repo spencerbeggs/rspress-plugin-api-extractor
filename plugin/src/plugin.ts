@@ -375,6 +375,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
  * files. Config helpers are available under `ApiExtractorPlugin.api` (single
  * package → one config for the `api:` option) and `ApiExtractorPlugin.apis`
  * (parent directory → array for the `apis:` option).
+ *
+ * @public
  */
 export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
 	api: { fromDir },

@@ -7,6 +7,11 @@ import { SignatureCode } from "../SignatureCode/index.js";
 import { SignatureToolbar } from "../SignatureToolbar/index.js";
 import styles from "./index.module.css";
 
+/**
+ * Props for {@link MemberSignature}.
+ *
+ * @internal
+ */
 export interface MemberSignatureProps {
 	/** Pre-generated HAST (Hypertext Abstract Syntax Tree) from Shiki */
 	hast: Root | null;
@@ -21,8 +26,10 @@ export interface MemberSignatureProps {
 }
 
 /**
- * Interactive member signature block with h3 header and wrap button
- * Displays syntax-highlighted TypeScript member signatures with hover tooltips
+ * Interactive member signature block with h3 header and wrap button.
+ * Displays syntax-highlighted TypeScript member signatures with hover tooltips.
+ *
+ * @internal
  */
 export function MemberSignature({
 	hast,

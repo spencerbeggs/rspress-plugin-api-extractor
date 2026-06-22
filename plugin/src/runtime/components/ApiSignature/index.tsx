@@ -3,6 +3,11 @@ import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
 import { SignatureBlock } from "../SignatureBlock/index.js";
 
+/**
+ * Props for the {@link ApiSignature} component used in generated MDX pages.
+ *
+ * @public
+ */
 export interface ApiSignatureProps {
 	/** Display code (clean, no Twoslash directives) */
 	code: string;
@@ -24,13 +29,11 @@ export interface ApiSignatureProps {
 /**
  * Renders a full API type signature block.
  *
- * Replaces SignatureBlockWrapper with a simpler component that takes plain
- * string props (no base64 encoding for code). Produces clean semantic HTML
- * that RSPress converts to LLM-readable markdown in SSG-MD mode, and renders
- * interactive Shiki-highlighted code in browser mode.
+ * In browser mode renders an interactive Shiki-highlighted code block.
+ * In SSG-MD mode renders a plain fenced code block for LLM consumption.
  *
- * In SSG-MD mode, renders a "Signature" heading followed by a plain
- * code block with the type signature.
+ * @param props - {@link ApiSignatureProps}
+ * @public
  */
 export function ApiSignature({
 	code,

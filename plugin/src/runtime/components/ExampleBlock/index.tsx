@@ -8,6 +8,11 @@ import { SignatureCode } from "../SignatureCode/index.js";
 import { SignatureToolbar } from "../SignatureToolbar/index.js";
 import styles from "./index.module.css";
 
+/**
+ * Props for {@link ExampleBlock}.
+ *
+ * @internal
+ */
 export interface ExampleBlockProps {
 	/** Pre-generated HAST (Hypertext Abstract Syntax Tree) from Shiki */
 	hast: Root | null;
@@ -16,9 +21,11 @@ export interface ExampleBlockProps {
 }
 
 /**
- * Code block for examples - displays syntax-highlighted code without a heading
- * Similar to SignatureBlock but without the "Signature" header
- * Includes both copy and wrap buttons in the toolbar
+ * Code block for examples — displays syntax-highlighted code without a heading.
+ * Similar to {@link SignatureBlock} but without the "Signature" header.
+ * Includes both copy and wrap buttons in the toolbar.
+ *
+ * @internal
  */
 export function ExampleBlock({ hast, code }: ExampleBlockProps): ReactElement {
 	const { wrapped, toggleWrap } = useWrapToggle();
