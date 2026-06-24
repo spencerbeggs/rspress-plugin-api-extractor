@@ -91,7 +91,7 @@ importers:
     devDependencies:
       '@savvy-web/bundler':
         specifier: ^0.9.0
-        version: 0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)
+        version: 0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.0
@@ -107,7 +107,7 @@ importers:
     devDependencies:
       '@savvy-web/bundler':
         specifier: ^0.9.0
-        version: 0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)
+        version: 0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.0
@@ -123,7 +123,7 @@ importers:
     devDependencies:
       '@savvy-web/bundler':
         specifier: ^0.9.0
-        version: 0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)
+        version: 0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.0
@@ -139,7 +139,7 @@ importers:
     devDependencies:
       '@savvy-web/bundler':
         specifier: ^0.9.0
-        version: 0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)
+        version: 0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.0
@@ -227,8 +227,8 @@ importers:
         specifier: ^2.0.14
         version: 2.0.14(@rspack/core@2.0.8(@swc/helpers@0.5.23))(@types/mdast@4.0.4)(@types/react@19.2.17)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rspress-builder':
-        specifier: ^0.9.0
-        version: 0.9.0(32a23cbde798251afde20f171e5dd10d)
+        specifier: ^0.9.1
+        version: 0.9.1(32a23cbde798251afde20f171e5dd10d)
       '@tsdown/css':
         specifier: ^0.22.2
         version: 0.22.3(jiti@2.6.1)(postcss@8.5.15)(tsdown@0.22.3)(yaml@2.9.0)
@@ -1321,8 +1321,8 @@ packages:
   '@rushstack/ts-command-line@5.3.10':
     resolution: {integrity: sha512-fwI076HYknC0IrMXdY6UmjDv+PH7NHhNJX3/pY2UblSE5XrXgndXZPiOe/6ZtuFpn6DvVDVNhtkIzQ+Qu/MhVQ==}
 
-  '@savvy-web/bundler@0.9.0':
-    resolution: {integrity: sha512-kuLCmMq/2tjo/MtDDe+lbZlRnp/4a+pR51KaH2vvUwtkRu/CdrQBYs0bkdIezrr+ygkeHiXpvANhp1Tg9Hjntg==}
+  '@savvy-web/bundler@0.9.1':
+    resolution: {integrity: sha512-A4pNKA8XDZifgfebfWDuUgY+X5GJ+a+uvJz6/81eoRpsNBpoutneTx9B14BRzzeImi+GaH+jLryUIGmcYxBjpw==}
     peerDependencies:
       '@types/node': ^26.0.0
       '@types/react': ^19.2.0
@@ -1349,8 +1349,8 @@ packages:
     resolution: {integrity: sha512-GWFG0BzTqfnV76dsH9ZLc2ej5j+zqtGwmCwrz6E9VnjTSTgCHIKFGx+JTOKwfjz/m0m6qc67Az+jIdKGWs6HjA==}
     hasBin: true
 
-  '@savvy-web/rspress-builder@0.9.0':
-    resolution: {integrity: sha512-eXaCILKtalRSGOSJGru7kBtW+buofB7PNEBcsG0R2IELCdzLZ0UmM7zA+ZCidCRasXyYfLCex1Y3VDpmPLv8Mw==}
+  '@savvy-web/rspress-builder@0.9.1':
+    resolution: {integrity: sha512-DrFCLXJ6WjbzFRhuMFFgACHy4cj2UcoXaKPUB3Dyh11ggJqmddEMcc8zSh9BUIAYXFLyFXvZVY0JjYWV2MTiLA==}
     peerDependencies:
       '@rspress/core': ^2.0.0
       '@types/node': ^26.0.0
@@ -1389,8 +1389,8 @@ packages:
       '@biomejs/biome':
         optional: true
 
-  '@savvy-web/tsdown-plugins@0.9.0':
-    resolution: {integrity: sha512-FzTOiYc537SVfwtguBbM079QP8HNtqzF7mm+4TAWb/czySOSk1TIOe083JdZttNru+x398NDvnUbyUXKwMIFBw==}
+  '@savvy-web/tsdown-plugins@0.9.1':
+    resolution: {integrity: sha512-3Vhrlwq8bQJbbfFJF/NootTmj206SqM7MGot7tn9unz0RYHwXB16GG4RTY78SBRIAcnX1HLdu80zwnpiJfvK+Q==}
     peerDependencies:
       effect: '>=3.21.0'
 
@@ -5674,9 +5674,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@savvy-web/bundler@0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)':
+  '@savvy-web/bundler@0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)':
     dependencies:
-      '@savvy-web/tsdown-plugins': 0.9.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)
+      '@savvy-web/tsdown-plugins': 0.9.1(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)
       '@tsdown/exe': 0.22.3(tsdown@0.22.3)
       '@types/node': 26.0.0
       '@typescript/native-preview': 7.0.0-dev.20260622.1
@@ -5751,11 +5751,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@savvy-web/rspress-builder@0.9.0(32a23cbde798251afde20f171e5dd10d)':
+  '@savvy-web/rspress-builder@0.9.1(32a23cbde798251afde20f171e5dd10d)':
     dependencies:
       '@rspress/core': 2.0.14(@rspack/core@2.0.8(@swc/helpers@0.5.23))(@types/mdast@4.0.4)(@types/react@19.2.17)(micromark-util-types@2.0.2)(micromark@4.0.2)
-      '@savvy-web/bundler': 0.9.0(d2f0334a4bb7d36a8224d64e81d061eb)
-      '@savvy-web/tsdown-plugins': 0.9.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)
+      '@savvy-web/bundler': 0.9.1(d2f0334a4bb7d36a8224d64e81d061eb)
+      '@savvy-web/tsdown-plugins': 0.9.1(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)
       '@tsdown/css': 0.22.3(jiti@2.6.1)(postcss@8.5.15)(tsdown@0.22.3)(yaml@2.9.0)
       '@types/node': 26.0.0
       '@types/react': 19.2.17
@@ -5845,7 +5845,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@savvy-web/tsdown-plugins@0.9.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)':
+  '@savvy-web/tsdown-plugins@0.9.1(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.0)(effect@3.21.4)':
     dependencies:
       '@changesets/get-release-plan': 4.0.16
       '@effect/platform-node': 0.107.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
