@@ -34,6 +34,14 @@ export const BuildMetrics = {
 	pagesGenerated: Metric.counter("pages.generated"),
 	apiVersionsLoaded: Metric.counter("api.versions.loaded"),
 	externalPackagesTotal: Metric.counter("external.packages.total"),
+	phaseDuration: Metric.histogram(
+		"phase.duration",
+		MetricBoundaries.fromIterable([50, 100, 250, 500, 1000, 2500, 5000, 10000]),
+	),
+	vfsFiles: Metric.counter("vfs.files"),
+	importsPrepended: Metric.counter("imports.prepended"),
+	twoslashDiagnostics: Metric.counter("twoslash.diagnostics"),
+	configDefaultsApplied: Metric.counter("config.defaults.applied"),
 } as const;
 
 /**
@@ -129,6 +137,9 @@ export const logBuildSummary = Effect.gen(function* () {
 	const prettierErrors = yield* Metric.value(BuildMetrics.prettierErrors);
 	const codeblockTotal = yield* Metric.value(BuildMetrics.codeblockTotal);
 	const codeblockSlow = yield* Metric.value(BuildMetrics.codeblockSlow);
+	const pagesGenerated = yield* Metric.value(BuildMetrics.pagesGenerated);
+	const externalPackages = yield* Metric.value(BuildMetrics.externalPackagesTotal);
+	const phaseDurationSnapshot = yield* Metric.value(BuildMetrics.phaseDuration);
 
 	const total = filesTotal.count;
 	const newCount = filesNew.count;
@@ -150,6 +161,16 @@ export const logBuildSummary = Effect.gen(function* () {
 		if (modified > 0) parts.push(`${modified} modified`);
 		if (unchanged > 0) parts.push(`${unchanged} unchanged`);
 		yield* Effect.log(`📝 ${total} files (${parts.join(", ")})`);
+	}
+
+	// Pages and external packages summary
+	if (pagesGenerated.count > 0) {
+		yield* Effect.log(`🧩 ${pagesGenerated.count} pages, ${externalPackages.count} external package(s)`);
+	}
+
+	// Per-phase duration summary (silent until Task 12 wires phaseDuration increments)
+	if (phaseDurationSnapshot.count > 0) {
+		yield* Effect.log(`⏱ ${phaseDurationSnapshot.count} phase(s) timed`);
 	}
 
 	// Code block summary

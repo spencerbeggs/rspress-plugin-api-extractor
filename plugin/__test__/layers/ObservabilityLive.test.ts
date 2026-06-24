@@ -144,4 +144,27 @@ describe("logBuildSummary", () => {
 		expect(errorLine).toBeDefined();
 		expect(errorLine).toContain("Twoslash");
 	});
+
+	it("reports pages generated and external packages in summary", async () => {
+		const output: string[] = [];
+		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+			output.push(args.map(String).join(" "));
+		});
+
+		const program = Effect.gen(function* () {
+			// Prime to ensure the count>0 guard fires; registry is process-wide so assert loosely
+			yield* Metric.incrementBy(BuildMetrics.pagesGenerated, 5);
+			yield* Metric.incrementBy(BuildMetrics.externalPackagesTotal, 2);
+			yield* logBuildSummary;
+		});
+
+		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("info"))));
+
+		spy.mockRestore();
+
+		// Process-wide registry: counts accumulate, so use toContain / loose assertions
+		const pagesLine = output.find((l) => l.includes("pages"));
+		expect(pagesLine).toBeDefined();
+		expect(pagesLine).toContain("external package");
+	});
 });
