@@ -98,7 +98,7 @@ The Prettier formatter (`plugin/src/prettier-formatter.ts`) stores the same
 
 ```typescript
 emitEvent(
-  PrettierEvent.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" })
+  PluginEvent.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" })
 );
 ```
 

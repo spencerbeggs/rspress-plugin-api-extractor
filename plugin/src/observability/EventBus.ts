@@ -11,7 +11,12 @@ export interface EventBusShape {
 export class EventBus extends Context.Tag("rspress-plugin-api-extractor/EventBus")<EventBus, EventBusShape>() {}
 
 function makeShape(sinks: readonly EventSink[]): EventBusShape {
-	const maxAdmitted = sinks.reduce((max, s) => Math.max(max, LEVEL_RANK[s.minLevel]), -1);
+	// Only sinks that serialize payloads drive the wantsLevel hint. Scalar-only
+	// sinks (e.g. metrics) omit capturesPayload so callers are not forced to
+	// build expensive string/JSON payloads just to update a counter.
+	const maxAdmitted = sinks
+		.filter((s) => s.capturesPayload === true)
+		.reduce((max, s) => Math.max(max, LEVEL_RANK[s.minLevel]), -1);
 	return {
 		emit: (event) =>
 			Effect.sync(() => {

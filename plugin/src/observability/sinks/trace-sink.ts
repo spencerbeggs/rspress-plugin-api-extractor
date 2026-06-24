@@ -9,6 +9,7 @@ export function makeTraceSink(filePath: string): EventSink & { flush: () => void
 	fs.writeFileSync(filePath, "");
 	return {
 		minLevel: "trace",
+		capturesPayload: true,
 		handle: (event: PluginEvent) => {
 			fs.appendFileSync(filePath, `${JSON.stringify(event)}\n`);
 		},

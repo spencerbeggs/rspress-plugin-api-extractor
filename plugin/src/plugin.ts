@@ -11,7 +11,7 @@ import { generateApiDocs } from "./build-program.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
-import { buildEventBus, logBuildSummary } from "./layers/ObservabilityLive.js";
+import { buildEventBus, logBuildSummary, makeSummaryLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { SnapshotServiceLive } from "./layers/SnapshotServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
@@ -86,6 +86,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 		TypeRegistryServiceLive,
 		NodeFileSystem.layer,
 		SnapshotServiceLive(dbPath),
+		makeSummaryLoggerLayer(obs.logLevel),
 	);
 	const EffectAppLayer = Layer.provideMerge(
 		ConfigServiceLive(options, shikiCrossLinker, buildId, obs.thresholds),

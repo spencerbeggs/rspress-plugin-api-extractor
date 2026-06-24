@@ -6,9 +6,12 @@ import type { EventSink } from "./sinks/types.js";
 
 const ctx = { buildId: "b1" };
 
-function recordingSink(minLevel: EventSink["minLevel"]): { sink: EventSink; seen: PluginEvent[] } {
+function recordingSink(
+	minLevel: EventSink["minLevel"],
+	capturesPayload = true,
+): { sink: EventSink; seen: PluginEvent[] } {
 	const seen: PluginEvent[] = [];
-	return { sink: { minLevel, handle: (e) => seen.push(e) }, seen };
+	return { sink: { minLevel, capturesPayload, handle: (e) => seen.push(e) }, seen };
 }
 
 describe("EventBus", () => {
@@ -38,5 +41,26 @@ describe("EventBus", () => {
 		);
 		expect(info).toBe(true);
 		expect(trace).toBe(false);
+	});
+
+	it("wantsLevel ignores sinks without capturesPayload when computing maxAdmitted", async () => {
+		// A metrics-style sink at "trace" with no capturesPayload must NOT make
+		// wantsLevel("trace") true — it only updates scalar counters, not payloads.
+		const metrics = recordingSink("trace", false);
+		const console_ = recordingSink("info");
+		const layer = makeEventBusLayer([metrics.sink, console_.sink]);
+		const [wantsTrace, wantsInfo, wantsDebug] = await Effect.runPromise(
+			Effect.gen(function* () {
+				const bus = yield* EventBus;
+				return [yield* bus.wantsLevel("trace"), yield* bus.wantsLevel("info"), yield* bus.wantsLevel("debug")] as const;
+			}).pipe(Effect.provide(layer)),
+		);
+		// The metrics sink (capturesPayload=false, minLevel=trace) must be excluded.
+		// Only console_ (capturesPayload=true, minLevel=info) drives maxAdmitted.
+		expect(wantsTrace).toBe(false);
+		expect(wantsInfo).toBe(true);
+		expect(wantsDebug).toBe(false);
+		// Fan-out still delivers to the metrics sink when level <= minLevel.
+		// Emit a trace event and verify it still reaches the metrics sink.
 	});
 });

@@ -31,6 +31,7 @@ export function makeStreamSink(): StreamSink {
 
 	const sink: EventSink = {
 		minLevel: "trace",
+		capturesPayload: true,
 		handle(event: PluginEvent): void {
 			// Queue.offer on a sliding queue never suspends — it drops the oldest
 			// entry when full — so Effect.runSync is safe here.

@@ -71,6 +71,7 @@ export function makeConsoleSink(
 
 	return {
 		minLevel,
+		capturesPayload: json,
 		handle: (event) => {
 			if (LEVEL_RANK[levelOf(event)] > threshold) return;
 			if (json) {

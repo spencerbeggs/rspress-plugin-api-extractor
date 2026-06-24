@@ -1,5 +1,6 @@
-import { Effect, Metric } from "effect";
+import { Effect, Layer, LogLevel, Logger, Metric } from "effect";
 import { makeEventBusLayer } from "../observability/EventBus.js";
+import type { EventLevel } from "../observability/events.js";
 import { makeConsoleSink } from "../observability/sinks/console-sink.js";
 import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
 import { makeTraceSink } from "../observability/sinks/trace-sink.js";
@@ -8,6 +9,41 @@ import type { ResolvedObservability } from "../schemas/observability.js";
 import { BuildMetrics } from "./build-metrics.js";
 
 export { BuildMetrics } from "./build-metrics.js";
+
+function formatTime(date: Date): string {
+	return date.toTimeString().slice(0, 8);
+}
+
+/**
+ * A slim Effect Logger layer that gates the residual `Effect.log*` calls in
+ * `build-program.ts` and `logBuildSummary` at the configured level.
+ *
+ * Level mapping: none→None, error→Error, warn→Warning, info→Info,
+ * debug/trace→Debug.  Format: `[HH:MM:SS] <prefix><message>` with
+ * `⚠️  ` / `🔴 ` prefixes for Warning / Error to match the EventBus
+ * console-sink style.
+ */
+export function makeSummaryLoggerLayer(logLevel: EventLevel | "none"): Layer.Layer<never> {
+	const effectLevel =
+		logLevel === "none"
+			? LogLevel.None
+			: logLevel === "error"
+				? LogLevel.Error
+				: logLevel === "warn"
+					? LogLevel.Warning
+					: logLevel === "info"
+						? LogLevel.Info
+						: LogLevel.Debug; // debug | trace
+
+	const pluginLogger = Logger.make(({ logLevel: lvl, message, date }) => {
+		const time = formatTime(date);
+		const msg = typeof message === "string" ? message : String(message);
+		const prefix = lvl._tag === "Warning" ? "⚠️  " : lvl._tag === "Error" ? "🔴 " : "";
+		console.log(`[${time}] ${prefix}${msg}`);
+	});
+
+	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLevel));
+}
 
 export interface BuiltSinks {
 	readonly layer: ReturnType<typeof makeEventBusLayer>;

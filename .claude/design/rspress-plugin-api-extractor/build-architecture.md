@@ -82,8 +82,11 @@ plugin.ts (RSPress adapter)
   |     +-> PathDerivationServiceLive
   |     |     Route and output path computation
   |     |
-  |     +-> PluginLoggerLayer
-  |     |     Custom Effect Logger + log level
+  |     +-> EventBus layer (from buildEventBus)
+  |     |     Synchronous fan-out: console, metrics, optional trace sinks
+  |     |
+  |     +-> makeSummaryLoggerLayer
+  |     |     Slim Effect Logger gating residual Effect.log* calls
   |     |
   |     +-> NodeFileSystem.layer
   |           @effect/platform cross-platform file I/O
@@ -109,7 +112,8 @@ plugin.ts (RSPress adapter)
 | `SnapshotServiceLive` | `layers/SnapshotServiceLive.ts` | `@effect/sql-sqlite-node` |
 | `TypeRegistryServiceLive` | `layers/TypeRegistryServiceLive.ts` | `type-registry-effect` |
 | `PathDerivationServiceLive` | `layers/PathDerivationServiceLive.ts` | (none) |
-| `PluginLoggerLayer` | `layers/ObservabilityLive.ts` | Effect Logger |
+| `buildEventBus` (EventBus layer) | `layers/ObservabilityLive.ts` | Synchronous fan-out event bus |
+| `makeSummaryLoggerLayer` | `layers/ObservabilityLive.ts` | Effect Logger gate for `Effect.log*` calls |
 
 ### Schema Validation
 
