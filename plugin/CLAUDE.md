@@ -33,12 +33,43 @@ composed `Layer` stack:
 - `TypeRegistryServiceLive` — external package type loading via
   `type-registry-effect`
 - `PathDerivationServiceLive` — route and output path computation
-- `PluginLoggerLayer` — custom Effect Logger with human-readable and JSON modes
+- `EventBus` layer (from `buildEventBus`) — synchronous fan-out event bus
+  wiring console, metrics, and optional JSONL trace sinks
 - `NodeFileSystem.layer` — cross-platform file I/O from `@effect/platform`
 
 Doc generation runs as a `Stream` pipeline in `build-stages.ts`:
 `Stream.fromIterable -> Stream.mapEffect(generateSinglePage) ->
 Stream.mapEffect(writeSingleFile) -> Stream.runFold`
+
+### Observability
+
+The plugin emits structured `PluginEvent` values through a **synchronous
+fan-out EventBus** (`src/observability/EventBus.ts`) rather than writing
+directly to the console or incrementing metrics inline.
+
+`buildEventBus(obs)` (`layers/ObservabilityLive.ts`) composes three sinks:
+
+- **Console sink** — human-readable one-liners (or JSON at `logLevel: "debug"`),
+  filtered by the configured level
+- **Metrics sink** — translates events to `BuildMetrics` counters/histograms
+  via `Effect.runSync`; exact counts are available when `logBuildSummary` runs
+  in `afterBuild`
+- **Trace sink** (opt-in) — full-fidelity JSONL written to `observability.trace`
+  path; `minLevel: "trace"`, independent of console level
+
+Twoslash and Prettier error callbacks fire outside Effect fibers.
+`makeRuntimeEmitter(runtime)` creates a sync bridge (`runtime.runSync(emit(event))`);
+`plugin.ts` injects it into both modules via `setEventEmitter(emitSync)`.
+
+A best-effort stream tee (`src/observability/stream.ts`) is exported but not
+wired into the live plugin — available for custom integrations.
+
+OpenTelemetry spans (`Effect.withSpan`) exist in the span substrate
+(`src/observability/spans.ts`) but no OTLP exporter is wired. This is a dormant
+seam for future integration.
+
+See `performance-observability.md` and `error-observability.md` in the design
+docs for the full architecture.
 
 ## Key Dependencies
 
@@ -66,7 +97,13 @@ which the global biome rule would rewrite to `.js`.
 - `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1220 lines)
 - `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection
 - `src/content-hash.ts` — SHA-256 hashing (pure, standalone)
-- `src/schemas/` — Effect Schema definitions (config, opengraph, performance)
+- `src/observability/` — EventBus, PluginEvent taxonomy, sinks (console/trace/metrics), span helpers, stream tee
+  - `events.ts` — `PluginEvent` taggedEnum, `EventLevel`, `EventContext`, `levelOf`
+  - `EventBus.ts` — synchronous fan-out bus, `makeRuntimeEmitter`, `EventBusNoop`
+  - `sinks/` — `console-sink.ts`, `trace-sink.ts`, `metrics-sink.ts`, `types.ts`
+  - `spans.ts` — `withPhase`, `withOp`, `PHASE_THRESHOLD_KEY`
+  - `stream.ts` — best-effort sliding-queue stream tee (exported, not wired to live plugin)
+- `src/schemas/` — Effect Schema definitions (config, opengraph, performance, observability)
 - `src/services/` — Effect service interfaces (Context.Tag)
 - `src/layers/` — Effect Layer implementations
 - `src/migrations/` — SQLite schema migrations
