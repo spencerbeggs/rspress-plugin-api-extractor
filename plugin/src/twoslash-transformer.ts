@@ -1,6 +1,5 @@
 /* v8 ignore start -- Shiki/Twoslash integration, requires full highlighter setup for testing */
 import { rendererRich, transformerTwoslash } from "@shikijs/twoslash";
-import { Effect, Metric } from "effect";
 import type { ElementContent } from "hast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toHast } from "mdast-util-to-hast";
@@ -9,7 +8,6 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type ts from "typescript";
 import type { TypeResolutionCompilerOptions } from "./internal-types.js";
-import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { PluginEvent } from "./observability/events.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
 
@@ -479,9 +477,7 @@ export class TwoslashManager {
 	}
 
 	private handleTwoslashError(error: unknown, _code: string, file: string): void {
-		// Keep the existing Metric counter (removed in Task 12 when MetricsSink derives it from TwoslashDiagnostic)
-		Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
-
+		// Metrics derived from TwoslashDiagnostic event in MetricsSink
 		const message = error instanceof Error ? error.message : String(error);
 		const match = /TS(\d+)/.exec(message);
 		const tsCode = match ? Number(match[1]) : 0;

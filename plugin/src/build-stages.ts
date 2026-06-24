@@ -543,8 +543,7 @@ export function generateSinglePage(
 			};
 		}
 
-		// Track page generation
-		yield* Metric.increment(BuildMetrics.pagesGenerated);
+		// Track page generation (metric derived from PageGenerated event in MetricsSink)
 		const codeblockCount = (page.content.match(/<(ApiSignature|ApiMember|ApiExample)\b/g) ?? []).length;
 		yield* emit(
 			PluginEvent.PageGenerated({
@@ -698,10 +697,8 @@ export function writeSingleFile(
 			buildTime,
 		};
 
-		// Handle unchanged files - skip write
+		// Handle unchanged files - skip write (metrics derived from FileDecision event in MetricsSink)
 		if (isUnchanged) {
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesUnchanged);
 			yield* emit(
 				PluginEvent.FileDecision({
 					ctx: { buildId, ...(packageName != null ? { packageName } : {}) },
@@ -769,13 +766,7 @@ export function writeSingleFile(
 
 		const status: "new" | "modified" = fileExisted ? "modified" : "new";
 
-		// Increment metrics
-		yield* Metric.increment(BuildMetrics.filesTotal);
-		if (status === "new") {
-			yield* Metric.increment(BuildMetrics.filesNew);
-		} else {
-			yield* Metric.increment(BuildMetrics.filesModified);
-		}
+		// Metrics derived from FileDecision event in MetricsSink
 		yield* emit(
 			PluginEvent.FileDecision({
 				ctx: { buildId, ...(packageName != null ? { packageName } : {}) },
@@ -919,12 +910,7 @@ export function writeMetadata(
 
 		if (!apiMetaUnchanged) {
 			yield* fileSystem.writeFileString(apiMetaJsonPath, apiMetaJsonContent).pipe(Effect.orDie);
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			if (apiMetaOldSnapshot) {
-				yield* Metric.increment(BuildMetrics.filesModified);
-			} else {
-				yield* Metric.increment(BuildMetrics.filesNew);
-			}
+			// Metrics derived from FileDecision event in MetricsSink
 			yield* emit(
 				PluginEvent.FileDecision({
 					ctx: { buildId, packageName },
@@ -937,8 +923,7 @@ export function writeMetadata(
 				}),
 			);
 		} else {
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesUnchanged);
+			// Metrics derived from FileDecision event in MetricsSink
 			yield* emit(
 				PluginEvent.FileDecision({
 					ctx: { buildId, packageName },
@@ -1071,12 +1056,7 @@ export function writeMetadata(
 						const categoryDir = path.dirname(categoryMetaPath);
 						yield* fileSystem.makeDirectory(categoryDir, { recursive: true }).pipe(Effect.orDie);
 						yield* fileSystem.writeFileString(categoryMetaPath, content).pipe(Effect.orDie);
-						yield* Metric.increment(BuildMetrics.filesTotal);
-						if (oldSnapshot) {
-							yield* Metric.increment(BuildMetrics.filesModified);
-						} else {
-							yield* Metric.increment(BuildMetrics.filesNew);
-						}
+						// Metrics derived from FileDecision event in MetricsSink
 						yield* emit(
 							PluginEvent.FileDecision({
 								ctx: { buildId, packageName },
@@ -1089,8 +1069,7 @@ export function writeMetadata(
 							}),
 						);
 					} else {
-						yield* Metric.increment(BuildMetrics.filesTotal);
-						yield* Metric.increment(BuildMetrics.filesUnchanged);
+						// Metrics derived from FileDecision event in MetricsSink
 						yield* emit(
 							PluginEvent.FileDecision({
 								ctx: { buildId, packageName },

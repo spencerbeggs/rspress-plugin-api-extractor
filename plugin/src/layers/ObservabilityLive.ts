@@ -1,47 +1,13 @@
-import { Effect, Metric, MetricBoundaries } from "effect";
+import { Effect, Metric } from "effect";
 import { makeEventBusLayer } from "../observability/EventBus.js";
 import { makeConsoleSink } from "../observability/sinks/console-sink.js";
 import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
 import { makeTraceSink } from "../observability/sinks/trace-sink.js";
 import type { EventSink } from "../observability/sinks/types.js";
 import type { ResolvedObservability } from "../schemas/observability.js";
+import { BuildMetrics } from "./build-metrics.js";
 
-/**
- * All build metrics as named counters/histograms.
- *
- * Note: Effect Metrics use a process-wide registry. In tests, counters
- * accumulate across test cases within the same process. Test assertions
- * should use loose matching (toContain) rather than exact count checks.
- */
-export const BuildMetrics = {
-	filesTotal: Metric.counter("files.total"),
-	filesNew: Metric.counter("files.new"),
-	filesModified: Metric.counter("files.modified"),
-	filesUnchanged: Metric.counter("files.unchanged"),
-	codeblockDuration: Metric.histogram(
-		"codeblock.duration",
-		MetricBoundaries.fromIterable([10, 25, 50, 100, 200, 500, 1000]),
-	),
-	codeblockShikiDuration: Metric.histogram(
-		"codeblock.shiki.duration",
-		MetricBoundaries.fromIterable([5, 10, 25, 50, 100, 250]),
-	),
-	codeblockTotal: Metric.counter("codeblock.total"),
-	codeblockSlow: Metric.counter("codeblock.slow"),
-	twoslashErrors: Metric.counter("twoslash.errors"),
-	prettierErrors: Metric.counter("prettier.errors"),
-	pagesGenerated: Metric.counter("pages.generated"),
-	apiVersionsLoaded: Metric.counter("api.versions.loaded"),
-	externalPackagesTotal: Metric.counter("external.packages.total"),
-	phaseDuration: Metric.histogram(
-		"phase.duration",
-		MetricBoundaries.fromIterable([50, 100, 250, 500, 1000, 2500, 5000, 10000]),
-	),
-	vfsFiles: Metric.counter("vfs.files"),
-	importsPrepended: Metric.counter("imports.prepended"),
-	twoslashDiagnostics: Metric.counter("twoslash.diagnostics"),
-	configDefaultsApplied: Metric.counter("config.defaults.applied"),
-} as const;
+export { BuildMetrics } from "./build-metrics.js";
 
 export interface BuiltSinks {
 	readonly layer: ReturnType<typeof makeEventBusLayer>;

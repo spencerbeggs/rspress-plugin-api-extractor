@@ -1,12 +1,10 @@
 /* v8 ignore start -- remark plugin, requires MDX compilation context */
-import { Effect, Metric } from "effect";
 import type { Code, Parent, Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import type { ShikiTransformer } from "shiki";
 import { codeToHast, hastToHtml } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
@@ -156,16 +154,8 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				const shikiTime = performance.now() - shikiStart;
 				const totalBlockTime = performance.now() - blockStart;
 
-				// Track block stats via Effect Metrics
-				Effect.runSync(Metric.increment(BuildMetrics.codeblockTotal));
-				Effect.runSync(Metric.update(BuildMetrics.codeblockDuration, totalBlockTime));
-				if (shikiTime > 0) {
-					Effect.runSync(Metric.update(BuildMetrics.codeblockShikiDuration, shikiTime));
-				}
+				// Block stats derived from CodeBlockProcessed event in MetricsSink
 				const isSlow = totalBlockTime > 100;
-				if (isSlow) {
-					Effect.runSync(Metric.increment(BuildMetrics.codeblockSlow));
-				}
 				emitEvent(
 					PE.CodeBlockProcessed({
 						ctx: { buildId: "", ...(currentFilePath != null ? { file: currentFilePath } : {}) },

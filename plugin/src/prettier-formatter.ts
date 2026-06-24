@@ -1,8 +1,6 @@
 /* v8 ignore start -- Prettier integration wrapper, tested via page generator integration tests */
-import { Effect, Metric } from "effect";
 import { format } from "prettier";
 import { addLogicalBlankLines } from "./code-post-processor.js";
-import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import type { PluginEvent } from "./observability/events.js";
 import { PluginEvent as PE } from "./observability/events.js";
 
@@ -92,8 +90,7 @@ export async function formatCode(code: string, language: string): Promise<Format
 		const formatTime = performance.now() - start;
 		const errorMsg = error instanceof Error ? error.message : String(error);
 
-		// Increment Prettier error counter
-		Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
+		// Metric derived from PrettierError event in MetricsSink
 		emitEvent(PE.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" }));
 
 		// Return original code on error (fallthrough behavior)
