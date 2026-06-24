@@ -1,5 +1,6 @@
 import { ApiItemKind } from "@microsoft/api-extractor-model";
 import { Schema } from "effect";
+import { ObservabilityConfig } from "./observability.js";
 import { OpenGraphImageConfig } from "./opengraph.js";
 import { PerformanceConfig } from "./performance.js";
 
@@ -364,10 +365,12 @@ export const PluginOptions = Schema.mutable(
 		errors: Schema.optional(ErrorConfig),
 		/** LLMs integration options, or `false` to disable. */
 		llmsPlugin: Schema.optional(Schema.Union(Schema.Boolean, LlmsPlugin)),
-		/** Verbosity level for plugin build output. */
+		/** Verbosity level for plugin build output. @deprecated Use `observability.logLevel`. */
 		logLevel: Schema.optional(LogLevel),
-		/** Performance tuning options. */
+		/** Performance tuning options. @deprecated Use `observability.thresholds`. */
 		performance: Schema.optional(PerformanceConfig),
+		/** Unified observability configuration (logLevel, trace artifact, thresholds). */
+		observability: Schema.optional(ObservabilityConfig),
 	}),
 );
 /** @public */
