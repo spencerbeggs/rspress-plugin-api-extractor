@@ -26,7 +26,7 @@ import { PluginOptions } from "./schemas/index.js";
 import { resolveObservability } from "./schemas/observability.js";
 import { ConfigService } from "./services/ConfigService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
-import { TwoslashManager } from "./twoslash-transformer.js";
+import { TwoslashManager, setEventEmitter } from "./twoslash-transformer.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 /**
@@ -87,6 +87,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 	const emitSync = makeRuntimeEmitter(effectRuntime);
+	setEventEmitter(emitSync);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
