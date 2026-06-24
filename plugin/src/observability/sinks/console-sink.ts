@@ -44,6 +44,10 @@ function render(event: PluginEvent): string {
 			return `${event.status}: ${event.file}`;
 		case "LlmsPackageFilesGenerated":
 			return `llms files: ${event.dir} (${event.files.length})`;
+		case "TypeRegistryEvent":
+			return event.kind === "BatchComplete"
+				? event.detail
+				: `${event.kind} ${event.ctx.packageName ?? ""} ${event.detail}`.trim();
 		default:
 			return event._tag;
 	}

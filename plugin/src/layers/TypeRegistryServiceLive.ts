@@ -3,6 +3,8 @@ import { PackageSpec, RegistryEvent, TypeRegistry, TypeRegistryObserver } from "
 import { NodeLayer } from "type-registry-effect/node";
 import { resolveExternalPackageVersions } from "../config-utils.js";
 import { TypeRegistryError as PluginTypeRegistryError } from "../errors.js";
+import { emit } from "../observability/EventBus.js";
+import { PluginEvent } from "../observability/events.js";
 import { TypeRegistryService } from "../services/TypeRegistryService.js";
 
 /**
@@ -18,26 +20,108 @@ const RegistryObserverLayer = Layer.succeed(TypeRegistryObserver, {
 	emit: (event) =>
 		RegistryEvent.$match(event, {
 			VersionResolved: ({ package: pkg, requested, resolved }) =>
-				Effect.logDebug(`Resolved ${pkg}: ${requested} -> ${resolved}`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg },
+						level: "debug",
+						kind: "VersionResolved",
+						detail: `${requested} -> ${resolved}`,
+					}),
+				),
 			VersionResolveFailed: ({ package: pkg, requested, reason }) =>
-				Effect.logDebug(`Could not resolve ${pkg}@${requested}: ${reason}`),
-			CacheHit: ({ package: pkg, version }) => Effect.logDebug(`Cache hit for ${pkg}@${version}`),
-			CacheStale: ({ package: pkg, version }) => Effect.logDebug(`Cache stale for ${pkg}@${version}`),
-			CacheMiss: ({ package: pkg, version }) => Effect.logDebug(`Cache miss for ${pkg}@${version}`),
-			FetchStart: ({ package: pkg, version }) => Effect.logDebug(`Fetching ${pkg}@${version}`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg },
+						level: "debug",
+						kind: "VersionResolveFailed",
+						detail: `${requested}: ${reason}`,
+					}),
+				),
+			CacheHit: ({ package: pkg, version }) =>
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "debug",
+						kind: "CacheHit",
+						detail: "",
+					}),
+				),
+			CacheStale: ({ package: pkg, version }) =>
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "debug",
+						kind: "CacheStale",
+						detail: "",
+					}),
+				),
+			CacheMiss: ({ package: pkg, version }) =>
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "debug",
+						kind: "CacheMiss",
+						detail: "",
+					}),
+				),
+			FetchStart: ({ package: pkg, version }) =>
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "debug",
+						kind: "FetchStart",
+						detail: "",
+					}),
+				),
 			// A single HTTP request returned non-2xx. This is low-level and usually
 			// handled gracefully upstream (e.g. an unpublished/workspace package that
 			// is then dropped), so it stays at debug. A package that actually fails to
 			// load surfaces as PackageLoadFailed at warning.
 			FetchFailed: ({ url, status, bodySnippet }) =>
-				Effect.logDebug(`Fetch failed (HTTP ${status}): ${url}${bodySnippet ? ` — ${bodySnippet}` : ""}`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "" },
+						level: "debug",
+						kind: "FetchFailed",
+						detail: `HTTP ${status}: ${url}${bodySnippet ? ` — ${bodySnippet}` : ""}`,
+					}),
+				),
 			PackageLoaded: ({ package: pkg, version, files, source }) =>
-				Effect.logDebug(`Loaded ${pkg}@${version} (${files} files, ${source})`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "debug",
+						kind: "PackageLoaded",
+						detail: `${files} files, ${source}`,
+					}),
+				),
 			PackageLoadFailed: ({ package: pkg, version, kind, message }) =>
-				Effect.logWarning(`Failed to load ${pkg}@${version} [${kind}]: ${message}`),
-			BatchStart: ({ total }) => Effect.logDebug(`Loading types for ${total} external package(s)`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "", packageName: pkg, version },
+						level: "warn",
+						kind: "PackageLoadFailed",
+						detail: `[${kind}] ${message}`,
+					}),
+				),
+			BatchStart: ({ total }) =>
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "" },
+						level: "debug",
+						kind: "BatchStart",
+						detail: `${total} package(s)`,
+					}),
+				),
 			BatchComplete: ({ loaded, total, totalFiles, durationMs }) =>
-				Effect.log(`Loaded ${loaded}/${total} external packages (${totalFiles} files, ${durationMs}ms)`),
+				emit(
+					PluginEvent.TypeRegistryEvent({
+						ctx: { buildId: "" },
+						level: "info",
+						kind: "BatchComplete",
+						detail: `${loaded}/${total} packages, ${totalFiles} files, ${durationMs}ms`,
+					}),
+				),
 		}),
 });
 

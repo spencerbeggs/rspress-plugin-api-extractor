@@ -38,6 +38,16 @@ export function emit(event: PluginEvent): Effect.Effect<void> {
 	);
 }
 
+/**
+ * Returns true when a bus is in context and has at least one sink admitted at
+ * `level`; false otherwise. R = never, safe to use anywhere emit is used.
+ */
+export function wantsLevel(level: EventLevel): Effect.Effect<boolean> {
+	return Effect.serviceOption(EventBus).pipe(
+		Effect.flatMap((maybe) => (Option.isSome(maybe) ? maybe.value.wantsLevel(level) : Effect.succeed(false))),
+	);
+}
+
 /** Bind a runtime so non-Effect (sync island) callbacks can emit. */
 export function makeRuntimeEmitter(runtime: {
 	runSync: (effect: Effect.Effect<void>) => void;

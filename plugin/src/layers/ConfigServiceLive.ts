@@ -15,6 +15,7 @@ import {
 	mergeLlmsPluginConfig,
 	validateExternalPackages,
 } from "../config-utils.js";
+import { hashContent } from "../content-hash.js";
 import type { ApiModelLoadError, TypeRegistryError } from "../errors.js";
 import { ConfigValidationError } from "../errors.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "../hide-cut-transformer.js";
@@ -22,6 +23,9 @@ import type { LoadedModel, PackageJson, TypeResolutionCompilerOptions, TypeScrip
 import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "../markdown/shiki-utils.js";
 import { ApiModelLoader } from "../model-loader.js";
+import { emit, wantsLevel } from "../observability/EventBus.js";
+import type { ImportRef } from "../observability/events.js";
+import { PluginEvent } from "../observability/events.js";
 import { OpenGraphResolver } from "../og-resolver.js";
 import type {
 	ExternalPackageSpec,
@@ -68,24 +72,63 @@ function normalizeThemeConfig(
 	return { light: theme, dark: theme };
 }
 
+interface VfsEntryPayload {
+	file: string;
+	entryPoint: string;
+	declCount: number;
+	contentHash: string;
+	content: string;
+	/** True only when import statements were actually prepended to this entry. */
+	hasImports: boolean;
+	importRefs: readonly ImportRef[];
+}
+
 /**
  * Prepend import statements for external type references to the VFS declaration files.
+ * Returns per-entry payloads for event emission (heavy content/importRefs gated on wantTrace).
  */
-function prependImportsToVfs(vfs: VirtualFileSystem, apiPackage: ApiPackage, packageName: string): void {
+function prependImportsToVfs(
+	vfs: VirtualFileSystem,
+	apiPackage: ApiPackage,
+	packageName: string,
+	wantTrace: boolean,
+): VfsEntryPayload[] {
 	const extractor = new TypeReferenceExtractor(apiPackage, packageName);
+	const payloads: VfsEntryPayload[] = [];
 	for (const entryPoint of apiPackage.entryPoints) {
-		const imports = extractor.extractImportsForEntryPoint(entryPoint as ApiEntryPoint);
+		const entryEp = entryPoint as ApiEntryPoint;
+		const imports = extractor.extractImportsForEntryPoint(entryEp);
 		const importStatements = TypeReferenceExtractor.formatImports(imports);
-		if (importStatements.length === 0) continue;
-
-		const entryName = (entryPoint as ApiEntryPoint).displayName || "";
+		const entryName = entryEp.displayName || "";
 		const fileName = entryName ? `${entryName}.d.ts` : "index.d.ts";
-		const key = `node_modules/${packageName}/${fileName}`;
-		const existing = vfs.get(key);
-		if (existing) {
-			vfs.set(key, `${importStatements.join("\n")}\n\n${existing}`);
+		const file = `node_modules/${packageName}/${fileName}`;
+
+		const hasImports = importStatements.length > 0;
+		if (hasImports) {
+			const existing = vfs.get(file);
+			if (existing) {
+				vfs.set(file, `${importStatements.join("\n")}\n\n${existing}`);
+			}
 		}
+
+		const content = vfs.get(file) ?? "";
+		const declCount = entryEp.members.length;
+		const contentHash = hashContent(content);
+		const importRefs: readonly ImportRef[] =
+			wantTrace && hasImports
+				? imports.map((i) => ({ from: i.packageName, symbols: [...i.symbols] as readonly string[] }))
+				: [];
+		payloads.push({
+			file,
+			entryPoint: entryName,
+			declCount,
+			contentHash,
+			content: wantTrace ? content : "",
+			hasImports,
+			importRefs,
+		});
 	}
+	return payloads;
 }
 
 /**
@@ -150,8 +193,14 @@ function validateOptions(
 				}
 			} else {
 				if (api.versions) {
-					yield* Effect.logWarning(
-						"api.versions is provided but RSPress multiVersion is not configured. Versions will be ignored.",
+					yield* emit(
+						PluginEvent.ConfigCascadeWarning({
+							ctx: { buildId: "" },
+							level: "warn",
+							field: "versions",
+							chosen: "(none — multiVersion not configured)",
+							ignored: ["api.versions"],
+						}),
 					);
 				}
 				if (!api.model) {
@@ -189,6 +238,9 @@ export function ConfigServiceLive(
 				resolve: (rspressConfig: RspressConfigSubset) =>
 					Effect.gen(function* () {
 						const loadStart = performance.now();
+
+						// Gate heavy VFS payloads behind trace level
+						const wantTrace = yield* wantsLevel("trace");
 
 						// --- 1. Validate options ---
 						yield* validateOptions(options, {
@@ -229,6 +281,7 @@ export function ConfigServiceLive(
 							model: NonNullable<SingleApiConfig["model"]> | MultiApiConfig["model"],
 							outputDir: string,
 							fullRoute: string,
+							wantTrace: boolean,
 						) =>
 							Effect.promise(async () => {
 								const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(
@@ -258,7 +311,7 @@ export function ConfigServiceLive(
 								// Generate virtual file system from API model for Twoslash
 								const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
 								const vfs = pkg.generateVfs();
-								prependImportsToVfs(vfs, apiPackage, api.packageName);
+								const vfsPayloads = prependImportsToVfs(vfs, apiPackage, api.packageName, wantTrace);
 
 								// Resolve ogImage with cascading: API > global
 								const resolvedOgImage = api.ogImage ?? options.ogImage;
@@ -268,6 +321,7 @@ export function ConfigServiceLive(
 
 								return {
 									vfs,
+									vfsPayloads,
 									externalPackages: externalPackages || [],
 									config: {
 										apiPackage,
@@ -318,6 +372,7 @@ export function ConfigServiceLive(
 											if (!versionDp) {
 												return {
 													vfs: new Map<string, string>(),
+													vfsPayloads: [] as VfsEntryPayload[],
 													externalPackages: [] as ExternalPackageSpec[],
 													config: null as ResolvedApiConfig | null,
 												};
@@ -377,7 +432,7 @@ export function ConfigServiceLive(
 												// Generate VFS
 												const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
 												const vfs = pkg.generateVfs();
-												prependImportsToVfs(vfs, apiPackage, api.packageName);
+												const vfsPayloads = prependImportsToVfs(vfs, apiPackage, api.packageName, wantTrace);
 
 												// Resolve ogImage with cascading: version > API > global
 												const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
@@ -388,6 +443,7 @@ export function ConfigServiceLive(
 
 												return {
 													vfs,
+													vfsPayloads,
 													externalPackages: externalPackages || [],
 													config: {
 														apiPackage,
@@ -422,6 +478,36 @@ export function ConfigServiceLive(
 									if (result.config) {
 										apiConfigs.push(result.config);
 									}
+									for (const payload of result.vfsPayloads) {
+										yield* emit(
+											PluginEvent.VfsGenerated({
+												ctx: {
+													buildId: "",
+													packageName: api.packageName,
+													...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+												},
+												level: "debug",
+												file: payload.file,
+												declCount: payload.declCount,
+												contentHash: payload.contentHash,
+												...(wantTrace && payload.content ? { content: payload.content } : {}),
+											}),
+										);
+										if (payload.hasImports) {
+											yield* emit(
+												PluginEvent.ImportsPrepended({
+													ctx: {
+														buildId: "",
+														packageName: api.packageName,
+														...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+													},
+													level: "debug",
+													file: payload.file,
+													imports: wantTrace ? payload.importRefs : [],
+												}),
+											);
+										}
+									}
 								}
 							} else if (api.model) {
 								// Non-versioned single-API mode
@@ -438,7 +524,7 @@ export function ConfigServiceLive(
 
 								const dp = derivedPaths[0];
 								if (dp) {
-									const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
+									const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase, wantTrace);
 									for (const [filepath, content] of result.vfs.entries()) {
 										combinedVfs.set(filepath, content);
 									}
@@ -446,6 +532,36 @@ export function ConfigServiceLive(
 										allExternalPackages.push(...result.externalPackages);
 									}
 									apiConfigs.push(result.config);
+									for (const payload of result.vfsPayloads) {
+										yield* emit(
+											PluginEvent.VfsGenerated({
+												ctx: {
+													buildId: "",
+													packageName: api.packageName,
+													...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+												},
+												level: "debug",
+												file: payload.file,
+												declCount: payload.declCount,
+												contentHash: payload.contentHash,
+												...(wantTrace && payload.content ? { content: payload.content } : {}),
+											}),
+										);
+										if (payload.hasImports) {
+											yield* emit(
+												PluginEvent.ImportsPrepended({
+													ctx: {
+														buildId: "",
+														packageName: api.packageName,
+														...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+													},
+													level: "debug",
+													file: payload.file,
+													imports: wantTrace ? payload.importRefs : [],
+												}),
+											);
+										}
+									}
 								}
 							}
 						} else if (options.apis) {
@@ -456,10 +572,16 @@ export function ConfigServiceLive(
 								firstApiTsconfig = apisWithTsconfig[0].tsconfig;
 								const uniqueTsconfigs = new Set(apisWithTsconfig.map((a) => String(a.tsconfig)));
 								if (uniqueTsconfigs.size > 1) {
-									yield* Effect.logWarning(
-										`Multiple APIs specify different tsconfig values: ${[...uniqueTsconfigs].join(", ")}. ` +
-											`Using '${String(firstApiTsconfig)}' for TypeScript resolution. ` +
-											`Per-API tsconfig resolution will be supported in a future release.`,
+									const chosen = String(firstApiTsconfig);
+									const ignored = [...uniqueTsconfigs].filter((t) => t !== chosen);
+									yield* emit(
+										PluginEvent.ConfigCascadeWarning({
+											ctx: { buildId: "" },
+											level: "warn",
+											field: "tsconfig",
+											chosen,
+											ignored,
+										}),
 									);
 								}
 							}
@@ -489,7 +611,37 @@ export function ConfigServiceLive(
 										const dp = derivedPaths[0];
 										if (!dp) return [];
 
-										const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
+										const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase, wantTrace);
+										for (const payload of result.vfsPayloads) {
+											yield* emit(
+												PluginEvent.VfsGenerated({
+													ctx: {
+														buildId: "",
+														packageName: api.packageName,
+														...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+													},
+													level: "debug",
+													file: payload.file,
+													declCount: payload.declCount,
+													contentHash: payload.contentHash,
+													...(wantTrace && payload.content ? { content: payload.content } : {}),
+												}),
+											);
+											if (payload.hasImports) {
+												yield* emit(
+													PluginEvent.ImportsPrepended({
+														ctx: {
+															buildId: "",
+															packageName: api.packageName,
+															...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+														},
+														level: "debug",
+														file: payload.file,
+														imports: wantTrace ? payload.importRefs : [],
+													}),
+												);
+											}
+										}
 										return [result];
 									}),
 								{ concurrency: "unbounded" },
@@ -510,7 +662,18 @@ export function ConfigServiceLive(
 						}
 
 						const loadMs = performance.now() - loadStart;
-						yield* Effect.logDebug(`Loading API models: ${loadMs.toFixed(0)}ms`);
+						yield* emit(
+							PluginEvent.ModelLoaded({
+								ctx: { buildId: "" },
+								level: "debug",
+								entryPoints: apiConfigs.length,
+								itemCount: apiConfigs.reduce(
+									(sum, cfg) => sum + cfg.apiPackage.entryPoints.reduce((s, ep) => s + ep.members.length, 0),
+									0,
+								),
+								durationMs: Math.round(loadMs),
+							}),
+						);
 
 						// --- 5. Resolve TypeScript compiler options ---
 						const projectRoot = process.cwd();
@@ -528,9 +691,13 @@ export function ConfigServiceLive(
 							resolveTypeScriptConfig(projectRoot, globalTsConfig),
 						);
 
-						yield* Effect.logDebug(
-							`Resolved TypeScript config: target=${resolvedCompilerOptions.target}, ` +
-								`module=${resolvedCompilerOptions.module}, lib=[${resolvedCompilerOptions.lib?.join(", ")}]`,
+						yield* emit(
+							PluginEvent.TsCacheCreated({
+								ctx: { buildId: "" },
+								level: "debug",
+								compilerOptions: `target=${resolvedCompilerOptions.target}, module=${resolvedCompilerOptions.module}, lib=[${resolvedCompilerOptions.lib?.join(", ") ?? ""}]`,
+								durationMs: 0,
+							}),
 						);
 
 						// --- 6. External type loading (recoverable) ---
@@ -548,8 +715,6 @@ export function ConfigServiceLive(
 						const typeLoadResult = yield* Effect.either(
 							Effect.gen(function* () {
 								if (externalPackagesToLoad.length > 0) {
-									const typesStart = performance.now();
-
 									// Resolve version specs (ranges / npm tags) to exact published
 									// versions and drop unpublished / workspace-only packages: the CDN
 									// backing loadPackages requires exact versions and 404s on ranges
@@ -557,8 +722,12 @@ export function ConfigServiceLive(
 									const resolvedPackages = yield* typeRegistry.resolveVersions(externalPackagesToLoad);
 									const droppedCount = externalPackagesToLoad.length - resolvedPackages.length;
 									if (droppedCount > 0) {
-										yield* Effect.logDebug(
-											`Skipped ${droppedCount} unresolvable external package(s) (unpublished or workspace-only)`,
+										yield* emit(
+											PluginEvent.ExternalPackageSkipped({
+												ctx: { buildId: "" },
+												level: "debug",
+												reason: `${droppedCount} unresolvable package(s) (unpublished or workspace-only)`,
+											}),
 										);
 									}
 
@@ -570,8 +739,13 @@ export function ConfigServiceLive(
 											combinedVfs.set(filePath, content);
 										}
 
-										yield* Effect.logDebug(
-											`Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`,
+										yield* emit(
+											PluginEvent.VfsMerged({
+												ctx: { buildId: "" },
+												level: "debug",
+												totalFiles: result.vfs.size,
+												packages: resolvedPackages.map((p) => p.name),
+											}),
 										);
 									}
 								}
@@ -579,8 +753,14 @@ export function ConfigServiceLive(
 						);
 
 						if (typeLoadResult._tag === "Left") {
-							yield* Effect.logWarning(
-								`Failed to load external types: ${typeLoadResult.left.message}. Continuing with empty VFS.`,
+							yield* emit(
+								PluginEvent.ConfigCascadeWarning({
+									ctx: { buildId: "" },
+									level: "warn",
+									field: "externalTypes",
+									chosen: "empty VFS",
+									ignored: [typeLoadResult.left.message ?? String(typeLoadResult.left)],
+								}),
 							);
 						}
 
@@ -593,7 +773,14 @@ export function ConfigServiceLive(
 							undefined,
 							resolvedCompilerOptions,
 						);
-						yield* Effect.logDebug(`Initializing Twoslash: ${(performance.now() - twoslashStartMs).toFixed(0)}ms`);
+						yield* emit(
+							PluginEvent.TwoslashInitialized({
+								ctx: { buildId: "" },
+								level: "debug",
+								durationMs: Math.round(performance.now() - twoslashStartMs),
+								vfsFileCount: combinedVfs.size,
+							}),
+						);
 
 						// --- 8. Shiki highlighter ---
 						const shikiStartMs = performance.now();
@@ -630,8 +817,13 @@ export function ConfigServiceLive(
 						const themes: Array<string | Record<string, unknown>> = [...themeSet, ...customThemes];
 						const langs = ["typescript", "javascript", "json", "bash", "sh"];
 						const highlighter = yield* Effect.promise(() => createHighlighter({ themes, langs }));
-						yield* Effect.logDebug(
-							`Initializing Shiki highlighter: ${(performance.now() - shikiStartMs).toFixed(0)}ms`,
+						yield* emit(
+							PluginEvent.PhaseCompleted({
+								ctx: { buildId: "" },
+								level: "debug",
+								phase: "shikiInit",
+								durationMs: Math.round(performance.now() - shikiStartMs),
+							}),
 						);
 
 						// --- 9. OG resolver ---
