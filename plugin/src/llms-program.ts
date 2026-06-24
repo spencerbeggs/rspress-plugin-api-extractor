@@ -23,6 +23,8 @@ import {
 	generateStructuredLlmsTxt,
 	parseLlmsTxtLine,
 } from "./llms-processing.js";
+import { emit } from "./observability/EventBus.js";
+import { PluginEvent } from "./observability/events.js";
 import type { LlmsPlugin } from "./schemas/index.js";
 
 /**
@@ -37,6 +39,8 @@ export interface ProcessLlmsFilesInput {
 	readonly llmsPlugin: LlmsPlugin;
 	/** Map of packageName to package-level route (without apiFolder, e.g., "/kitchensink") */
 	readonly packageRoutes: ReadonlyMap<string, string>;
+	/** Correlation ID carried from the plugin factory; used for event context. */
+	readonly buildId: string;
 }
 
 /**
@@ -255,7 +259,8 @@ function collectApiPageContent(
 export function processLlmsFiles(input: ProcessLlmsFilesInput): Effect.Effect<void, never, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
 		const fs = yield* FileSystem.FileSystem;
-		const { outDir, buildResults, llmsPlugin, packageRoutes } = input;
+		const { outDir, buildResults, llmsPlugin, packageRoutes, buildId } = input;
+		const ctx = { buildId };
 
 		if (buildResults.length === 0) {
 			return;
@@ -263,7 +268,7 @@ export function processLlmsFiles(input: ProcessLlmsFilesInput): Effect.Effect<vo
 
 		// Step 1: Build the set of all API route URLs
 		const apiRoutes = buildApiRoutes(buildResults);
-		yield* Effect.logDebug(`Built ${apiRoutes.size} API routes for LLMs filtering`);
+		yield* emit(PluginEvent.LlmsRoutesBuilt({ ctx, level: "debug", count: apiRoutes.size }));
 
 		if (apiRoutes.size === 0) {
 			return;
@@ -275,7 +280,7 @@ export function processLlmsFiles(input: ProcessLlmsFilesInput): Effect.Effect<vo
 		// Step 3: Process each prefix's global files
 		yield* Effect.forEach(
 			[...prefixes],
-			(prefix) => processPrefix(fs, outDir, prefix, buildResults, apiRoutes, llmsPlugin, packageRoutes),
+			(prefix) => processPrefix(fs, outDir, prefix, buildResults, apiRoutes, llmsPlugin, packageRoutes, ctx),
 			{ concurrency: "unbounded" },
 		);
 	});
@@ -292,6 +297,7 @@ function processPrefix(
 	apiRoutes: Set<string>,
 	llmsPlugin: LlmsPlugin,
 	packageRoutes: ReadonlyMap<string, string>,
+	ctx: { buildId: string },
 ): Effect.Effect<void> {
 	return Effect.gen(function* () {
 		const prefixDir = prefix ? path.join(outDir, prefix) : outDir;
@@ -357,10 +363,13 @@ function processPrefix(
 						apiRoutes,
 						llmsPlugin,
 						packageRoutes.get(result.packageName) ?? result.baseRoute,
+						ctx,
 					),
 				{ concurrency: "unbounded" },
 			);
 		}
+
+		yield* emit(PluginEvent.LlmsPrefixProcessed({ ctx, level: "debug", prefix }));
 	});
 }
 
@@ -376,6 +385,7 @@ function generatePerPackageFiles(
 	apiRoutes: Set<string>,
 	llmsPlugin: LlmsPlugin,
 	packageRoute: string,
+	ctx: { buildId: string },
 ): Effect.Effect<void> {
 	return Effect.gen(function* () {
 		// Write llms files at the package scope level (e.g., dist/kitchensink/),
@@ -385,6 +395,7 @@ function generatePerPackageFiles(
 		yield* fs.makeDirectory(packageLlmsDir, { recursive: true }).pipe(Effect.orDie);
 
 		const displayName = result.apiName ?? result.packageName;
+		const writtenFiles: string[] = [];
 
 		// Collect API page entries from global llms.txt
 		const apiEntries = collectApiEntries(globalLlmsTxtContent, result);
@@ -400,6 +411,7 @@ function generatePerPackageFiles(
 			apiPages: apiEntries,
 		});
 		yield* fs.writeFileString(path.join(packageLlmsDir, "llms.txt"), packageLlmsTxt).pipe(Effect.orDie);
+		writtenFiles.push("llms.txt");
 
 		// Collect full page content for API pages from global llms-full.txt
 		const apiPageContent = collectApiPageContent(globalLlmsFullContent, result);
@@ -415,20 +427,30 @@ function generatePerPackageFiles(
 		if (fullPageContent.length > 0) {
 			const packageLlmsFullTxt = generatePackageLlmsFullTxt(fullPageContent);
 			yield* fs.writeFileString(path.join(packageLlmsDir, "llms-full.txt"), packageLlmsFullTxt).pipe(Effect.orDie);
+			writtenFiles.push("llms-full.txt");
 		}
 
 		// Generate llms-api.txt (API-only content) when apiTxt is enabled
 		if (llmsPlugin.apiTxt && apiPageContent.length > 0) {
 			const apiTxtContent = generatePackageLlmsFullTxt(apiPageContent);
 			yield* fs.writeFileString(path.join(packageLlmsDir, "llms-api.txt"), apiTxtContent).pipe(Effect.orDie);
+			writtenFiles.push("llms-api.txt");
 		}
 
 		// Generate llms-docs.txt (guide-only content)
 		if (guidePageContent.length > 0) {
 			const docsTxtContent = generatePackageLlmsFullTxt(guidePageContent);
 			yield* fs.writeFileString(path.join(packageLlmsDir, "llms-docs.txt"), docsTxtContent).pipe(Effect.orDie);
+			writtenFiles.push("llms-docs.txt");
 		}
 
-		yield* Effect.logDebug(`Generated LLMs files for ${displayName} in ${packageLlmsDir}`);
+		yield* emit(
+			PluginEvent.LlmsPackageFilesGenerated({
+				ctx,
+				level: "debug",
+				dir: packageLlmsDir,
+				files: writtenFiles,
+			}),
+		);
 	});
 }

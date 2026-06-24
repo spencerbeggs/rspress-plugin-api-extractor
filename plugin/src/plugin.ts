@@ -141,6 +141,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 							buildResults,
 							llmsPlugin: resolvedLlmsPlugin,
 							packageRoutes,
+							buildId,
 						}),
 					);
 				}
