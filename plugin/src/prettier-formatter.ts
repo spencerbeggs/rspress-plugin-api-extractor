@@ -3,6 +3,14 @@ import { Effect, Metric } from "effect";
 import { format } from "prettier";
 import { addLogicalBlankLines } from "./code-post-processor.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
+import type { PluginEvent } from "./observability/events.js";
+import { PluginEvent as PE } from "./observability/events.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+export function setPrettierEventEmitter(fn: (event: PluginEvent) => void): void {
+	emitEvent = fn;
+}
 
 /**
  * Map code fence languages to Prettier parsers
@@ -86,6 +94,7 @@ export async function formatCode(code: string, language: string): Promise<Format
 
 		// Increment Prettier error counter
 		Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
+		emitEvent(PE.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" }));
 
 		// Return original code on error (fallthrough behavior)
 		return {

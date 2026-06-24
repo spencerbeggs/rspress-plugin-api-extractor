@@ -15,6 +15,15 @@ import type { MdxJsxAttributeValueExpression, MdxJsxFlowElement } from "mdast-ut
 import type { ShikiTransformer } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
+import type { PluginEvent } from "./observability/events.js";
+import { PluginEvent as PE } from "./observability/events.js";
+import { TwoslashManager } from "./twoslash-transformer.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+export function setRemarkApiCodeblocksEventEmitter(fn: (event: PluginEvent) => void): void {
+	emitEvent = fn;
+}
 
 /**
  * Create an MDX JSX attribute value expression with proper estree AST.
@@ -127,6 +136,11 @@ export const remarkApiCodeblocks: Plugin<[undefined?], Root> = () => {
 		// Get file path for logging
 		const currentFilePath = file.path || "unknown";
 
+		// Step 1b: wire file path into TwoslashManager so TwoslashDiagnostic.file carries real paths
+		if (file.path) {
+			TwoslashManager.getInstance().setCurrentFile(file.path);
+		}
+
 		// Visit JSX component nodes (ApiSignature, ApiMember, ApiExample)
 		// These are emitted by page generators with `source` and `apiScope` props
 		// that need Shiki processing and HAST injection for browser rendering
@@ -156,8 +170,14 @@ export const remarkApiCodeblocks: Plugin<[undefined?], Root> = () => {
 				// Look up VFS config
 				const vfsConfig = VfsRegistry.get(apiScopeValue);
 				if (!vfsConfig) {
-					console.warn(
-						`[remark-api-codeblocks] No VFS config found for scope "${apiScopeValue}" in ${currentFilePath}`,
+					emitEvent(
+						PE.ConfigCascadeWarning({
+							ctx: { buildId: "", file: currentFilePath },
+							field: "vfs",
+							chosen: apiScopeValue,
+							ignored: [],
+							level: "warn",
+						}),
 					);
 					removeJsxAttrs(node, ["source", "apiScope"]);
 					return;

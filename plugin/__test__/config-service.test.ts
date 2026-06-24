@@ -3,7 +3,6 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { TypeRegistryError } from "../src/errors.js";
 import { ConfigServiceLive } from "../src/layers/ConfigServiceLive.js";
-import { PluginLoggerLayer } from "../src/layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "../src/layers/PathDerivationServiceLive.js";
 import type { PluginOptions } from "../src/schemas/index.js";
 import type { ResolvedApiConfig, ResolvedBuildContext, RspressConfigSubset } from "../src/services/ConfigService.js";
@@ -17,7 +16,7 @@ const fixtureModel = path.join(import.meta.dirname, "../src/__fixtures__/example
 const makeTestLayer = (options: PluginOptions) =>
 	Layer.provideMerge(
 		ConfigServiceLive(options, new ShikiCrossLinker()),
-		Layer.mergeAll(PathDerivationServiceLive, MockTypeRegistryServiceLayer, PluginLoggerLayer("none")),
+		Layer.mergeAll(PathDerivationServiceLive, MockTypeRegistryServiceLayer),
 	);
 
 describe("ConfigService types", () => {
@@ -306,7 +305,7 @@ describe("ConfigServiceLive.resolve", () => {
 
 		const testLayer = Layer.provideMerge(
 			ConfigServiceLive(options, new ShikiCrossLinker()),
-			Layer.mergeAll(PathDerivationServiceLive, FailingTypeRegistryLayer, PluginLoggerLayer("none")),
+			Layer.mergeAll(PathDerivationServiceLive, FailingTypeRegistryLayer),
 		);
 
 		const program = Effect.gen(function* () {

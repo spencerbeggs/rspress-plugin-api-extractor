@@ -141,6 +141,7 @@ export function generateApiDocs(
 			"generate",
 			phaseCtx,
 			buildPipelineForApi({
+				buildId,
 				workItems,
 				baseRoute,
 				packageName,
@@ -180,6 +181,7 @@ export function generateApiDocs(
 			"write",
 			phaseCtx,
 			writeMetadata({
+				buildId,
 				fileResults,
 				categories,
 				resolvedOutputDir,
@@ -198,6 +200,7 @@ export function generateApiDocs(
 			"cleanup",
 			phaseCtx,
 			cleanupAndCommit({
+				buildId,
 				fileResults,
 				resolvedOutputDir,
 				generatedFiles,

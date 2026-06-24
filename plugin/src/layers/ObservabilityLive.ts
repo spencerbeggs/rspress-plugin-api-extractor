@@ -1,5 +1,4 @@
-import type { HashMap } from "effect";
-import { Effect, Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effect";
+import { Effect, Metric, MetricBoundaries } from "effect";
 import { makeEventBusLayer } from "../observability/EventBus.js";
 import { makeConsoleSink } from "../observability/sinks/console-sink.js";
 import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
@@ -43,73 +42,6 @@ export const BuildMetrics = {
 	twoslashDiagnostics: Metric.counter("twoslash.diagnostics"),
 	configDefaultsApplied: Metric.counter("config.defaults.applied"),
 } as const;
-
-/**
- * Format a Date as HH:MM:SS for console output.
- */
-function formatTime(date: Date): string {
-	return date.toTimeString().slice(0, 8);
-}
-
-/**
- * Extract annotations from HashMap to a plain object.
- */
-function annotationsToObject(annotations: HashMap.HashMap<string, unknown>): Record<string, unknown> {
-	const obj: Record<string, unknown> = {};
-	for (const [key, value] of annotations) {
-		obj[key] = value;
-	}
-	return obj;
-}
-
-/**
- * Create a custom plugin logger for the given mode.
- * Uses a closure to capture debugMode — no mutable module state.
- */
-function makePluginLogger(debugMode: boolean) {
-	return Logger.make(({ logLevel, message, date, annotations }) => {
-		if (debugMode) {
-			// Structured JSON for LLM consumption
-			const entry: Record<string, unknown> = {
-				timestamp: date.getTime(),
-				level: logLevel.label.toLowerCase(),
-				message: typeof message === "string" ? message : String(message),
-				...annotationsToObject(annotations),
-			};
-			console.log(JSON.stringify(entry));
-		} else {
-			// Human-readable with emoji prefix
-			const time = formatTime(date);
-			const msg = typeof message === "string" ? message : String(message);
-			const prefix = logLevel._tag === "Warning" ? "\u26A0\uFE0F  " : logLevel._tag === "Error" ? "\uD83D\uDD34 " : "";
-			console.log(`[${time}] ${prefix}${msg}`);
-		}
-	});
-}
-
-/**
- * Create the complete observability layer for the plugin.
- * Replaces the default Effect logger with a custom one and sets minimum log level.
- *
- * @param logLevel - Plugin log level from options
- */
-export function PluginLoggerLayer(
-	logLevel: "debug" | "verbose" | "info" | "warn" | "error" | "none" = "info",
-): Layer.Layer<never> {
-	const debugMode = logLevel === "debug";
-	const pluginLogger = makePluginLogger(debugMode);
-
-	const effectLogLevel = {
-		debug: LogLevel.Debug,
-		verbose: LogLevel.Debug,
-		info: LogLevel.Info,
-		warn: LogLevel.Warning,
-		error: LogLevel.Error,
-		none: LogLevel.None,
-	}[logLevel];
-
-	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLogLevel));
-}
 
 export interface BuiltSinks {
 	readonly layer: ReturnType<typeof makeEventBusLayer>;

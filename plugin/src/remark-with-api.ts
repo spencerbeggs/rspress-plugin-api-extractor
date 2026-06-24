@@ -10,8 +10,17 @@ import { BuildMetrics } from "./layers/ObservabilityLive.js";
 import { stripTwoslashDirectives } from "./markdown/helpers.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
+import type { PluginEvent } from "./observability/events.js";
+import { PluginEvent as PE } from "./observability/events.js";
 import { formatCode } from "./prettier-formatter.js";
 import type { ShikiCrossLinker } from "./shiki-transformer.js";
+import { TwoslashManager } from "./twoslash-transformer.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+export function setRemarkWithApiEventEmitter(fn: (event: PluginEvent) => void): void {
+	emitEvent = fn;
+}
 
 /**
  * Supported languages for with-api code blocks
@@ -74,9 +83,7 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 	const resolvedTheme = theme ?? DEFAULT_SHIKI_THEMES;
 
 	return async function remarkTransformer(tree: Root, file: { path?: string; cwd?: string }): Promise<void> {
-		const fileStart = performance.now();
 		const promises: Array<Promise<void>> = [];
-		let blockCount = 0;
 		let needsApiExampleImport = false;
 
 		// Detect if we're in SSG-MD (node_md) compilation environment
@@ -94,6 +101,8 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 			if (apiScope) {
 				shikiCrossLinker.setApiScope(apiScope);
 			}
+			// Step 1b: wire file path into TwoslashManager so TwoslashDiagnostic.file carries real paths
+			TwoslashManager.getInstance().setCurrentFile(currentFilePath);
 		}
 
 		visit(tree, "code", (node: Code, index: number | undefined, parent: Parent | undefined) => {
@@ -106,7 +115,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				return;
 			}
 
-			blockCount++;
 			const promise = (async () => {
 				const blockStart = performance.now();
 
@@ -154,9 +162,21 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				if (shikiTime > 0) {
 					Effect.runSync(Metric.update(BuildMetrics.codeblockShikiDuration, shikiTime));
 				}
-				if (totalBlockTime > 100) {
+				const isSlow = totalBlockTime > 100;
+				if (isSlow) {
 					Effect.runSync(Metric.increment(BuildMetrics.codeblockSlow));
 				}
+				emitEvent(
+					PE.CodeBlockProcessed({
+						ctx: { buildId: "", ...(currentFilePath != null ? { file: currentFilePath } : {}) },
+						lang,
+						shikiMs: shikiTime,
+						twoslashMs: totalBlockTime - shikiTime,
+						totalMs: totalBlockTime,
+						slow: isSlow,
+						level: "debug",
+					}),
+				);
 
 				// Replace the code block with appropriate output based on build target
 				if (parent && typeof index === "number") {
@@ -261,11 +281,6 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 			}
 		}
 
-		const fileTime = performance.now() - fileStart;
-		if (blockCount > 0) {
-			console.log(
-				`⏱️  [remark-with-api] Processed ${blockCount} blocks in ${fileTime.toFixed(0)}ms (avg: ${(fileTime / blockCount).toFixed(0)}ms per block)`,
-			);
-		}
+		// File-level stats are captured per-block via CodeBlockProcessed events above
 	};
 };

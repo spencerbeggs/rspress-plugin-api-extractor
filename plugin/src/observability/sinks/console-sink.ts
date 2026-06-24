@@ -42,6 +42,12 @@ function render(event: PluginEvent): string {
 			return `page ${event.category}/${event.item} (${event.durationMs}ms)`;
 		case "FileDecision":
 			return `${event.status}: ${event.file}`;
+		case "ItemSkipped":
+			return `skipped ${event.kind} "${event.item}": ${event.reason}`;
+		case "ShikiError":
+			return `Shiki error in ${event.file}: ${event.reason}`;
+		case "PrettierError":
+			return `Prettier error in ${event.file}: ${event.reason}`;
 		case "LlmsPackageFilesGenerated":
 			return `llms files: ${event.dir} (${event.files.length})`;
 		case "TypeRegistryEvent":

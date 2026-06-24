@@ -15,13 +15,16 @@ import { buildEventBus, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { SnapshotServiceLive } from "./layers/SnapshotServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
+import { setLoaderEventEmitter } from "./loader.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
-import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
+import { DEFAULT_SHIKI_THEMES, setShikiUtilsEventEmitter } from "./markdown/shiki-utils.js";
 import { emit, makeRuntimeEmitter } from "./observability/EventBus.js";
 import { PluginEvent } from "./observability/events.js";
+import { setOgResolverEventEmitter } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
-import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
-import { remarkWithApi } from "./remark-with-api.js";
+import { setPrettierEventEmitter } from "./prettier-formatter.js";
+import { remarkApiCodeblocks, setRemarkApiCodeblocksEventEmitter } from "./remark-api-codeblocks.js";
+import { remarkWithApi, setRemarkWithApiEventEmitter } from "./remark-with-api.js";
 import { PluginOptions } from "./schemas/index.js";
 import { resolveObservability } from "./schemas/observability.js";
 import { ConfigService } from "./services/ConfigService.js";
@@ -91,6 +94,12 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 	const emitSync = makeRuntimeEmitter(effectRuntime);
 	setEventEmitter(emitSync);
+	setLoaderEventEmitter(emitSync);
+	setShikiUtilsEventEmitter(emitSync);
+	setPrettierEventEmitter(emitSync);
+	setOgResolverEventEmitter(emitSync);
+	setRemarkWithApiEventEmitter(emitSync);
+	setRemarkApiCodeblocksEventEmitter(emitSync);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();

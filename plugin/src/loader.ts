@@ -12,7 +12,15 @@ import {
 	hasModifierTag as libHasModifierTag,
 } from "api-extractor-llms";
 import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
+import type { PluginEvent } from "./observability/events.js";
+import { PluginEvent as PE } from "./observability/events.js";
 import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+export function setLoaderEventEmitter(fn: (event: PluginEvent) => void): void {
+	emitEvent = fn;
+}
 
 /**
  * Represents a member of a namespace with its parent namespace context.
@@ -103,9 +111,17 @@ export class ApiParser {
 				}
 			}
 
-			// Log warning if item wasn't categorized (suppressed in test environments)
+			// Emit event if item wasn't categorized (suppressed in test environments)
 			if (!categorized && typeof process !== "undefined" && !process.env.VITEST) {
-				console.warn(`⚠️  API item "${member.displayName}" (kind: ${member.kind}) not categorized`);
+				emitEvent(
+					PE.ItemSkipped({
+						ctx: { buildId: "" },
+						item: member.displayName,
+						kind: String(member.kind),
+						reason: "uncategorized",
+						level: "warn",
+					}),
+				);
 			}
 		}
 
