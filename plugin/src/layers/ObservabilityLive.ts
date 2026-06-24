@@ -1,5 +1,11 @@
 import type { HashMap } from "effect";
 import { Effect, Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effect";
+import { makeEventBusLayer } from "../observability/EventBus.js";
+import { makeConsoleSink } from "../observability/sinks/console-sink.js";
+import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
+import { makeTraceSink } from "../observability/sinks/trace-sink.js";
+import type { EventSink } from "../observability/sinks/types.js";
+import type { ResolvedObservability } from "../schemas/observability.js";
 
 /**
  * All build metrics as named counters/histograms.
@@ -95,6 +101,19 @@ export function PluginLoggerLayer(
 	}[logLevel];
 
 	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLogLevel));
+}
+
+export interface BuiltSinks {
+	readonly layer: ReturnType<typeof makeEventBusLayer>;
+	readonly trace: (EventSink & { flush: () => void }) | null;
+}
+
+/** Compose the console + metrics (+ optional trace) sinks into an EventBus layer. */
+export function buildEventBus(obs: ResolvedObservability): BuiltSinks {
+	const sinks: EventSink[] = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink()];
+	const trace = obs.tracePath ? makeTraceSink(obs.tracePath) : null;
+	if (trace) sinks.push(trace);
+	return { layer: makeEventBusLayer(sinks), trace };
 }
 
 /**

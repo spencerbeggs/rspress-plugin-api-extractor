@@ -11,17 +11,19 @@ import { generateApiDocs } from "./build-program.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
-import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
+import { buildEventBus, logBuildSummary } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { SnapshotServiceLive } from "./layers/SnapshotServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
+import { emit, makeRuntimeEmitter } from "./observability/EventBus.js";
+import { PluginEvent } from "./observability/events.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
 import { remarkWithApi } from "./remark-with-api.js";
-import type { LogLevel } from "./schemas/index.js";
 import { PluginOptions } from "./schemas/index.js";
+import { resolveObservability } from "./schemas/observability.js";
 import { ConfigService } from "./services/ConfigService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
@@ -54,26 +56,40 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	// Create instances once at plugin initialization and reuse across all builds
 	const shikiCrossLinker = new ShikiCrossLinker();
 
-	// Create logger and stats collectors at plugin level (shared across hooks)
-	// Support LOG_LEVEL environment variable as override (useful for CI/debugging)
-	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
-	const logLevel = envLogLevel || options.logLevel || "info";
+	// Resolve unified observability config (logLevel, trace, thresholds).
+	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
+	const buildId = `${process.pid}-${performance.now().toString(36)}`;
+	const rspressOutDirGuess = path.resolve(process.cwd(), "dist");
+	const { resolved: obs, deprecations } = resolveObservability({
+		...(options.observability ? { observability: options.observability } : {}),
+		...(options.logLevel ? { logLevel: options.logLevel } : {}),
+		...(options.performance
+			? {
+					performance: {
+						...(options.performance.thresholds !== undefined ? { thresholds: options.performance.thresholds } : {}),
+					},
+				}
+			: {}),
+		...(envLogLevel ? { envLogLevel } : {}),
+		outDir: rspressOutDirGuess,
+		buildId,
+	});
+	const { layer: eventBusLayer, trace: traceSink } = buildEventBus(obs);
+
 	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
-		PluginLoggerLayer(logLevel),
+		eventBusLayer,
 		TypeRegistryServiceLive,
 		NodeFileSystem.layer,
 		SnapshotServiceLive(dbPath),
 	);
 	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
+	const emitSync = makeRuntimeEmitter(effectRuntime);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
-
-	// Verbose check helper
-	const isVerbose = logLevel === "verbose" || logLevel === "debug";
 
 	// Capture RSPress root directory for OG image auto-detection
 	let docsRoot: string | undefined;
@@ -119,6 +135,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				// Mark first build as complete
 				isFirstBuild = false;
 			}
+
+			if (traceSink) traceSink.flush();
 
 			// Only dispose the runtime in production builds.
 			// In dev mode, the runtime must stay alive for HMR rebuilds —
@@ -192,8 +210,15 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			VfsRegistry.clear();
 			fileContextMap.clear();
 
-			if (isVerbose) {
-				console.log("🚀 RSPress API Extractor Plugin");
+			for (const dep of deprecations) {
+				emitSync(
+					PluginEvent.DeprecatedConfigUsed({
+						ctx: { buildId },
+						level: "warn",
+						key: dep.key,
+						replacement: dep.replacement,
+					}),
+				);
 			}
 
 			try {
@@ -206,10 +231,10 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 				await effectRuntime.runPromise(
 					Effect.gen(function* () {
+						const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
+						yield* emit(PluginEvent.BuildStarted({ ctx: { buildId }, level: "info", mode: "prod", apiCount }));
 						const configSvc = yield* ConfigService;
 						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
-
-						yield* Effect.logInfo("Generating API documentation...");
 
 						// Clear previous build results (for HMR rebuilds)
 						buildResults.length = 0;
@@ -226,23 +251,20 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 										buildResults.push(result);
 										return Effect.void;
 									}),
-									Effect.tap(() =>
-										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
-									),
 								),
 							{ concurrency: 2 },
 						);
+
+						const totalMs = performance.now() - buildStartTime;
+						yield* emit(
+							PluginEvent.BuildCompleted({ ctx: { buildId }, level: "info", durationMs: totalMs, totals: {} }),
+						);
 					}).pipe(Effect.scoped),
 				);
-
-				if (logLevel !== "none") {
-					const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
-					console.log(`✅ API documentation complete (${totalTime}s)`);
-				}
 			} catch (error) {
-				console.error(
-					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
-				);
+				const message = error instanceof Error ? error.message : String(error);
+				emitSync(PluginEvent.BuildFailed({ ctx: { buildId }, level: "error", phase: "generate", error: message }));
+				if (traceSink) traceSink.flush();
 				throw error;
 			}
 
