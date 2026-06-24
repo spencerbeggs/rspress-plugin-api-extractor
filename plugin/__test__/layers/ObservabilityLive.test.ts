@@ -1,6 +1,6 @@
-import { Effect, Logger, Metric } from "effect";
+import { Effect, Metric } from "effect";
 import { describe, expect, it, vi } from "vitest";
-import { BuildMetrics, logBuildSummary } from "../../src/layers/ObservabilityLive.js";
+import { BuildMetrics, logBuildSummary, makeSummaryLoggerLayer } from "../../src/layers/ObservabilityLive.js";
 
 describe("BuildMetrics", () => {
 	it("counters can be incremented", async () => {
@@ -104,11 +104,7 @@ describe("logBuildSummary", () => {
 			output.push(args.map(String).join(" "));
 		});
 
-		const program = Effect.gen(function* () {
-			yield* logBuildSummary;
-		}).pipe(Logger.withMinimumLogLevel(Logger.none.minimumLogLevel));
-
-		await Effect.runPromise(program);
+		await Effect.runPromise(Effect.provide(logBuildSummary, makeSummaryLoggerLayer("none")));
 
 		spy.mockRestore();
 

@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { imageSizeFromFile } from "image-size/fromFile";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OpenGraphResolver } from "./og-resolver.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PluginEvent } from "./observability/events.js";
+import { OpenGraphResolver, setOgResolverEventEmitter } from "./og-resolver.js";
 import type { OpenGraphImageMetadata } from "./schemas/index.js";
 
 // Mock dependencies
@@ -17,6 +18,10 @@ describe("OpenGraphResolver", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		resolver = new OpenGraphResolver({ siteUrl, docsRoot });
+	});
+
+	afterEach(() => {
+		setOgResolverEventEmitter(() => {});
 	});
 
 	describe("constructor", () => {
@@ -107,7 +112,8 @@ describe("OpenGraphResolver", () => {
 		});
 
 		it("should return undefined for invalid URL format", async () => {
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const events: PluginEvent[] = [];
+			setOgResolverEventEmitter((e) => events.push(e));
 			const metadata: OpenGraphImageMetadata = {
 				url: "invalid-url",
 			};
@@ -115,9 +121,9 @@ describe("OpenGraphResolver", () => {
 			const result = await resolver.resolve(metadata, "my-lib");
 
 			expect(result).toBeUndefined();
-			expect(consoleWarnSpy).toHaveBeenCalledWith('[og-resolver] Invalid ogImage URL format: "invalid-url"');
-
-			consoleWarnSpy.mockRestore();
+			expect(events).toContainEqual(
+				expect.objectContaining({ _tag: "ConfigCascadeWarning", field: "ogImage.url", chosen: "invalid-url" }),
+			);
 		});
 
 		it("should use custom alt text when provided", async () => {
@@ -143,7 +149,8 @@ describe("OpenGraphResolver", () => {
 		});
 
 		it("should warn and ignore invalid secureUrl", async () => {
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const events: PluginEvent[] = [];
+			setOgResolverEventEmitter((e) => events.push(e));
 			const metadata: OpenGraphImageMetadata = {
 				url: "https://cdn.example.com/og.png",
 				secureUrl: "http://cdn.example.com/og.png", // Not https
@@ -152,11 +159,13 @@ describe("OpenGraphResolver", () => {
 			const result = await resolver.resolve(metadata, "my-lib");
 
 			expect(result?.secureUrl).toBeUndefined();
-			expect(consoleWarnSpy).toHaveBeenCalledWith(
-				'[og-resolver] ogImage secureUrl must be an absolute HTTPS URL: "http://cdn.example.com/og.png"',
+			expect(events).toContainEqual(
+				expect.objectContaining({
+					_tag: "ConfigCascadeWarning",
+					field: "ogImage.secureUrl",
+					chosen: "http://cdn.example.com/og.png",
+				}),
 			);
-
-			consoleWarnSpy.mockRestore();
 		});
 
 		it("should preserve type, width, and height from metadata", async () => {
@@ -203,16 +212,15 @@ describe("OpenGraphResolver", () => {
 		});
 
 		it("should return undefined for invalid format", async () => {
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const events: PluginEvent[] = [];
+			setOgResolverEventEmitter((e) => events.push(e));
 
 			const result = await resolver.resolve("invalid-path", "my-lib");
 
 			expect(result).toBeUndefined();
-			expect(consoleWarnSpy).toHaveBeenCalledWith(
-				'[og-resolver] Invalid ogImage format: "invalid-path" (must be absolute URL or path starting with /)',
+			expect(events).toContainEqual(
+				expect.objectContaining({ _tag: "ConfigCascadeWarning", field: "ogImage", chosen: "invalid-path" }),
 			);
-
-			consoleWarnSpy.mockRestore();
 		});
 
 		it("should auto-detect dimensions for local file", async () => {
@@ -261,7 +269,8 @@ describe("OpenGraphResolver", () => {
 		});
 
 		it("should handle dimension read errors gracefully", async () => {
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const events: PluginEvent[] = [];
+			setOgResolverEventEmitter((e) => events.push(e));
 			vi.mocked(fs.existsSync).mockReturnValue(true);
 			vi.mocked(imageSizeFromFile).mockRejectedValue(new Error("Invalid image file"));
 
@@ -271,12 +280,14 @@ describe("OpenGraphResolver", () => {
 				url: "https://example.com/images/corrupt.png",
 			});
 			expect(result?.width).toBeUndefined();
-			expect(consoleWarnSpy).toHaveBeenCalledWith(
-				expect.stringContaining("[og-resolver] Failed to read image dimensions"),
-				"Invalid image file",
+			expect(events).toContainEqual(
+				expect.objectContaining({
+					_tag: "ConfigCascadeWarning",
+					field: "ogImage",
+					chosen: "/path/to/docs/public/images/corrupt.png",
+					ignored: ["Invalid image file"],
+				}),
 			);
-
-			consoleWarnSpy.mockRestore();
 		});
 
 		it("should generate alt text with apiName", async () => {
