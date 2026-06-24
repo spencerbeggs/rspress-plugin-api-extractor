@@ -84,7 +84,10 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 		NodeFileSystem.layer,
 		SnapshotServiceLive(dbPath),
 	);
-	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
+	const EffectAppLayer = Layer.provideMerge(
+		ConfigServiceLive(options, shikiCrossLinker, buildId, obs.thresholds),
+		BaseLayer,
+	);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 	const emitSync = makeRuntimeEmitter(effectRuntime);
 	setEventEmitter(emitSync);

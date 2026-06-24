@@ -8,6 +8,7 @@ import type { PackageJson, TypeResolutionCompilerOptions } from "../internal-typ
 import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
 import type { OpenGraphResolver } from "../og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, LogLevel, OpenGraphImageConfig, SourceConfig } from "../schemas/index.js";
+import type { ResolvedObservability } from "../schemas/observability.js";
 import type { ShikiCrossLinker } from "../shiki-transformer.js";
 /**
  * Subset of RSPress config needed by ConfigService.
@@ -59,6 +60,8 @@ export interface ResolvedBuildContext {
 	readonly pageConcurrency: number;
 	readonly logLevel: LogLevel;
 	readonly suppressExampleErrors: boolean;
+	readonly thresholds: ResolvedObservability["thresholds"];
+	readonly buildId: string;
 }
 
 /**
