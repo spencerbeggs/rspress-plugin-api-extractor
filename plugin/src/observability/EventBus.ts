@@ -1,0 +1,46 @@
+import { Context, Effect, Layer, Option } from "effect";
+import type { EventLevel, PluginEvent } from "./events.js";
+import { LEVEL_RANK, levelOf } from "./events.js";
+import type { EventSink } from "./sinks/types.js";
+
+export interface EventBusShape {
+	readonly emit: (event: PluginEvent) => Effect.Effect<void>;
+	readonly wantsLevel: (level: EventLevel) => Effect.Effect<boolean>;
+}
+
+export class EventBus extends Context.Tag("rspress-plugin-api-extractor/EventBus")<EventBus, EventBusShape>() {}
+
+function makeShape(sinks: readonly EventSink[]): EventBusShape {
+	const maxAdmitted = sinks.reduce((max, s) => Math.max(max, LEVEL_RANK[s.minLevel]), -1);
+	return {
+		emit: (event) =>
+			Effect.sync(() => {
+				const rank = LEVEL_RANK[levelOf(event)];
+				for (const sink of sinks) {
+					if (rank <= LEVEL_RANK[sink.minLevel]) sink.handle(event);
+				}
+			}),
+		wantsLevel: (level) => Effect.succeed(LEVEL_RANK[level] <= maxAdmitted),
+	};
+}
+
+export function makeEventBusLayer(sinks: readonly EventSink[]): Layer.Layer<EventBus> {
+	return Layer.succeed(EventBus, makeShape(sinks));
+}
+
+/** No sinks: every emit is a no-op, wantsLevel always false. */
+export const EventBusNoop: Layer.Layer<EventBus> = makeEventBusLayer([]);
+
+/** Emit when a bus is in context; silently no-op otherwise. */
+export function emit(event: PluginEvent): Effect.Effect<void> {
+	return Effect.serviceOption(EventBus).pipe(
+		Effect.flatMap((maybe) => (Option.isSome(maybe) ? maybe.value.emit(event) : Effect.void)),
+	);
+}
+
+/** Bind a runtime so non-Effect (sync island) callbacks can emit. */
+export function makeRuntimeEmitter(runtime: {
+	runSync: (effect: Effect.Effect<void>) => void;
+}): (event: PluginEvent) => void {
+	return (event) => runtime.runSync(emit(event));
+}
