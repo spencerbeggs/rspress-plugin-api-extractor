@@ -122,7 +122,12 @@ describe("OpenGraphResolver", () => {
 
 			expect(result).toBeUndefined();
 			expect(events).toContainEqual(
-				expect.objectContaining({ _tag: "ConfigCascadeWarning", field: "ogImage.url", chosen: "invalid-url" }),
+				expect.objectContaining({
+					_tag: "ConfigValidationWarning",
+					field: "ogImage.url",
+					value: "invalid-url",
+					reason: "invalid URL format",
+				}),
 			);
 		});
 
@@ -161,9 +166,10 @@ describe("OpenGraphResolver", () => {
 			expect(result?.secureUrl).toBeUndefined();
 			expect(events).toContainEqual(
 				expect.objectContaining({
-					_tag: "ConfigCascadeWarning",
+					_tag: "ConfigValidationWarning",
 					field: "ogImage.secureUrl",
-					chosen: "http://cdn.example.com/og.png",
+					value: "http://cdn.example.com/og.png",
+					reason: "secureUrl must be absolute HTTPS",
 				}),
 			);
 		});
@@ -219,7 +225,12 @@ describe("OpenGraphResolver", () => {
 
 			expect(result).toBeUndefined();
 			expect(events).toContainEqual(
-				expect.objectContaining({ _tag: "ConfigCascadeWarning", field: "ogImage", chosen: "invalid-path" }),
+				expect.objectContaining({
+					_tag: "ConfigValidationWarning",
+					field: "ogImage",
+					value: "invalid-path",
+					reason: "invalid URL format",
+				}),
 			);
 		});
 
@@ -282,10 +293,10 @@ describe("OpenGraphResolver", () => {
 			expect(result?.width).toBeUndefined();
 			expect(events).toContainEqual(
 				expect.objectContaining({
-					_tag: "ConfigCascadeWarning",
+					_tag: "ConfigValidationWarning",
 					field: "ogImage",
-					chosen: "/path/to/docs/public/images/corrupt.png",
-					ignored: ["Invalid image file"],
+					value: "/path/to/docs/public/images/corrupt.png",
+					reason: "Invalid image file",
 				}),
 			);
 		});

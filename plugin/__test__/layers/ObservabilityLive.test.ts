@@ -42,7 +42,7 @@ describe("logBuildSummary", () => {
 			yield* Metric.incrementBy(BuildMetrics.filesNew, 3);
 			yield* Metric.incrementBy(BuildMetrics.filesModified, 2);
 			yield* Metric.incrementBy(BuildMetrics.filesUnchanged, 5);
-			yield* logBuildSummary;
+			yield* logBuildSummary(100);
 		});
 
 		await Effect.runPromise(program);
@@ -63,7 +63,7 @@ describe("logBuildSummary", () => {
 
 		const program = Effect.gen(function* () {
 			yield* Metric.incrementBy(BuildMetrics.twoslashErrors, 3);
-			yield* logBuildSummary;
+			yield* logBuildSummary(100);
 		});
 
 		await Effect.runPromise(program);
@@ -85,7 +85,7 @@ describe("logBuildSummary", () => {
 			// Prime to ensure the count>0 guard fires; registry is process-wide so assert loosely
 			yield* Metric.incrementBy(BuildMetrics.pagesGenerated, 5);
 			yield* Metric.incrementBy(BuildMetrics.externalPackagesTotal, 2);
-			yield* logBuildSummary;
+			yield* logBuildSummary(100);
 		});
 
 		await Effect.runPromise(program);
@@ -104,7 +104,7 @@ describe("logBuildSummary", () => {
 			output.push(args.map(String).join(" "));
 		});
 
-		await Effect.runPromise(Effect.provide(logBuildSummary, makeSummaryLoggerLayer("none")));
+		await Effect.runPromise(Effect.provide(logBuildSummary(100), makeSummaryLoggerLayer("none")));
 
 		spy.mockRestore();
 

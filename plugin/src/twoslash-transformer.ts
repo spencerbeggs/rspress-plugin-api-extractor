@@ -18,13 +18,15 @@ import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
  * outside any Effect fiber.
  */
 let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
 
 /**
  * Inject the runtime-bound emitter into the Twoslash module.
  * Call this right after `makeRuntimeEmitter` in plugin.ts.
  */
-export function setEventEmitter(fn: (event: PluginEvent) => void): void {
+export function setEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -484,7 +486,7 @@ export class TwoslashManager {
 
 		emitEvent(
 			PluginEvent.TwoslashDiagnostic({
-				ctx: { buildId: "", file },
+				ctx: { buildId: currentBuildId, file },
 				level: "warn",
 				file,
 				line: 0,
@@ -496,7 +498,7 @@ export class TwoslashManager {
 		);
 		emitEvent(
 			PluginEvent.TwoslashCheckFailed({
-				ctx: { buildId: "", file },
+				ctx: { buildId: currentBuildId, file },
 				level: "trace",
 				file,
 				code: tsCode,

@@ -7,8 +7,10 @@ import type { OpenGraphImageConfig, OpenGraphImageMetadata, OpenGraphMetadata } 
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setOgResolverEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setOgResolverEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -153,11 +155,11 @@ export class OpenGraphResolver {
 		const resolvedUrl = this.resolveUrl(url);
 		if (!resolvedUrl) {
 			emitEvent(
-				PE.ConfigCascadeWarning({
-					ctx: { buildId: "" },
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
 					field: "ogImage.url",
-					chosen: url,
-					ignored: [],
+					value: url,
+					reason: "invalid URL format",
 					level: "warn",
 				}),
 			);
@@ -171,11 +173,11 @@ export class OpenGraphResolver {
 				resolvedSecureUrl = secureUrl;
 			} else {
 				emitEvent(
-					PE.ConfigCascadeWarning({
-						ctx: { buildId: "" },
+					PE.ConfigValidationWarning({
+						ctx: { buildId: currentBuildId },
 						field: "ogImage.secureUrl",
-						chosen: secureUrl,
-						ignored: [],
+						value: secureUrl,
+						reason: "secureUrl must be absolute HTTPS",
 						level: "warn",
 					}),
 				);
@@ -215,11 +217,11 @@ export class OpenGraphResolver {
 		const resolvedUrl = this.resolveUrl(imageUrl);
 		if (!resolvedUrl) {
 			emitEvent(
-				PE.ConfigCascadeWarning({
-					ctx: { buildId: "" },
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
 					field: "ogImage",
-					chosen: imageUrl,
-					ignored: [],
+					value: imageUrl,
+					reason: "invalid URL format",
 					level: "warn",
 				}),
 			);
@@ -302,11 +304,11 @@ export class OpenGraphResolver {
 			};
 		} catch (error) {
 			emitEvent(
-				PE.ConfigCascadeWarning({
-					ctx: { buildId: "" },
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
 					field: "ogImage",
-					chosen: filePath,
-					ignored: [(error as Error).message ?? String(error)],
+					value: filePath,
+					reason: (error as Error).message ?? String(error),
 					level: "warn",
 				}),
 			);

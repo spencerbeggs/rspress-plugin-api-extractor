@@ -21,8 +21,10 @@ import { TwoslashManager } from "./twoslash-transformer.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setRemarkApiCodeblocksEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setRemarkApiCodeblocksEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -172,7 +174,7 @@ export const remarkApiCodeblocks: Plugin<[undefined?], Root> = () => {
 				if (!vfsConfig) {
 					emitEvent(
 						PE.ConfigCascadeWarning({
-							ctx: { buildId: "", file: currentFilePath },
+							ctx: { buildId: currentBuildId, file: currentFilePath },
 							field: "vfs",
 							chosen: apiScopeValue,
 							ignored: [],

@@ -47,6 +47,7 @@ export type PluginEvent = Data.TaggedEnum<{
 	BaseRouteResolved: Base & { readonly mode: "api" | "apis"; readonly explicit: boolean; readonly resolved: string };
 	ConfigMerged: Base & { readonly key: string; readonly winner: string; readonly overridden: readonly string[] };
 	ConfigCascadeWarning: Base & { readonly field: string; readonly chosen: string; readonly ignored: readonly string[] };
+	ConfigValidationWarning: Base & { readonly field: string; readonly value: string; readonly reason: string };
 	AutoDetectedDependencies: Base & { readonly source: "peer" | "auto"; readonly packages: readonly string[] };
 	ConfigResolved: Base & { readonly baseRoute: string; readonly categoryCount: number; readonly externalCount: number };
 	DeprecatedConfigUsed: Base & { readonly key: string; readonly replacement: string };

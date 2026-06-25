@@ -6,8 +6,10 @@ import { PluginEvent as PE } from "../observability/events.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setShikiUtilsEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setShikiUtilsEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -80,7 +82,9 @@ export async function generateShikiHast(
 		}
 		return await highlighter.codeToHast(code, options);
 	} catch (error) {
-		emitEvent(PE.ShikiError({ ctx: { buildId: "" }, file: "unknown", reason: String(error), level: "warn" }));
+		emitEvent(
+			PE.ShikiError({ ctx: { buildId: currentBuildId }, file: "unknown", reason: String(error), level: "warn" }),
+		);
 		return null;
 	}
 }

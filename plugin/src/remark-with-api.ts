@@ -16,8 +16,10 @@ import { TwoslashManager } from "./twoslash-transformer.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setRemarkWithApiEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setRemarkWithApiEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -158,7 +160,7 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				const isSlow = totalBlockTime > 100;
 				emitEvent(
 					PE.CodeBlockProcessed({
-						ctx: { buildId: "", ...(currentFilePath != null ? { file: currentFilePath } : {}) },
+						ctx: { buildId: currentBuildId, ...(currentFilePath != null ? { file: currentFilePath } : {}) },
 						lang,
 						shikiMs: shikiTime,
 						twoslashMs: totalBlockTime - shikiTime,

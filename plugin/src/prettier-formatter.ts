@@ -6,8 +6,10 @@ import { PluginEvent as PE } from "./observability/events.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setPrettierEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setPrettierEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -91,7 +93,7 @@ export async function formatCode(code: string, language: string): Promise<Format
 		const errorMsg = error instanceof Error ? error.message : String(error);
 
 		// Metric derived from PrettierError event in MetricsSink
-		emitEvent(PE.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" }));
+		emitEvent(PE.PrettierError({ ctx: { buildId: currentBuildId }, file: "unknown", reason: errorMsg, level: "warn" }));
 
 		// Return original code on error (fallthrough behavior)
 		return {

@@ -28,6 +28,8 @@ function render(event: PluginEvent): string {
 			return `slow ${event.operation}: ${event.durationMs}ms (>${event.threshold}ms)`;
 		case "ConfigCascadeWarning":
 			return `${event.field}: using '${event.chosen}', ignoring ${event.ignored.join(", ")}`;
+		case "ConfigValidationWarning":
+			return `${event.field}: rejected '${event.value}'${event.reason ? ` — ${event.reason}` : ""}`;
 		case "DeprecatedConfigUsed":
 			return `option '${event.key}' is deprecated; use ${event.replacement}`;
 		case "ModelLoaded":

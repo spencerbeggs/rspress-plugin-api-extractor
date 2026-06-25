@@ -77,7 +77,11 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 		outDir: rspressOutDirGuess,
 		buildId,
 	});
-	const { layer: eventBusLayer, trace: traceSink } = buildEventBus(obs);
+	// Detect whether trace path was auto-derived from the guessed outDir (boolean true)
+	// vs an explicit string path supplied by the caller. When it's the former we defer
+	// file binding until config() where the real RSPress outDir is available.
+	const traceIsDefault = options.observability?.trace === true;
+	const { layer: eventBusLayer, trace: traceSink } = buildEventBus(obs, traceIsDefault);
 
 	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
@@ -94,13 +98,13 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 	const emitSync = makeRuntimeEmitter(effectRuntime);
-	setEventEmitter(emitSync);
+	setEventEmitter(emitSync, buildId);
 	setLoaderEventEmitter(emitSync);
-	setShikiUtilsEventEmitter(emitSync);
-	setPrettierEventEmitter(emitSync);
-	setOgResolverEventEmitter(emitSync);
-	setRemarkWithApiEventEmitter(emitSync);
-	setRemarkApiCodeblocksEventEmitter(emitSync);
+	setShikiUtilsEventEmitter(emitSync, buildId);
+	setPrettierEventEmitter(emitSync, buildId);
+	setOgResolverEventEmitter(emitSync, buildId);
+	setRemarkWithApiEventEmitter(emitSync, buildId);
+	setRemarkApiCodeblocksEventEmitter(emitSync, buildId);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
@@ -131,7 +135,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
 				// Log build summary via Effect metrics
-				await effectRuntime.runPromise(logBuildSummary);
+				await effectRuntime.runPromise(logBuildSummary(obs.thresholds.slowCodeBlock));
 
 				// Post-process LLMs files when RSPress llms plugin and our llmsPlugin are both enabled
 				if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled) {
@@ -181,6 +185,15 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// Capture RSPress LLMs config for afterBuild processing
 			rspressLlmsEnabled = Boolean((_config as { llms?: boolean | object }).llms);
 			rspressOutDir = _config.outDir ?? "dist";
+
+			// Bind deferred trace sink to the real outDir now that it is known.
+			// When trace was set to boolean true, the path was computed from the
+			// guessed outDir at factory time; we re-derive it here with the real
+			// outDir and call setPath() so no stray file was written earlier.
+			if (traceIsDefault && traceSink) {
+				const realTracePath = path.resolve(process.cwd(), rspressOutDir, ".api-extractor", `trace-${buildId}.jsonl`);
+				traceSink.setPath(realTracePath);
+			}
 
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
 			if (options.api) {
