@@ -133,7 +133,7 @@ export function generateApiDocs(
 		}
 
 		// Phase 2+3: Generate pages and write files via Stream pipeline
-		yield* Effect.logInfo(
+		yield* Effect.logDebug(
 			`Generating ${workItems.length} pages across ${Object.keys(categories).length} categories in parallel`,
 		);
 
@@ -162,7 +162,7 @@ export function generateApiDocs(
 		);
 
 		const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
-		yield* Effect.logInfo(`Generated ${changedCount} pages`);
+		yield* Effect.logDebug(`Generated ${changedCount} pages`);
 
 		// Track generated files and file context
 		const generatedFiles = new Set<string>();
@@ -208,7 +208,7 @@ export function generateApiDocs(
 			thresholds,
 		);
 
-		yield* Effect.logInfo(`Generated ${changedCount} API documentation files for ${packageName}`);
+		yield* Effect.logDebug(`Generated ${changedCount} API documentation files for ${packageName}`);
 
 		return {
 			crossLinkData,
