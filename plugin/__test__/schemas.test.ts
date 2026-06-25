@@ -73,7 +73,7 @@ describe("Performance schemas", () => {
 	it("decodes PerformanceThresholds with defaults", () => {
 		const decode = Schema.decodeUnknownSync(PerformanceThresholds);
 		const result = decode({});
-		expect(result.slowCodeBlock).toBe(100);
+		expect(result.slowCodeBlock).toBe(500);
 		expect(result.slowPageGeneration).toBe(500);
 		expect(result.slowApiLoad).toBe(1000);
 		expect(result.slowFileOperation).toBe(50);

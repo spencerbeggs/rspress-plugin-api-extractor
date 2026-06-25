@@ -17,9 +17,15 @@ import { TwoslashManager } from "./twoslash-transformer.js";
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
 let currentBuildId = "";
-export function setRemarkWithApiEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+let currentSlowCodeBlockMs = 500;
+export function setRemarkWithApiEventEmitter(
+	fn: (event: PluginEvent) => void,
+	buildId = "",
+	slowCodeBlockMs = 500,
+): void {
 	emitEvent = fn;
 	currentBuildId = buildId;
+	currentSlowCodeBlockMs = slowCodeBlockMs;
 }
 
 /**
@@ -157,7 +163,7 @@ export const remarkWithApi: Plugin<[RemarkWithApiOptions], Root> = (options: Rem
 				const totalBlockTime = performance.now() - blockStart;
 
 				// Block stats derived from CodeBlockProcessed event in MetricsSink
-				const isSlow = totalBlockTime > 100;
+				const isSlow = totalBlockTime > currentSlowCodeBlockMs;
 				emitEvent(
 					PE.CodeBlockProcessed({
 						ctx: { buildId: currentBuildId, ...(currentFilePath != null ? { file: currentFilePath } : {}) },

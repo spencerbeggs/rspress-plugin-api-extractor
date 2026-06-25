@@ -30,7 +30,7 @@ export interface ResolvedObservability {
 }
 
 const DEFAULT_THRESHOLDS: ResolvedObservability["thresholds"] = {
-	slowCodeBlock: 100,
+	slowCodeBlock: 500,
 	slowPageGeneration: 500,
 	slowApiLoad: 1000,
 	slowFileOperation: 50,

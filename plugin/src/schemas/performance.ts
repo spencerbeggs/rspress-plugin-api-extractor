@@ -2,7 +2,7 @@ import { Schema } from "effect";
 
 export const PerformanceThresholds = Schema.mutable(
 	Schema.Struct({
-		slowCodeBlock: Schema.optionalWith(Schema.Number, { default: () => 100 }),
+		slowCodeBlock: Schema.optionalWith(Schema.Number, { default: () => 500 }),
 		slowPageGeneration: Schema.optionalWith(Schema.Number, { default: () => 500 }),
 		slowApiLoad: Schema.optionalWith(Schema.Number, { default: () => 1000 }),
 		slowFileOperation: Schema.optionalWith(Schema.Number, { default: () => 50 }),

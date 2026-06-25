@@ -552,7 +552,7 @@ export function generateSinglePage(
 				category: categoryConfig.displayName,
 				codeblockCount,
 				durationMs: Math.round(performance.now() - pageGenStart),
-				level: "info",
+				level: "debug",
 			}),
 		);
 

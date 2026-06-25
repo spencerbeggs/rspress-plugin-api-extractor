@@ -103,7 +103,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	setShikiUtilsEventEmitter(emitSync, buildId);
 	setPrettierEventEmitter(emitSync, buildId);
 	setOgResolverEventEmitter(emitSync, buildId);
-	setRemarkWithApiEventEmitter(emitSync, buildId);
+	setRemarkWithApiEventEmitter(emitSync, buildId, obs.thresholds.slowCodeBlock);
 	setRemarkApiCodeblocksEventEmitter(emitSync, buildId);
 
 	// File context map (shared across hooks)

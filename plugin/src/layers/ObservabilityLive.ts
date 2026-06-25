@@ -124,7 +124,7 @@ export const logBuildSummary = (slowCodeBlockMs: number) =>
 		// Code block summary
 		if (blocks > 0 && slowBlocks > 0) {
 			yield* Effect.logWarning(
-				`⚠️  Code block performance: ${slowBlocks} of ${blocks} blocks were slow (>${slowCodeBlockMs}ms)`,
+				`Code block performance: ${slowBlocks} of ${blocks} blocks were slow (>${slowCodeBlockMs}ms)`,
 			);
 		}
 
@@ -134,6 +134,6 @@ export const logBuildSummary = (slowCodeBlockMs: number) =>
 			const errorParts: string[] = [];
 			if (tsErrors > 0) errorParts.push(`${tsErrors} Twoslash`);
 			if (prErrors > 0) errorParts.push(`${prErrors} Prettier`);
-			yield* Effect.logWarning(`🔴 ${totalErrors} error(s) in code blocks (${errorParts.join(", ")})`);
+			yield* Effect.logWarning(`${totalErrors} error(s) in code blocks (${errorParts.join(", ")})`);
 		}
 	});
