@@ -82,7 +82,9 @@ export interface TypeScriptConfigFields {
 }
 
 /**
- * Result from a model loader function
+ * Result returned by a model loader function.
+ *
+ * @public
  */
 export interface LoadedModel {
 	/** The API model */

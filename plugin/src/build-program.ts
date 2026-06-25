@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import type { CrossLinkData } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { markdownCrossLinker } from "./markdown/index.js";
+import { withPhase } from "./observability/spans.js";
 import type { ResolvedApiConfig, ResolvedBuildContext } from "./services/ConfigService.js";
 import { SnapshotService } from "./services/SnapshotService.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
@@ -70,7 +71,14 @@ export function generateApiDocs(
 			twoslashTransformer,
 			ogResolver,
 			pageConcurrency,
+			thresholds,
+			buildId,
 		} = buildContext;
+
+		const phaseCtx = {
+			buildId,
+			packageName,
+		};
 
 		const resolvedOutputDir = path.resolve(process.cwd(), outputDir);
 		const buildTime = new Date().toISOString();
@@ -83,12 +91,19 @@ export function generateApiDocs(
 		yield* fileSystem.makeDirectory(resolvedOutputDir, { recursive: true }).pipe(Effect.orDie);
 
 		// Phase 1: Prepare work items and cross-link data (sync, pure)
-		const { workItems, crossLinkData } = prepareWorkItems({
-			apiPackage,
-			categories,
-			baseRoute,
-			packageName,
-		});
+		const { workItems, crossLinkData } = yield* withPhase(
+			"resolve",
+			phaseCtx,
+			Effect.sync(() =>
+				prepareWorkItems({
+					apiPackage,
+					categories,
+					baseRoute,
+					packageName,
+				}),
+			),
+			thresholds,
+		);
 
 		// Initialize cross-linkers with the prepared data
 		// Use crossLinkData.routes directly so both cross-linkers share the same
@@ -118,30 +133,36 @@ export function generateApiDocs(
 		}
 
 		// Phase 2+3: Generate pages and write files via Stream pipeline
-		yield* Effect.logInfo(
+		yield* Effect.logDebug(
 			`Generating ${workItems.length} pages across ${Object.keys(categories).length} categories in parallel`,
 		);
 
-		const fileResults = yield* buildPipelineForApi({
-			workItems,
-			baseRoute,
-			packageName,
-			apiScope,
-			...(apiName != null ? { apiName } : {}),
-			...(source != null ? { source } : {}),
-			buildTime,
-			resolvedOutputDir,
-			pageConcurrency,
-			existingSnapshots,
-			...(suppressExampleErrors != null ? { suppressExampleErrors } : {}),
-			...(llmsPlugin != null ? { llmsPlugin } : {}),
-			...(ogResolver !== undefined ? { ogResolver } : {}),
-			...(siteUrl != null ? { siteUrl } : {}),
-			...(ogImage != null ? { ogImage } : {}),
-		});
+		const fileResults = yield* withPhase(
+			"generate",
+			phaseCtx,
+			buildPipelineForApi({
+				buildId,
+				workItems,
+				baseRoute,
+				packageName,
+				apiScope,
+				...(apiName != null ? { apiName } : {}),
+				...(source != null ? { source } : {}),
+				buildTime,
+				resolvedOutputDir,
+				pageConcurrency,
+				existingSnapshots,
+				...(suppressExampleErrors != null ? { suppressExampleErrors } : {}),
+				...(llmsPlugin != null ? { llmsPlugin } : {}),
+				...(ogResolver !== undefined ? { ogResolver } : {}),
+				...(siteUrl != null ? { siteUrl } : {}),
+				...(ogImage != null ? { ogImage } : {}),
+			}),
+			thresholds,
+		);
 
 		const changedCount = fileResults.filter((r) => r.status !== "unchanged").length;
-		yield* Effect.logInfo(`Generated ${changedCount} pages`);
+		yield* Effect.logDebug(`Generated ${changedCount} pages`);
 
 		// Track generated files and file context
 		const generatedFiles = new Set<string>();
@@ -156,26 +177,38 @@ export function generateApiDocs(
 		}
 
 		// Phase 4: Write metadata (root _meta.json, main index, category _meta.json)
-		yield* writeMetadata({
-			fileResults,
-			categories,
-			resolvedOutputDir,
-			existingSnapshots,
-			buildTime,
-			baseRoute,
-			packageName,
-			...(apiName != null ? { apiName } : {}),
-			generatedFiles,
-		});
+		yield* withPhase(
+			"write",
+			phaseCtx,
+			writeMetadata({
+				buildId,
+				fileResults,
+				categories,
+				resolvedOutputDir,
+				existingSnapshots,
+				buildTime,
+				baseRoute,
+				packageName,
+				...(apiName != null ? { apiName } : {}),
+				generatedFiles,
+			}),
+			thresholds,
+		);
 
 		// Phase 5: Cleanup and commit snapshots
-		yield* cleanupAndCommit({
-			fileResults,
-			resolvedOutputDir,
-			generatedFiles,
-		});
+		yield* withPhase(
+			"cleanup",
+			phaseCtx,
+			cleanupAndCommit({
+				buildId,
+				fileResults,
+				resolvedOutputDir,
+				generatedFiles,
+			}),
+			thresholds,
+		);
 
-		yield* Effect.logInfo(`Generated ${changedCount} API documentation files for ${packageName}`);
+		yield* Effect.logDebug(`Generated ${changedCount} API documentation files for ${packageName}`);
 
 		return {
 			crossLinkData,

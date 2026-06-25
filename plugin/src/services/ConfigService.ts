@@ -3,12 +3,12 @@ import type { ApiPackage } from "@microsoft/api-extractor-model";
 import type { Effect, Scope } from "effect";
 import { Context } from "effect";
 import type { Highlighter, ShikiTransformer } from "shiki";
-import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type { ApiModelLoadError, ConfigValidationError, TypeRegistryError } from "../errors.js";
 import type { PackageJson, TypeResolutionCompilerOptions } from "../internal-types.js";
 import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
 import type { OpenGraphResolver } from "../og-resolver.js";
 import type { CategoryConfig, LlmsPlugin, LogLevel, OpenGraphImageConfig, SourceConfig } from "../schemas/index.js";
+import type { ResolvedObservability } from "../schemas/observability.js";
 import type { ShikiCrossLinker } from "../shiki-transformer.js";
 /**
  * Subset of RSPress config needed by ConfigService.
@@ -51,7 +51,6 @@ export interface ResolvedBuildContext {
 	readonly apiConfigs: ReadonlyArray<ResolvedApiConfig>;
 	readonly combinedVfs: ReadonlyMap<string, string>;
 	readonly highlighter: Highlighter;
-	readonly tsEnvCache: ReadonlyMap<string, VirtualTypeScriptEnvironment>;
 	readonly resolvedCompilerOptions: TypeResolutionCompilerOptions;
 	readonly ogResolver: OpenGraphResolver | null;
 	readonly shikiCrossLinker: ShikiCrossLinker;
@@ -61,6 +60,8 @@ export interface ResolvedBuildContext {
 	readonly pageConcurrency: number;
 	readonly logLevel: LogLevel;
 	readonly suppressExampleErrors: boolean;
+	readonly thresholds: ResolvedObservability["thresholds"];
+	readonly buildId: string;
 }
 
 /**

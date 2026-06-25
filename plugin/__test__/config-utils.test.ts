@@ -2,11 +2,13 @@
  * Tests for config-utils module - focusing on dependency extraction and version conflict resolution
  */
 
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import {
 	extractAutoDetectedPackages,
 	extractPeerDependencies,
 	extractTypeUtilities,
+	resolveExternalPackageVersions,
 	resolvePackageVersionConflicts,
 } from "../src/config-utils.js";
 import type { PackageJson } from "../src/internal-types.js";
@@ -44,6 +46,70 @@ describe("extractPeerDependencies", () => {
 
 	it("should return empty array when packageJson is undefined", () => {
 		const result = extractPeerDependencies(undefined);
+
+		expect(result).toEqual([]);
+	});
+});
+
+describe("resolveExternalPackageVersions", () => {
+	/**
+	 * Fake resolver: returns an exact version for known packages, fails for
+	 * unknown ones (mirrors how the registry resolve endpoint 404s on
+	 * unpublished / workspace-only packages).
+	 */
+	const fakeResolve =
+		(exact: Record<string, string>) =>
+		(pkg: ExternalPackageSpec): Effect.Effect<string, Error> =>
+			exact[pkg.name] !== undefined
+				? Effect.succeed(exact[pkg.name])
+				: Effect.fail(new Error(`not found: ${pkg.name}@${pkg.version}`));
+
+	it("resolves version ranges to the exact versions returned by the resolver", async () => {
+		const packages: ExternalPackageSpec[] = [
+			{ name: "vitest", version: "^4.1.0" },
+			{ name: "react", version: "^19.2.7" },
+		];
+
+		const result = await Effect.runPromise(
+			resolveExternalPackageVersions(packages, fakeResolve({ vitest: "4.1.9", react: "19.2.10" })),
+		);
+
+		expect(result).toEqual([
+			{ name: "vitest", version: "4.1.9" },
+			{ name: "react", version: "19.2.10" },
+		]);
+	});
+
+	it("drops packages the resolver cannot resolve (unpublished / workspace-only)", async () => {
+		const packages: ExternalPackageSpec[] = [
+			{ name: "vitest", version: "^4.1.0" },
+			{ name: "@vitest-agent/cli", version: "1.0.0" },
+			{ name: "react", version: "^19.2.7" },
+		];
+
+		const result = await Effect.runPromise(
+			resolveExternalPackageVersions(packages, fakeResolve({ vitest: "4.1.9", react: "19.2.10" })),
+		);
+
+		expect(result).toEqual([
+			{ name: "vitest", version: "4.1.9" },
+			{ name: "react", version: "19.2.10" },
+		]);
+	});
+
+	it("returns an empty array when every package fails to resolve", async () => {
+		const packages: ExternalPackageSpec[] = [
+			{ name: "@vitest-agent/cli", version: "1.0.0" },
+			{ name: "@vitest-agent/mcp", version: "1.0.0" },
+		];
+
+		const result = await Effect.runPromise(resolveExternalPackageVersions(packages, fakeResolve({})));
+
+		expect(result).toEqual([]);
+	});
+
+	it("returns an empty array for empty input", async () => {
+		const result = await Effect.runPromise(resolveExternalPackageVersions([], fakeResolve({})));
 
 		expect(result).toEqual([]);
 	});
@@ -141,19 +207,29 @@ describe("extractAutoDetectedPackages", () => {
 		},
 	};
 
-	it("should extract only peerDependencies and type utilities by default", () => {
+	it("should extract dependencies, peerDependencies, and type utilities by default (not devDependencies)", () => {
 		const result = extractAutoDetectedPackages(packageJson);
 
 		expect(result).toEqual([
+			{ name: "effect", version: "^3.0.0" },
 			{ name: "zod", version: "^3.22.4" },
 			{ name: "type-fest", version: "^4.0.0" },
 		]);
+		// devDependencies (vitest) are not auto-detected
+		expect(result).not.toContainEqual({ name: "vitest", version: "^1.0.0" });
 	});
 
-	it("should include dependencies when option is true", () => {
-		const result = extractAutoDetectedPackages(packageJson, { dependencies: true });
+	it("should include dependencies by default", () => {
+		const result = extractAutoDetectedPackages(packageJson);
 
 		expect(result).toContainEqual({ name: "effect", version: "^3.0.0" });
+	});
+
+	it("should exclude dependencies when option is false", () => {
+		const result = extractAutoDetectedPackages(packageJson, { dependencies: false });
+
+		expect(result).not.toContainEqual({ name: "effect", version: "^3.0.0" });
+		expect(result).toContainEqual({ name: "zod", version: "^3.22.4" });
 	});
 
 	it("should include devDependencies when option is true", () => {

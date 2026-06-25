@@ -3,14 +3,7 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
-completeness: 90
-related:
-  - rspress-plugin-api-extractor/error-observability.md
-  - rspress-plugin-api-extractor/snapshot-tracking-system.md
-  - rspress-plugin-api-extractor/build-architecture.md
-dependencies: []
+updated: 2026-06-24
 ---
 
 # Performance Observability System Design
@@ -18,311 +11,316 @@ dependencies: []
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture](#architecture)
-- [Effect Metrics](#effect-metrics)
-- [Logging System](#logging-system)
+- [EventBus: Synchronous Fan-Out](#eventbus-synchronous-fan-out)
+- [PluginEvent Taxonomy](#pluginevent-taxonomy)
+- [Correlation Envelope and Level Ladder](#correlation-envelope-and-level-ladder)
+- [Three Sinks](#three-sinks)
+- [Span Substrate](#span-substrate)
+- [Build Metrics](#build-metrics)
 - [Build Summary](#build-summary)
-- [Code Block Timing](#code-block-timing)
+- [Programmatic Stream Tee (Deferred)](#programmatic-stream-tee-deferred)
+- [Sync-Island Bridge](#sync-island-bridge)
 - [File Locations](#file-locations)
 
 ---
 
 ## Overview
 
-The performance observability system provides build-time monitoring for the
-`rspress-plugin-api-extractor` using Effect's built-in Logger and Metric
-primitives. It replaces the previous custom classes (`PerformanceManager`,
-`CodeBlockStatsCollector`, `FileGenerationStats`, `TwoslashErrorStats`,
-`PrettierErrorStats`) with a single unified approach.
+Build observability is wired through a **synchronous fan-out EventBus** backed
+by three sinks: a console sink (human-readable or JSON, level-filtered), a
+full-fidelity JSONL trace sink (opt-in, captures every event), and a metrics
+sink (translates events to `BuildMetrics` counters and histograms).
 
-### Key Features
-
-- **Effect Metric counters and histograms** for all build statistics
-- **Custom Effect Logger** with human-readable and structured JSON modes
-- **Single `logBuildSummary` program** reads all metrics at build end
-- **Fiber-scoped context** -- metrics are automatically associated with
-  the correct fiber
-- **Zero custom collector classes** -- all state lives in Effect's metric
-  registry
-
-### What Was Deleted
-
-The following files were removed during the Effect migration:
-
-- `performance-manager.ts` -- replaced by native `performance.now()` calls
-  and Effect Metrics
-- `code-block-stats.ts` -- replaced by `codeblock.*` metrics
-- `file-generation-stats.ts` -- replaced by `files.*` metrics
-- `twoslash-error-stats.ts` -- replaced by `twoslash.errors` counter
-- `prettier-error-stats.ts` -- replaced by `prettier.errors` counter
-- `build-events.ts` -- deleted (event system no longer needed)
-- `debug-logger.ts` -- replaced by Effect Logger
+The entire observability module lives under `plugin/src/observability/`. The
+plugin creates the bus once during initialization and tears it down at the end
+of `afterBuild`.
 
 ---
 
-## Architecture
+## EventBus: Synchronous Fan-Out
 
-### Single Observability Module
+**Location:** `plugin/src/observability/EventBus.ts`
 
-All observability is defined in `layers/ObservabilityLive.ts`:
-
-```text
-ObservabilityLive.ts
-  +-> BuildMetrics (named counters and histograms)
-  +-> PluginLoggerLayer (custom Effect Logger + log level)
-  +-> logBuildSummary (Effect program to read metrics)
-```
-
-### Integration Points
-
-```text
-Plugin initialization (plugin.ts)
-    |
-    +-> PluginLoggerLayer(logLevel)
-    |   Replaces default Effect logger with custom formatter
-    |   Sets minimum log level
-    |
-    +-> Layer composed into BaseLayer -> EffectAppLayer
-    +-> ManagedRuntime.make(EffectAppLayer)
-
-Build execution (build-stages.ts)
-    |
-    +-> Metric.increment(BuildMetrics.filesTotal)
-    +-> Metric.increment(BuildMetrics.filesNew / modified / unchanged)
-    +-> Metric.increment(BuildMetrics.pagesGenerated)
-    +-> Metric.increment(BuildMetrics.codeblockTotal / codeblockSlow)
-    +-> Metric.update(BuildMetrics.codeblockDuration)(duration)
-
-Error callbacks (twoslash-transformer.ts, prettier-formatter.ts)
-    |
-    +-> Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors))
-    +-> Effect.runSync(Metric.increment(BuildMetrics.prettierErrors))
-
-afterBuild hook (plugin.ts)
-    |
-    +-> effectRuntime.runPromise(logBuildSummary)
-```
-
----
-
-## Effect Metrics
-
-All metrics are defined as named counters and histograms in
-`BuildMetrics`:
+The `EventBus` is NOT an async PubSub. `emit` fans out to every registered
+sink inline — by the time the emitting fiber resumes, all sinks have finished.
+This keeps metrics exact when `logBuildSummary` reads them in `afterBuild`.
 
 ```typescript
-export const BuildMetrics = {
-  // File tracking
-  filesTotal: Metric.counter("files.total"),
-  filesNew: Metric.counter("files.new"),
-  filesModified: Metric.counter("files.modified"),
-  filesUnchanged: Metric.counter("files.unchanged"),
-
-  // Code block performance
-  codeblockDuration: Metric.histogram(
-    "codeblock.duration",
-    MetricBoundaries.fromIterable([10, 25, 50, 100, 200, 500, 1000]),
-  ),
-  codeblockShikiDuration: Metric.histogram(
-    "codeblock.shiki.duration",
-    MetricBoundaries.fromIterable([5, 10, 25, 50, 100, 250]),
-  ),
-  codeblockTotal: Metric.counter("codeblock.total"),
-  codeblockSlow: Metric.counter("codeblock.slow"),
-
-  // Error tracking
-  twoslashErrors: Metric.counter("twoslash.errors"),
-  prettierErrors: Metric.counter("prettier.errors"),
-
-  // Build progress
-  pagesGenerated: Metric.counter("pages.generated"),
-  apiVersionsLoaded: Metric.counter("api.versions.loaded"),
-  externalPackagesTotal: Metric.counter("external.packages.total"),
-} as const;
-```
-
-### Usage Pattern
-
-Metrics are incremented within Effect programs using `Metric.increment`:
-
-```typescript
-// In build-stages.ts writeSingleFile
-yield* Metric.increment(BuildMetrics.filesTotal);
-if (status === "new") {
-  yield* Metric.increment(BuildMetrics.filesNew);
-} else {
-  yield* Metric.increment(BuildMetrics.filesModified);
+interface EventBusShape {
+  emit: (event: PluginEvent) => Effect.Effect<void>;
+  wantsLevel: (level: EventLevel) => Effect.Effect<boolean>;
 }
 ```
 
-For error tracking in non-Effect callbacks (Shiki transformer hooks),
-`Effect.runSync` is used:
+`makeShape(sinks)` computes `maxAdmitted` as the highest-rank sink `minLevel`
+across all registered sinks. `wantsLevel(level)` returns `true` when
+`levelRank(level) <= maxAdmitted`. Because the metrics sink and trace sink both
+sit at `minLevel: "trace"` (rank 4), `wantsLevel` returns `true` for all levels
+in the live build — the guard is most useful when composing a custom bus without
+a trace-level sink.
 
-```typescript
-// In twoslash-transformer.ts onTwoslashError callback
-Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
-```
+The free `emit(event)` and `wantsLevel(level)` functions use
+`Effect.serviceOption(EventBus)` and are no-ops when no bus is in context,
+requiring `R = never` so they are safe to call from any effect.
+
+`EventBusNoop` is `makeEventBusLayer([])` — useful in tests that do not want
+observable side effects.
 
 ---
 
-## Logging System
+## PluginEvent Taxonomy
 
-### Custom Plugin Logger
+**Location:** `plugin/src/observability/events.ts`
 
-`PluginLoggerLayer` creates a custom Effect Logger that replaces the
-default logger:
+`PluginEvent` is a `Data.TaggedEnum` with approximately 40 variants organized
+across seven subsystems:
+
+| Subsystem | Representative events |
+| --------- | --------------------- |
+| Lifecycle | `BuildStarted`, `BuildCompleted`, `PhaseStarted`, `PhaseCompleted`, `SlowOperation` |
+| Config parse / merge | `OptionsDecoded`, `DefaultApplied`, `DeprecatedConfigUsed`, `ConfigResolved` |
+| Model loading | `ModelLoaded`, `ModelLoadFailed` |
+| Type loading / VFS | `VfsGenerated`, `ImportsPrepended`, `TypeRegistryEvent` |
+| Multi-entry / routing | `EntryPointResolved`, `RouteCollisionDetected` |
+| Page gen / code blocks | `PageGenerated`, `CodeBlockProcessed`, `TwoslashDiagnostic`, `TwoslashCheckFailed`, `PrettierError`, `ShikiError` |
+| Write / snapshot / cleanup | `FileDecision`, `SnapshotUpdated`, `StaleFileRemoved`, `OrphanFileRemoved` |
+| LLMs | `LlmsPackageFilesGenerated`, `LlmsGlobalFilesRewritten` |
+
+`levelOf(event)` extracts `event.level`. Every variant carries a `level` field
+of type `EventLevel`.
+
+**Known limitation:** `BuildStarted.mode` is always `"prod"` regardless of
+whether `rspress dev` or `rspress build` is running.
+
+---
+
+## Correlation Envelope and Level Ladder
+
+### EventContext
+
+Every event carries an `EventContext` envelope:
 
 ```typescript
-export function PluginLoggerLayer(
-  logLevel: "debug" | "verbose" | "info" | "warn" | "error" | "none",
-): Layer.Layer<never> {
-  const debugMode = logLevel === "debug";
-  const pluginLogger = makePluginLogger(debugMode);
-  const effectLogLevel = { /* mapping */ }[logLevel];
-
-  return Layer.mergeAll(
-    Logger.replace(Logger.defaultLogger, pluginLogger),
-    Logger.minimumLogLevel(effectLogLevel),
-  );
+interface EventContext {
+  buildId: string;
+  apiScope?: string;
+  packageName?: string;
+  version?: string;
+  locale?: string;
+  entryPoint?: string;
+  route?: string;
+  file?: string;
+  symbol?: string;
 }
 ```
 
-### Output Modes
+All fields except `buildId` are optional — emit sites fill in what they know.
 
-**Human-readable mode** (info, verbose, warn, error):
+### Level Ladder
 
 ```text
-[15:23:45] Generating API documentation...
-[15:23:46] Generated 42 pages across 6 categories in parallel
-[15:23:47] Generated 12 API documentation files for my-package
+none  — no console output
+error (rank 0) — fatal and non-recoverable failures
+warn  (rank 1) — degraded output, recoverable errors
+info  (rank 2) — per-file and phase milestones
+debug (rank 3) — all events with full payloads; activates JSON console mode
+trace (rank 4) — fine-grained internals (e.g. TwoslashCheckFailed env snapshots)
 ```
 
-**Structured JSON mode** (debug):
+`LEVEL_RANK` maps each level to its numeric rank. A sink with `minLevel: "info"`
+admits events ranked 0–2 — lower rank means higher severity and always emitted.
 
-```json
-{"timestamp":1710691425000,"level":"info","message":"Generating API documentation..."}
+`verbose` is accepted as a config input value and normalized to `debug` by
+`resolveObservability`; it is not a valid `EventLevel`.
+
+---
+
+## Three Sinks
+
+All three implement `EventSink` (`plugin/src/observability/sinks/types.ts`):
+
+```typescript
+interface EventSink {
+  minLevel: EventLevel;
+  handle: (event: PluginEvent) => void;
+}
 ```
 
-### Log Level Mapping
+### Console Sink
 
-| Plugin Level | Effect Level | Behavior |
-| --- | --- | --- |
-| `debug` | `Debug` | Structured JSON, all messages |
-| `verbose` | `Debug` | Human-readable, all messages |
-| `info` | `Info` | Human-readable, info+ only |
-| `warn` | `Warning` | Human-readable, warnings+ only |
-| `error` | `Error` | Human-readable, errors only |
-| `none` | `None` | No output |
+**Location:** `plugin/src/observability/sinks/console-sink.ts`
 
-The `LOG_LEVEL` environment variable can override the configured level.
+`makeConsoleSink(logLevel, opts)` produces an `EventSink` with `minLevel` set
+to the configured `logLevel`. When `logLevel === "none"` the threshold is `-1`
+so no event passes.
+
+- **Human-readable mode** (all levels except `debug`): `[HH:MM:SS] rendered-message`. `render(event)` switches on `_tag` to produce a one-liner per variant; unknown tags fall back to the bare `_tag`.
+- **JSON mode** (when `logLevel === "debug"`): `console.log(JSON.stringify({ timestamp, ...event }))`.
+
+### Trace Sink
+
+**Location:** `plugin/src/observability/sinks/trace-sink.ts`
+
+`makeTraceSink(filePath)` returns `EventSink & { flush: () => void }`.
+
+- `minLevel: "trace"` — captures every event regardless of console level.
+- Truncates the file on construction; calls `appendFileSync` per event (synchronous, nothing buffered).
+- `flush()` is a no-op: sync appends mean nothing is held in memory.
+
+The trace sink and console level are **independent**. Running at
+`logLevel: "info"` with `trace: true` still writes every event to the JSONL
+file; the console shows only `info`-and-above messages.
+
+### Metrics Sink
+
+**Location:** `plugin/src/observability/sinks/metrics-sink.ts`
+
+`makeMetricsSink()` returns an `EventSink` with `minLevel: "trace"`. It
+translates events to `BuildMetrics` via `Effect.runSync`. The fan-out is
+synchronous, so metric counts are exact when `logBuildSummary` reads them.
+
+| Event | Metric(s) updated |
+| ----- | ----------------- |
+| `FileDecision` | `filesTotal`, `filesNew` / `filesModified` / `filesUnchanged` |
+| `PageGenerated` | `pagesGenerated` |
+| `TwoslashDiagnostic` | `twoslashDiagnostics`, `twoslashErrors` |
+| `PrettierError` | `prettierErrors` |
+| `CodeBlockProcessed` | `codeblockTotal`, `codeblockDuration`, `codeblockShikiDuration` (if `shikiMs > 0`), `codeblockSlow` |
+| `VfsGenerated` | `vfsFiles` |
+| `ImportsPrepended` | `importsPrepended` |
+| `PhaseCompleted` | `phaseDuration` |
+| `DefaultApplied` | `configDefaultsApplied` |
+
+Unmapped tags (including `ShikiError`) hit the `default` branch and are
+silently ignored. See the inline-metrics note below.
+
+**Not event-derived:** `externalPackagesTotal` and `apiVersionsLoaded` remain
+inline `Metric.incrementBy` calls in `ConfigServiceLive`. The only candidate
+event (`TypeRegistryEvent{BatchComplete}`) carries a `loaded` (succeeded) count,
+not a configured count — deriving it here would change the metric's semantics.
+
+---
+
+## Span Substrate
+
+**Location:** `plugin/src/observability/spans.ts`
+
+Two helpers wrap Effects in `Effect.withSpan` and emit timing events:
+
+### `withPhase(phase, ctx, effect, thresholds?)`
+
+Emits `PhaseStarted` before and `PhaseCompleted` after. Measures wall-clock
+duration. If duration exceeds the threshold for that phase, also emits
+`SlowOperation`. Phase names map to threshold keys via `PHASE_THRESHOLD_KEY`:
+
+| Phase | Threshold key |
+| ----- | ------------- |
+| `"modelLoad"`, `"resolve"` | `slowApiLoad` |
+| `"generate"` | `slowPageGeneration` |
+| `"write"` | `slowFileOperation` |
+| `"cleanup"` | `slowDbOperation` |
+
+### `withOp(operation, ctx, effect, threshold?)`
+
+No phase events — emits `SlowOperation` only if duration exceeds `threshold`.
+Used for sub-operation timing inside a phase.
+
+Both helpers call `Effect.withSpan`, which creates OpenTelemetry-compatible
+spans in the Effect fiber context. **No OTLP exporter is wired in the live
+plugin.** The spans are a dormant seam for future integration.
+
+---
+
+## Build Metrics
+
+**Location:** `plugin/src/layers/build-metrics.ts`
+
+`BuildMetrics` is extracted from `ObservabilityLive.ts` into its own module to
+avoid circular imports between the metrics sink and the layer that assembles
+sinks. It provides Effect `Metric.counter` and `Metric.histogram` instances.
 
 ---
 
 ## Build Summary
 
-### logBuildSummary
+**Location:** `plugin/src/layers/ObservabilityLive.ts`
 
-A single Effect program reads all metric snapshots and logs a summary:
+`logBuildSummary` is an Effect program that reads all metric snapshots and logs
+a human-readable summary. It is called once in `afterBuild` (skipped on HMR
+rebuilds). The summary covers file counts (new/modified/unchanged), pages and
+external packages, phase timing, slow code blocks, and Twoslash/Prettier error
+totals.
 
-```typescript
-export const logBuildSummary = Effect.gen(function* () {
-  const filesTotal = yield* Metric.value(BuildMetrics.filesTotal);
-  const filesNew = yield* Metric.value(BuildMetrics.filesNew);
-  const filesModified = yield* Metric.value(BuildMetrics.filesModified);
-  const filesUnchanged = yield* Metric.value(BuildMetrics.filesUnchanged);
-  const twoslashErrors = yield* Metric.value(BuildMetrics.twoslashErrors);
-  const prettierErrors = yield* Metric.value(BuildMetrics.prettierErrors);
-  const codeblockTotal = yield* Metric.value(BuildMetrics.codeblockTotal);
-  const codeblockSlow = yield* Metric.value(BuildMetrics.codeblockSlow);
-
-  // File summary
-  yield* Effect.log(`files summary line`);
-
-  // Code block performance warning (if slow blocks detected)
-  if (blocks > 0 && slowBlocks > 0) {
-    yield* Effect.logWarning(`slow blocks warning`);
-  }
-
-  // Error summary (if errors detected)
-  if (totalErrors > 0) {
-    yield* Effect.logWarning(`error summary`);
-  }
-});
-```
-
-### Example Output
-
-```text
-[15:23:47] files: 339 files (12 new, 5 modified, 322 unchanged)
-[15:23:47] code block performance: 8 of 1247 blocks were slow (>100ms)
-[15:23:47] 3 error(s) in code blocks (2 Twoslash, 1 Prettier)
-```
-
-### When It Runs
-
-`logBuildSummary` is called in the `afterBuild` hook, but only on the
-first build (skipped on HMR rebuilds to reduce noise):
+`buildEventBus(obs: ResolvedObservability)` composes sinks into a layer:
 
 ```typescript
-async afterBuild(_config, isProd) {
-  if (isFirstBuild) {
-    await effectRuntime.runPromise(logBuildSummary);
-    isFirstBuild = false;
-  }
-  if (isProd) {
-    await effectRuntime.dispose();
-  }
+function buildEventBus(obs: ResolvedObservability): BuiltSinks {
+  const sinks = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink()];
+  const trace = obs.tracePath ? makeTraceSink(obs.tracePath) : null;
+  if (trace) sinks.push(trace);
+  return { layer: makeEventBusLayer(sinks), trace };
 }
 ```
+
+`BuiltSinks.trace` is retained at the plugin level so `afterBuild` can call
+`trace.flush()` before disposing the runtime.
 
 ---
 
-## Code Block Timing
+## Programmatic Stream Tee (Deferred)
 
-### Twoslash Timing Wrapper
+**Location:** `plugin/src/observability/stream.ts`
 
-The `createTwoslashTimingWrapper` (`twoslash-timing-wrapper.ts`) wraps a
-Shiki transformer to measure Twoslash preprocessing time:
+`makeStreamSink()` creates a bounded sliding `Queue<PluginEvent>` (capacity
+1024). The returned `EventSink` offers events into the queue; when full, the
+oldest entry is dropped. The companion `stream` drains events as a
+`Stream.Stream<PluginEvent>`.
+
+**This sink is NOT wired into the live plugin.** To use it, export the sink
+from `makeStreamSink` and pass it to `makeEventBusLayer` at the call site.
+
+---
+
+## Sync-Island Bridge
+
+**Location:** `plugin/src/observability/EventBus.ts`
+
+`makeRuntimeEmitter(runtime)` creates a synchronous bridge for callbacks that
+fire outside any Effect fiber:
 
 ```typescript
-export function createTwoslashTimingWrapper(
-  twoslashTransformer: ShikiTransformer,
-  onTiming: (duration: number) => void,
-): ShikiTransformer {
-  // Wraps the preprocess hook with performance.now() timing
-}
+const emitSync = makeRuntimeEmitter(effectRuntime);
+// (event: PluginEvent) => void — calls runtime.runSync(emit(event))
 ```
 
-The `onTiming` callback increments the `codeblockDuration` histogram
-and the `codeblockSlow` counter when duration exceeds 100ms.
-
-### Histogram Boundaries
-
-Code block duration is tracked with histogram buckets at:
-10ms, 25ms, 50ms, 100ms, 200ms, 500ms, 1000ms.
-
-Shiki-only duration (excluding Twoslash) uses: 5ms, 10ms, 25ms, 50ms,
-100ms, 250ms.
+The Twoslash transformer and Prettier formatter each maintain a module-level
+`emitEvent` variable (default: no-op) that `plugin.ts` wires via
+`setEventEmitter(emitSync)` right after creating the runtime emitter. Error
+events flow through `emitEvent` and into the normal fan-out path. See
+`error-observability.md` for how the error variants are handled.
 
 ---
 
 ## File Locations
 
 | File | Purpose |
-| --- | --- |
-| `layers/ObservabilityLive.ts` | BuildMetrics, PluginLoggerLayer, logBuildSummary |
-| `twoslash-timing-wrapper.ts` | Timing wrapper for Shiki transformers |
-| `build-stages.ts` | Metric increments in generate/write functions |
-| `twoslash-transformer.ts` | Twoslash error counter via Effect.runSync |
-| `prettier-formatter.ts` | Prettier error counter via Effect.runSync |
+| ---- | ------- |
+| `src/observability/events.ts` | `PluginEvent` taggedEnum, `EventLevel`, `LEVEL_RANK`, `EventContext`, `levelOf` |
+| `src/observability/EventBus.ts` | `EventBus` tag, `makeShape`, `makeEventBusLayer`, `emit`, `wantsLevel`, `makeRuntimeEmitter`, `EventBusNoop` |
+| `src/observability/sinks/types.ts` | `EventSink` interface |
+| `src/observability/sinks/console-sink.ts` | Level-filtered console output (human-readable or JSON) |
+| `src/observability/sinks/trace-sink.ts` | Full-fidelity JSONL file sink |
+| `src/observability/sinks/metrics-sink.ts` | Event-to-BuildMetrics translation |
+| `src/observability/spans.ts` | `withPhase`, `withOp`, `PHASE_THRESHOLD_KEY` |
+| `src/observability/stream.ts` | Best-effort sliding-queue stream tee (exported, not wired) |
+| `src/layers/build-metrics.ts` | `BuildMetrics` counters and histograms |
+| `src/layers/ObservabilityLive.ts` | `buildEventBus`, `BuiltSinks`, `logBuildSummary` |
+| `src/schemas/observability.ts` | `ObservabilityConfig`, `ResolvedObservability`, `resolveObservability` |
 
 ---
 
 ## Related Documentation
 
-- **Error Observability:**
-  `error-observability.md` -- Twoslash and Prettier error tracking
-- **Snapshot Tracking System:**
-  `snapshot-tracking-system.md` -- File change tracking with metrics
-- **Build Architecture:**
-  `build-architecture.md` -- Plugin structure and service layer
+- **Error Observability:** `error-observability.md` — how Twoslash and Prettier errors flow through the bus
+- **Build Architecture:** `build-architecture.md` — plugin structure and service layer
+- **Snapshot Tracking System:** `snapshot-tracking-system.md` — `FileDecision` events and file-write metrics

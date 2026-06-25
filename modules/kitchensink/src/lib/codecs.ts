@@ -69,15 +69,13 @@ export namespace Codecs {
 	 * This function is part of the staged streaming API and is not yet
 	 * production-ready. The interface may change in a future minor release.
 	 *
-	 * @alpha
-	 *
 	 * @typeParam T - The type of records produced by the data source.
 	 *
 	 * @param source - A {@link DataSource} that supplies the records to encode.
 	 * @returns An `AsyncIterable<Uint8Array>` that yields one encoded chunk per
 	 *   record fetched from `source`.
 	 *
-	 * @public
+	 * @alpha
 	 */
 	export async function* streaming<T>(source: DataSource<T>): AsyncIterable<Uint8Array> {
 		await source.connect();

@@ -1,6 +1,16 @@
 /* v8 ignore start -- Shiki utility functions, require full Shiki highlighter for testing */
 import type { Root } from "hast";
 import type { Highlighter, ShikiTransformer } from "shiki";
+import type { PluginEvent } from "../observability/events.js";
+import { PluginEvent as PE } from "../observability/events.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
+export function setShikiUtilsEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+	emitEvent = fn;
+	currentBuildId = buildId;
+}
 
 /**
  * Theme input type - can be a theme name string or custom theme object
@@ -72,7 +82,9 @@ export async function generateShikiHast(
 		}
 		return await highlighter.codeToHast(code, options);
 	} catch (error) {
-		console.error("Failed to generate Shiki HAST:", error);
+		emitEvent(
+			PE.ShikiError({ ctx: { buildId: currentBuildId }, file: "unknown", reason: String(error), level: "warn" }),
+		);
 		return null;
 	}
 }

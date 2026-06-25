@@ -13,8 +13,7 @@ ApiExtractorPlugin({
   defaultCategories: { /* category overrides applied to every API */ },
   errors: { example: "show" },
   llmsPlugin: { scopes: true },
-  logLevel: "info",
-  performance: { /* performance config */ },
+  observability: { logLevel: "info" },
 });
 ```
 
@@ -27,8 +26,9 @@ ApiExtractorPlugin({
 | `defaultCategories` | category record | Override the built-in categories for every API. |
 | `errors` | object | `{ example: "show" \| "suppress" }` controls whether code-example type errors surface. |
 | `llmsPlugin` | boolean or object | Enable and configure per-package `llms*.txt` generation. |
-| `logLevel` | string | One of `none`, `error`, `warn`, `info`, `verbose`, `debug`. |
-| `performance` | object | Slow-operation thresholds and metrics reporting. |
+| `observability` | object | Log level, opt-in JSONL trace, and slow-operation thresholds. |
+| `logLevel` | string | Deprecated alias for `observability.logLevel`. |
+| `performance` | object | Deprecated alias for `observability.thresholds`. |
 
 Provide exactly one of `api` or `apis`. Use `api` for a single package — it also supports RSPress multiVersion through `versions` — and `apis` for a portal that hosts more than one package.
 
@@ -235,16 +235,17 @@ ApiExtractorPlugin({
 | `width` / `height` | number | Image dimensions in pixels. |
 | `alt` | string | Alt text. |
 
-## Performance
+## Observability
 
-`performance` tunes the slow-operation thresholds used for build warnings and whether timing metrics are reported:
+`observability` controls build-output verbosity, the opt-in JSONL trace
+artifact, and slow-operation thresholds:
 
 ```ts
 ApiExtractorPlugin({
   api: { packageName: "my-library", model: "./api/my-library.api.json" },
-  performance: {
-    showInsights: true,
-    trackDetailedMetrics: false,
+  observability: {
+    logLevel: "info",
+    trace: true,           // or a file path string
     thresholds: {
       slowCodeBlock: 100,
       slowPageGeneration: 500,
@@ -254,16 +255,50 @@ ApiExtractorPlugin({
 });
 ```
 
-| Field | Type | Default | Purpose |
-| --- | --- | --- | --- |
-| `showInsights` | boolean | `true` | Print a build performance summary. |
-| `trackDetailedMetrics` | boolean | `false` | Track per-operation timing. |
-| `thresholds.slowCodeBlock` | number (ms) | `100` | Warn when a code block takes longer than this. |
-| `thresholds.slowPageGeneration` | number (ms) | `500` | Warn when a page takes longer to generate. |
-| `thresholds.slowApiLoad` | number (ms) | `1000` | Warn when loading a model is slow. |
-| `thresholds.slowFileOperation` | number (ms) | `50` | Warn when a file write is slow. |
-| `thresholds.slowHttpRequest` | number (ms) | `2000` | Warn when a network request is slow. |
-| `thresholds.slowDbOperation` | number (ms) | `100` | Warn when the incremental-build store is slow. |
+### `logLevel`
+
+Controls which events appear in the console:
+
+| Level | What you see |
+| ----- | ------------ |
+| `none` | Nothing. |
+| `error` | Fatal errors only. |
+| `warn` | Recoverable errors and warnings. |
+| `info` | Per-file and phase milestones (the usual choice). |
+| `debug` | All events in structured JSON. Activates JSON output mode. |
+| `trace` | Everything, including fine-grained internals (VFS keys, compiler options). |
+
+`verbose` is accepted as a synonym for `debug`.
+
+The `LOG_LEVEL` environment variable overrides the configured level for a
+single run, taking the same values as the `logLevel` field.
+
+### `trace`
+
+Set to `true` to write a full-fidelity JSONL log of every event to a
+temporary file, or pass a file path string to control where it lands.
+
+The trace artifact captures **every** event regardless of `logLevel` — running
+at `logLevel: "info"` with `trace: true` still records all events to the file.
+This is useful for post-build analysis or reproducing Twoslash diagnostics
+(the `TwoslashCheckFailed` event records the VFS key list and compiler options).
+
+### `thresholds`
+
+Durations (in milliseconds) for slow-operation warnings:
+
+| Field | Default | Triggered by |
+| ----- | ------- | ------------ |
+| `slowCodeBlock` | `100` | A single code block taking longer than this. |
+| `slowPageGeneration` | `500` | A page generation phase exceeding this. |
+| `slowApiLoad` | `1000` | Model loading or config resolution exceeding this. |
+| `slowFileOperation` | `50` | A file write exceeding this. |
+| `slowDbOperation` | `100` | A snapshot-store operation exceeding this. |
+
+## Performance (deprecated)
+
+`performance` is a deprecated alias for `observability.thresholds`. Use
+`observability.thresholds` instead. When both are set, `observability` wins.
 
 ## LLMs
 
@@ -291,24 +326,15 @@ ApiExtractorPlugin({
 | `copyButtonText` | string | `"Copy Markdown"` | Copy button label. |
 | `viewOptions` | string array | `["markdownLink", "chatgpt", "claude"]` | Dropdown actions. |
 
-## Logging
+## Logging (deprecated)
 
-`logLevel` controls build output verbosity:
+`logLevel` is a deprecated top-level alias for `observability.logLevel`. Use
+`observability.logLevel` instead. When both are set, `observability` wins.
 
 ```ts
+// Old form — still works, but prefer observability.logLevel
 ApiExtractorPlugin({
-  logLevel: "verbose",
+  logLevel: "info",
   api: { packageName: "my-library", model: "./api/my-library.api.json" },
 });
 ```
-
-| Level | Output |
-| --- | --- |
-| `none` | Silent. |
-| `error` | Errors only. |
-| `warn` | Warnings and errors. |
-| `info` | Normal build messages (the usual choice). |
-| `verbose` | Detailed messages. |
-| `debug` | Structured JSON, every message. |
-
-The `LOG_LEVEL` environment variable overrides the configured level for a single run.

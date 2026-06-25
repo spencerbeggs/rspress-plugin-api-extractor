@@ -11,20 +11,25 @@ import { generateApiDocs } from "./build-program.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
-import { PluginLoggerLayer, logBuildSummary } from "./layers/ObservabilityLive.js";
+import { buildEventBus, logBuildSummary, makeSummaryLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
 import { SnapshotServiceLive } from "./layers/SnapshotServiceLive.js";
 import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
+import { setLoaderEventEmitter } from "./loader.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
-import { DEFAULT_SHIKI_THEMES } from "./markdown/shiki-utils.js";
+import { DEFAULT_SHIKI_THEMES, setShikiUtilsEventEmitter } from "./markdown/shiki-utils.js";
+import { emit, makeRuntimeEmitter } from "./observability/EventBus.js";
+import { PluginEvent } from "./observability/events.js";
+import { setOgResolverEventEmitter } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
-import { remarkApiCodeblocks } from "./remark-api-codeblocks.js";
-import { remarkWithApi } from "./remark-with-api.js";
-import type { LogLevel } from "./schemas/index.js";
+import { setPrettierEventEmitter } from "./prettier-formatter.js";
+import { remarkApiCodeblocks, setRemarkApiCodeblocksEventEmitter } from "./remark-api-codeblocks.js";
+import { remarkWithApi, setRemarkWithApiEventEmitter } from "./remark-with-api.js";
 import { PluginOptions } from "./schemas/index.js";
+import { resolveObservability } from "./schemas/observability.js";
 import { ConfigService } from "./services/ConfigService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
-import { TwoslashManager } from "./twoslash-transformer.js";
+import { TwoslashManager, setEventEmitter } from "./twoslash-transformer.js";
 import { VfsRegistry } from "./vfs-registry.js";
 
 /**
@@ -54,26 +59,55 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	// Create instances once at plugin initialization and reuse across all builds
 	const shikiCrossLinker = new ShikiCrossLinker();
 
-	// Create logger and stats collectors at plugin level (shared across hooks)
-	// Support LOG_LEVEL environment variable as override (useful for CI/debugging)
-	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
-	const logLevel = envLogLevel || options.logLevel || "info";
+	// Resolve unified observability config (logLevel, trace, thresholds).
+	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
+	const buildId = `${process.pid}-${performance.now().toString(36)}`;
+	const rspressOutDirGuess = path.resolve(process.cwd(), "dist");
+	const { resolved: obs, deprecations } = resolveObservability({
+		...(options.observability ? { observability: options.observability } : {}),
+		...(options.logLevel ? { logLevel: options.logLevel } : {}),
+		...(options.performance
+			? {
+					performance: {
+						...(options.performance.thresholds !== undefined ? { thresholds: options.performance.thresholds } : {}),
+					},
+				}
+			: {}),
+		...(envLogLevel ? { envLogLevel } : {}),
+		outDir: rspressOutDirGuess,
+		buildId,
+	});
+	// Detect whether trace path was auto-derived from the guessed outDir (boolean true)
+	// vs an explicit string path supplied by the caller. When it's the former we defer
+	// file binding until config() where the real RSPress outDir is available.
+	const traceIsDefault = options.observability?.trace === true;
+	const { layer: eventBusLayer, trace: traceSink } = buildEventBus(obs, traceIsDefault);
+
 	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
-		PluginLoggerLayer(logLevel),
+		eventBusLayer,
 		TypeRegistryServiceLive,
 		NodeFileSystem.layer,
 		SnapshotServiceLive(dbPath),
+		makeSummaryLoggerLayer(obs.logLevel),
 	);
-	const EffectAppLayer = Layer.provideMerge(ConfigServiceLive(options, shikiCrossLinker), BaseLayer);
+	const EffectAppLayer = Layer.provideMerge(
+		ConfigServiceLive(options, shikiCrossLinker, buildId, obs.thresholds),
+		BaseLayer,
+	);
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
+	const emitSync = makeRuntimeEmitter(effectRuntime);
+	setEventEmitter(emitSync, buildId);
+	setLoaderEventEmitter(emitSync, buildId);
+	setShikiUtilsEventEmitter(emitSync, buildId);
+	setPrettierEventEmitter(emitSync, buildId);
+	setOgResolverEventEmitter(emitSync, buildId);
+	setRemarkWithApiEventEmitter(emitSync, buildId, obs.thresholds.slowCodeBlock);
+	setRemarkApiCodeblocksEventEmitter(emitSync, buildId);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
-
-	// Verbose check helper
-	const isVerbose = logLevel === "verbose" || logLevel === "debug";
 
 	// Capture RSPress root directory for OG image auto-detection
 	let docsRoot: string | undefined;
@@ -101,7 +135,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
 			if (isFirstBuild) {
 				// Log build summary via Effect metrics
-				await effectRuntime.runPromise(logBuildSummary);
+				await effectRuntime.runPromise(logBuildSummary(obs.thresholds.slowCodeBlock));
 
 				// Post-process LLMs files when RSPress llms plugin and our llmsPlugin are both enabled
 				if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled) {
@@ -112,6 +146,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 							buildResults,
 							llmsPlugin: resolvedLlmsPlugin,
 							packageRoutes,
+							buildId,
 						}),
 					);
 				}
@@ -119,6 +154,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				// Mark first build as complete
 				isFirstBuild = false;
 			}
+
+			if (traceSink) traceSink.flush();
 
 			// Only dispose the runtime in production builds.
 			// In dev mode, the runtime must stay alive for HMR rebuilds —
@@ -148,6 +185,15 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// Capture RSPress LLMs config for afterBuild processing
 			rspressLlmsEnabled = Boolean((_config as { llms?: boolean | object }).llms);
 			rspressOutDir = _config.outDir ?? "dist";
+
+			// Bind deferred trace sink to the real outDir now that it is known.
+			// When trace was set to boolean true, the path was computed from the
+			// guessed outDir at factory time; we re-derive it here with the real
+			// outDir and call setPath() so no stray file was written earlier.
+			if (traceIsDefault && traceSink) {
+				const realTracePath = path.resolve(process.cwd(), rspressOutDir, ".api-extractor", `trace-${buildId}.jsonl`);
+				traceSink.setPath(realTracePath);
+			}
 
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
 			if (options.api) {
@@ -192,8 +238,15 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			VfsRegistry.clear();
 			fileContextMap.clear();
 
-			if (isVerbose) {
-				console.log("🚀 RSPress API Extractor Plugin");
+			for (const dep of deprecations) {
+				emitSync(
+					PluginEvent.DeprecatedConfigUsed({
+						ctx: { buildId },
+						level: "warn",
+						key: dep.key,
+						replacement: dep.replacement,
+					}),
+				);
 			}
 
 			try {
@@ -206,10 +259,10 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 				await effectRuntime.runPromise(
 					Effect.gen(function* () {
+						const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
+						yield* emit(PluginEvent.BuildStarted({ ctx: { buildId }, level: "info", mode: "prod", apiCount }));
 						const configSvc = yield* ConfigService;
 						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
-
-						yield* Effect.logInfo("Generating API documentation...");
 
 						// Clear previous build results (for HMR rebuilds)
 						buildResults.length = 0;
@@ -226,23 +279,20 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 										buildResults.push(result);
 										return Effect.void;
 									}),
-									Effect.tap(() =>
-										isVerbose ? Effect.logDebug(`Generating docs for ${apiConfig.packageName}`) : Effect.void,
-									),
 								),
 							{ concurrency: 2 },
 						);
+
+						const totalMs = performance.now() - buildStartTime;
+						yield* emit(
+							PluginEvent.BuildCompleted({ ctx: { buildId }, level: "info", durationMs: totalMs, totals: {} }),
+						);
 					}).pipe(Effect.scoped),
 				);
-
-				if (logLevel !== "none") {
-					const totalTime = ((performance.now() - buildStartTime) / 1000).toFixed(2);
-					console.log(`✅ API documentation complete (${totalTime}s)`);
-				}
 			} catch (error) {
-				console.error(
-					`❌ Error generating API documentation: ${error instanceof Error ? error.message : String(error)}`,
-				);
+				const message = error instanceof Error ? error.message : String(error);
+				emitSync(PluginEvent.BuildFailed({ ctx: { buildId }, level: "error", phase: "generate", error: message }));
+				if (traceSink) traceSink.flush();
 				throw error;
 			}
 
@@ -375,6 +425,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
  * files. Config helpers are available under `ApiExtractorPlugin.api` (single
  * package → one config for the `api:` option) and `ApiExtractorPlugin.apis`
  * (parent directory → array for the `apis:` option).
+ *
+ * @public
  */
 export const ApiExtractorPlugin = Object.assign(ApiExtractorPluginImpl, {
 	api: { fromDir },

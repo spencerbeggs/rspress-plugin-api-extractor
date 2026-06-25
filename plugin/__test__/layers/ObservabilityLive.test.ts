@@ -1,76 +1,6 @@
 import { Effect, Metric } from "effect";
 import { describe, expect, it, vi } from "vitest";
-import { BuildMetrics, PluginLoggerLayer, logBuildSummary } from "../../src/layers/ObservabilityLive.js";
-
-describe("PluginLoggerLayer", () => {
-	it("INFO level outputs emoji-prefixed messages", async () => {
-		const output: string[] = [];
-		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-			output.push(args.map(String).join(" "));
-		});
-
-		const program = Effect.gen(function* () {
-			yield* Effect.log("Build started");
-			yield* Effect.logWarning("Slow code block");
-			yield* Effect.logError("Build failed");
-		});
-
-		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("info"))));
-
-		spy.mockRestore();
-
-		expect(output.some((l) => l.includes("Build started"))).toBe(true);
-		expect(output.some((l) => l.includes("\u26A0\uFE0F") && l.includes("Slow code block"))).toBe(true);
-		expect(output.some((l) => l.includes("\uD83D\uDD34") && l.includes("Build failed"))).toBe(true);
-	});
-
-	it("DEBUG level outputs structured JSON with annotations", async () => {
-		const output: string[] = [];
-		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-			output.push(args.map(String).join(" "));
-		});
-
-		const program = Effect.gen(function* () {
-			yield* Effect.log("test message").pipe(
-				Effect.annotateLogs("api", "my-package"),
-				Effect.annotateLogs("version", "1.0.0"),
-			);
-		});
-
-		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("debug"))));
-
-		spy.mockRestore();
-
-		const jsonLine = output.find((l) => l.startsWith("{"));
-		expect(jsonLine).toBeDefined();
-		const parsed = JSON.parse(jsonLine ?? "");
-		expect(parsed.message).toBe("test message");
-		expect(parsed.api).toBe("my-package");
-		expect(parsed.version).toBe("1.0.0");
-		expect(parsed.timestamp).toBeTypeOf("number");
-		expect(parsed.level).toBe("info");
-	});
-
-	it("minimum log level filters correctly", async () => {
-		const output: string[] = [];
-		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-			output.push(args.map(String).join(" "));
-		});
-
-		const program = Effect.gen(function* () {
-			yield* Effect.logDebug("debug msg");
-			yield* Effect.log("info msg");
-			yield* Effect.logWarning("warn msg");
-		});
-
-		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("warn"))));
-
-		spy.mockRestore();
-
-		expect(output).toHaveLength(1);
-		expect(output[0]).toContain("warn msg");
-	});
-});
+import { BuildMetrics, logBuildSummary, makeSummaryLoggerLayer } from "../../src/layers/ObservabilityLive.js";
 
 describe("BuildMetrics", () => {
 	it("counters can be incremented", async () => {
@@ -112,10 +42,10 @@ describe("logBuildSummary", () => {
 			yield* Metric.incrementBy(BuildMetrics.filesNew, 3);
 			yield* Metric.incrementBy(BuildMetrics.filesModified, 2);
 			yield* Metric.incrementBy(BuildMetrics.filesUnchanged, 5);
-			yield* logBuildSummary;
+			yield* logBuildSummary(100);
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("info"))));
+		await Effect.runPromise(program);
 
 		spy.mockRestore();
 
@@ -133,15 +63,51 @@ describe("logBuildSummary", () => {
 
 		const program = Effect.gen(function* () {
 			yield* Metric.incrementBy(BuildMetrics.twoslashErrors, 3);
-			yield* logBuildSummary;
+			yield* logBuildSummary(100);
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(PluginLoggerLayer("info"))));
+		await Effect.runPromise(program);
 
 		spy.mockRestore();
 
 		const errorLine = output.find((l) => l.includes("error"));
 		expect(errorLine).toBeDefined();
 		expect(errorLine).toContain("Twoslash");
+	});
+
+	it("reports pages generated and external packages in summary", async () => {
+		const output: string[] = [];
+		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+			output.push(args.map(String).join(" "));
+		});
+
+		const program = Effect.gen(function* () {
+			// Prime to ensure the count>0 guard fires; registry is process-wide so assert loosely
+			yield* Metric.incrementBy(BuildMetrics.pagesGenerated, 5);
+			yield* Metric.incrementBy(BuildMetrics.externalPackagesTotal, 2);
+			yield* logBuildSummary(100);
+		});
+
+		await Effect.runPromise(program);
+
+		spy.mockRestore();
+
+		// Process-wide registry: counts accumulate, so use toContain / loose assertions
+		const pagesLine = output.find((l) => l.includes("pages"));
+		expect(pagesLine).toBeDefined();
+		expect(pagesLine).toContain("external package");
+	});
+
+	it("suppresses output with Logger.withMinimumLogLevel None", async () => {
+		const output: string[] = [];
+		const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+			output.push(args.map(String).join(" "));
+		});
+
+		await Effect.runPromise(Effect.provide(logBuildSummary(100), makeSummaryLoggerLayer("none")));
+
+		spy.mockRestore();
+
+		expect(output).toHaveLength(0);
 	});
 });

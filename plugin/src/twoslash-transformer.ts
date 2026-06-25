@@ -1,6 +1,5 @@
 /* v8 ignore start -- Shiki/Twoslash integration, requires full highlighter setup for testing */
 import { rendererRich, transformerTwoslash } from "@shikijs/twoslash";
-import { Effect, Metric } from "effect";
 import type { ElementContent } from "hast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toHast } from "mdast-util-to-hast";
@@ -9,8 +8,26 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import type ts from "typescript";
 import type { TypeResolutionCompilerOptions } from "./internal-types.js";
-import { BuildMetrics } from "./layers/ObservabilityLive.js";
+import { PluginEvent } from "./observability/events.js";
 import { DEFAULT_COMPILER_OPTIONS } from "./typescript-config.js";
+
+/**
+ * Module-level emitter seam. Default is a no-op; wire in `setEventEmitter(emitSync)`
+ * from plugin.ts right after the runtime emitter is created so that Twoslash error
+ * events flow through the EventBus even though they fire in a sync Shiki callback
+ * outside any Effect fiber.
+ */
+let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
+
+/**
+ * Inject the runtime-bound emitter into the Twoslash module.
+ * Call this right after `makeRuntimeEmitter` in plugin.ts.
+ */
+export function setEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+	emitEvent = fn;
+	currentBuildId = buildId;
+}
 
 /**
  * Module-level type routes map for resolving link references.
@@ -310,6 +327,26 @@ export class TwoslashManager {
 	private transformer: ShikiTransformer | null = null;
 
 	/**
+	 * VFS keys snapshot captured at initialize() time.
+	 * Returned by vfsKeysSnapshot() for TwoslashCheckFailed events.
+	 */
+	private _vfsKeys: string[] = [];
+
+	/**
+	 * Resolved compiler options captured at initialize() time.
+	 * Returned by compilerOptionsSnapshot() for TwoslashCheckFailed events.
+	 */
+	private _resolvedCompilerOptions: TypeResolutionCompilerOptions = DEFAULT_COMPILER_OPTIONS;
+
+	/**
+	 * Path of the file whose code block is currently being processed.
+	 * Used to attribute Twoslash error events to a source file. Defaults to
+	 * "unknown"; remark plugins set this via setCurrentFile() before rendering
+	 * each block (wired in Task 11).
+	 */
+	private currentFilePath = "unknown";
+
+	/**
 	 * Private constructor to enforce singleton pattern
 	 */
 	private constructor() {}
@@ -347,8 +384,12 @@ export class TwoslashManager {
 			extraFiles[path] = content;
 		}
 
+		// Snapshot VFS keys and compiler options for TwoslashCheckFailed events.
+		this._vfsKeys = Array.from(vfs.keys());
+
 		// Use provided compiler options or fall back to defaults
 		const resolvedOptions = compilerOptions ?? DEFAULT_COMPILER_OPTIONS;
+		this._resolvedCompilerOptions = resolvedOptions;
 
 		// Create the transformer with virtual file system
 		this.transformer = transformerTwoslash({
@@ -387,13 +428,8 @@ export class TwoslashManager {
 			// Don't throw errors for TypeScript errors in examples
 			// Documentation examples may be intentionally incomplete
 			throws: false,
-			// Log when transforming
-			onTwoslashError: (error: unknown, _code: string): void => {
-				// Increment Effect Metric counter for aggregate tracking
-				Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
-
-				const errorMsg = error instanceof Error ? error.message : String(error);
-				console.error(`🔴 Twoslash error: ${errorMsg}`);
+			onTwoslashError: (error: unknown, code: string): void => {
+				this.handleTwoslashError(error, code, this.currentFilePath);
 			},
 		});
 
@@ -409,6 +445,16 @@ export class TwoslashManager {
 	}
 
 	/**
+	 * Set the source file path used to attribute subsequent Twoslash error events.
+	 * Remark plugins call this before rendering each code block (wired in Task 11).
+	 *
+	 * @param path - Source file path (e.g. "kitchensink/api/class/plugin.md")
+	 */
+	public setCurrentFile(path: string): void {
+		this.currentFilePath = path;
+	}
+
+	/**
 	 * Clear the Twoslash transformer (useful for testing or reinitializing)
 	 */
 	public clear(): void {
@@ -420,6 +466,54 @@ export class TwoslashManager {
 	 */
 	public static reset(): void {
 		TwoslashManager.instance = null;
+	}
+
+	/** Returns VFS keys snapshotted at initialize() time. Empty array before initialize(). */
+	private vfsKeysSnapshot(): string[] {
+		return this._vfsKeys;
+	}
+
+	/** Returns compiler options snapshotted at initialize() time. Falls back to DEFAULT_COMPILER_OPTIONS. */
+	private compilerOptionsSnapshot(): TypeResolutionCompilerOptions {
+		return this._resolvedCompilerOptions;
+	}
+
+	private handleTwoslashError(error: unknown, _code: string, file: string): void {
+		// Metrics derived from TwoslashDiagnostic event in MetricsSink
+		const message = error instanceof Error ? error.message : String(error);
+		const match = /TS(\d+)/.exec(message);
+		const tsCode = match ? Number(match[1]) : 0;
+
+		emitEvent(
+			PluginEvent.TwoslashDiagnostic({
+				ctx: { buildId: currentBuildId, file },
+				level: "warn",
+				file,
+				line: 0,
+				col: 0,
+				code: tsCode,
+				message,
+				snippet: "",
+			}),
+		);
+		emitEvent(
+			PluginEvent.TwoslashCheckFailed({
+				ctx: { buildId: currentBuildId, file },
+				level: "trace",
+				file,
+				code: tsCode,
+				fsMapKeys: this.vfsKeysSnapshot(),
+				compilerOptions: JSON.stringify(this.compilerOptionsSnapshot()),
+			}),
+		);
+	}
+
+	/**
+	 * Test seam: drive `handleTwoslashError` directly without going through the Shiki transformer.
+	 * @internal
+	 */
+	public handleTwoslashErrorForTest(error: unknown, code: string, file: string): void {
+		this.handleTwoslashError(error, code, file);
 	}
 
 	/**

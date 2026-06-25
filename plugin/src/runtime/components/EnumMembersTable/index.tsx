@@ -2,16 +2,35 @@ import type { ReactElement } from "react";
 import { MarkdownContent } from "../MarkdownContent/index.js";
 import styles from "./index.module.css";
 
+/**
+ * A single enum member entry for {@link EnumMembersTable}.
+ *
+ * @public
+ */
 export interface EnumMember {
+	/** The enum member name. */
 	name: string;
+	/** The string or numeric value of the member, if any. */
 	value?: string;
+	/** HTML description rendered in the table cell. */
 	description: string;
 }
 
+/**
+ * Props for the {@link EnumMembersTable} component.
+ *
+ * @public
+ */
 export interface EnumMembersTableProps {
+	/** Enum members to display. */
 	members: EnumMember[];
 }
 
+/**
+ * Renders a table of enum members with their values and descriptions.
+ *
+ * @public
+ */
 export const EnumMembersTable = ({ members }: EnumMembersTableProps): ReactElement | null => {
 	// Guard against undefined or empty members
 	if (!members || members.length === 0) {

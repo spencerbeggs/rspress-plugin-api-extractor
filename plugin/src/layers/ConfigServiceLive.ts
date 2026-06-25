@@ -7,7 +7,6 @@ import { Effect, Layer, Metric } from "effect";
 import type { ShikiTransformer } from "shiki";
 import { createHighlighter } from "shiki";
 import type { VirtualFileSystem } from "type-registry-effect";
-import type { VirtualTypeScriptEnvironment } from "type-registry-effect/node";
 import { ApiExtractedPackage } from "../api-extracted-package.js";
 import { CategoryResolver } from "../category-resolver.js";
 import {
@@ -16,6 +15,7 @@ import {
 	mergeLlmsPluginConfig,
 	validateExternalPackages,
 } from "../config-utils.js";
+import { hashContent } from "../content-hash.js";
 import type { ApiModelLoadError, TypeRegistryError } from "../errors.js";
 import { ConfigValidationError } from "../errors.js";
 import { HideCutLinesTransformer, MemberFormatTransformer } from "../hide-cut-transformer.js";
@@ -23,6 +23,10 @@ import type { LoadedModel, PackageJson, TypeResolutionCompilerOptions, TypeScrip
 import type { ShikiThemeConfig } from "../markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES } from "../markdown/shiki-utils.js";
 import { ApiModelLoader } from "../model-loader.js";
+import { emit, wantsLevel } from "../observability/EventBus.js";
+import type { ImportRef } from "../observability/events.js";
+import { PluginEvent } from "../observability/events.js";
+import { withPhase } from "../observability/spans.js";
 import { OpenGraphResolver } from "../og-resolver.js";
 import type {
 	ExternalPackageSpec,
@@ -32,6 +36,7 @@ import type {
 	VersionConfig,
 } from "../schemas/index.js";
 import { DEFAULT_CATEGORIES } from "../schemas/index.js";
+import type { ResolvedObservability } from "../schemas/observability.js";
 import type { ResolvedApiConfig, ResolvedBuildContext, RspressConfigSubset } from "../services/ConfigService.js";
 import { ConfigService } from "../services/ConfigService.js";
 import { PathDerivationService } from "../services/PathDerivationService.js";
@@ -41,6 +46,15 @@ import { TwoslashManager } from "../twoslash-transformer.js";
 import { TypeReferenceExtractor } from "../type-reference-extractor.js";
 import { resolveTypeScriptConfig } from "../typescript-config.js";
 import { BuildMetrics } from "./ObservabilityLive.js";
+
+const DEFAULT_THRESHOLDS: ResolvedObservability["thresholds"] = {
+	slowCodeBlock: 100,
+	slowPageGeneration: 500,
+	slowApiLoad: 1000,
+	slowFileOperation: 50,
+	slowHttpRequest: 2000,
+	slowDbOperation: 100,
+};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -69,24 +83,63 @@ function normalizeThemeConfig(
 	return { light: theme, dark: theme };
 }
 
+interface VfsEntryPayload {
+	file: string;
+	entryPoint: string;
+	declCount: number;
+	contentHash: string;
+	content: string;
+	/** True only when import statements were actually prepended to this entry. */
+	hasImports: boolean;
+	importRefs: readonly ImportRef[];
+}
+
 /**
  * Prepend import statements for external type references to the VFS declaration files.
+ * Returns per-entry payloads for event emission (heavy content/importRefs gated on wantTrace).
  */
-function prependImportsToVfs(vfs: VirtualFileSystem, apiPackage: ApiPackage, packageName: string): void {
+function prependImportsToVfs(
+	vfs: VirtualFileSystem,
+	apiPackage: ApiPackage,
+	packageName: string,
+	wantTrace: boolean,
+): VfsEntryPayload[] {
 	const extractor = new TypeReferenceExtractor(apiPackage, packageName);
+	const payloads: VfsEntryPayload[] = [];
 	for (const entryPoint of apiPackage.entryPoints) {
-		const imports = extractor.extractImportsForEntryPoint(entryPoint as ApiEntryPoint);
+		const entryEp = entryPoint as ApiEntryPoint;
+		const imports = extractor.extractImportsForEntryPoint(entryEp);
 		const importStatements = TypeReferenceExtractor.formatImports(imports);
-		if (importStatements.length === 0) continue;
-
-		const entryName = (entryPoint as ApiEntryPoint).displayName || "";
+		const entryName = entryEp.displayName || "";
 		const fileName = entryName ? `${entryName}.d.ts` : "index.d.ts";
-		const key = `node_modules/${packageName}/${fileName}`;
-		const existing = vfs.get(key);
-		if (existing) {
-			vfs.set(key, `${importStatements.join("\n")}\n\n${existing}`);
+		const file = `node_modules/${packageName}/${fileName}`;
+
+		const hasImports = importStatements.length > 0;
+		if (hasImports) {
+			const existing = vfs.get(file);
+			if (existing) {
+				vfs.set(file, `${importStatements.join("\n")}\n\n${existing}`);
+			}
 		}
+
+		const content = vfs.get(file) ?? "";
+		const declCount = entryEp.members.length;
+		const contentHash = hashContent(content);
+		const importRefs: readonly ImportRef[] =
+			wantTrace && hasImports
+				? imports.map((i) => ({ from: i.packageName, symbols: [...i.symbols] as readonly string[] }))
+				: [];
+		payloads.push({
+			file,
+			entryPoint: entryName,
+			declCount,
+			contentHash,
+			content: wantTrace ? content : "",
+			hasImports,
+			importRefs,
+		});
 	}
+	return payloads;
 }
 
 /**
@@ -151,8 +204,14 @@ function validateOptions(
 				}
 			} else {
 				if (api.versions) {
-					yield* Effect.logWarning(
-						"api.versions is provided but RSPress multiVersion is not configured. Versions will be ignored.",
+					yield* emit(
+						PluginEvent.ConfigCascadeWarning({
+							ctx: { buildId: "" },
+							level: "warn",
+							field: "versions",
+							chosen: "(none — multiVersion not configured)",
+							ignored: ["api.versions"],
+						}),
 					);
 				}
 				if (!api.model) {
@@ -178,6 +237,8 @@ function validateOptions(
 export function ConfigServiceLive(
 	options: PluginOptions,
 	shikiCrossLinker: ShikiCrossLinker,
+	buildId = "",
+	resolvedThresholds?: ResolvedObservability["thresholds"],
 ): Layer.Layer<ConfigService, never, TypeRegistryService | PathDerivationService> {
 	return Layer.effect(
 		ConfigService,
@@ -190,6 +251,9 @@ export function ConfigServiceLive(
 				resolve: (rspressConfig: RspressConfigSubset) =>
 					Effect.gen(function* () {
 						const loadStart = performance.now();
+
+						// Gate heavy VFS payloads behind trace level
+						const wantTrace = yield* wantsLevel("trace");
 
 						// --- 1. Validate options ---
 						yield* validateOptions(options, {
@@ -230,6 +294,7 @@ export function ConfigServiceLive(
 							model: NonNullable<SingleApiConfig["model"]> | MultiApiConfig["model"],
 							outputDir: string,
 							fullRoute: string,
+							wantTrace: boolean,
 						) =>
 							Effect.promise(async () => {
 								const { apiPackage, source: loaderSource } = await ApiModelLoader.loadApiModel(
@@ -259,7 +324,7 @@ export function ConfigServiceLive(
 								// Generate virtual file system from API model for Twoslash
 								const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
 								const vfs = pkg.generateVfs();
-								prependImportsToVfs(vfs, apiPackage, api.packageName);
+								const vfsPayloads = prependImportsToVfs(vfs, apiPackage, api.packageName, wantTrace);
 
 								// Resolve ogImage with cascading: API > global
 								const resolvedOgImage = api.ogImage ?? options.ogImage;
@@ -269,6 +334,7 @@ export function ConfigServiceLive(
 
 								return {
 									vfs,
+									vfsPayloads,
 									externalPackages: externalPackages || [],
 									config: {
 										apiPackage,
@@ -289,197 +355,188 @@ export function ConfigServiceLive(
 								};
 							});
 
-						if (options.api) {
-							// === Single-API mode ===
-							const api = options.api;
-							const baseRoute = yield* pathService.normalizeBaseRoute(api.baseRoute ?? "/");
+						// Model loading + VFS reconstruction. These are fused inside the
+						// same Effect.promise bodies (processSimpleApi / the versioned
+						// branch), so the modelLoad phase necessarily includes VFS
+						// generation — isolating pure model-load would require
+						// restructuring the loaders.
+						yield* withPhase(
+							"modelLoad",
+							{ buildId },
+							Effect.gen(function* () {
+								if (options.api) {
+									// === Single-API mode ===
+									const api = options.api;
+									const baseRoute = yield* pathService.normalizeBaseRoute(api.baseRoute ?? "/");
 
-							// Capture tsconfig for later resolution
-							firstApiTsconfig = api.tsconfig;
-							firstApiCompilerOptions = api.compilerOptions;
+									// Capture tsconfig for later resolution
+									firstApiTsconfig = api.tsconfig;
+									firstApiCompilerOptions = api.compilerOptions;
 
-							if (rspressMultiVersion && api.versions) {
-								// Versioned single-API mode
-								const versionResults = yield* Effect.forEach(
-									Object.entries(api.versions),
-									([version, versionValue]) =>
-										Effect.gen(function* () {
-											// Derive versioned output paths
-											const versionDerivedPaths = yield* pathService.derivePaths({
-												mode: "single",
-												docsRoot: rspressRoot,
-												baseRoute,
-												apiFolder: api.apiFolder ?? "api",
-												locales: rspressLocales,
-												defaultLang: rspressLang,
-												versions: [version],
-												defaultVersion: rspressMultiVersion?.default,
-											});
-											const versionDp = versionDerivedPaths[0];
-											if (!versionDp) {
-												return {
-													vfs: new Map<string, string>(),
-													externalPackages: [] as ExternalPackageSpec[],
-													config: null as ResolvedApiConfig | null,
-												};
+									if (rspressMultiVersion && api.versions) {
+										// Versioned single-API mode
+										const versionResults = yield* Effect.forEach(
+											Object.entries(api.versions),
+											([version, versionValue]) =>
+												Effect.gen(function* () {
+													// Derive versioned output paths
+													const versionDerivedPaths = yield* pathService.derivePaths({
+														mode: "single",
+														docsRoot: rspressRoot,
+														baseRoute,
+														apiFolder: api.apiFolder ?? "api",
+														locales: rspressLocales,
+														defaultLang: rspressLang,
+														versions: [version],
+														defaultVersion: rspressMultiVersion?.default,
+													});
+													const versionDp = versionDerivedPaths[0];
+													if (!versionDp) {
+														return {
+															vfs: new Map<string, string>(),
+															vfsPayloads: [] as VfsEntryPayload[],
+															externalPackages: [] as ExternalPackageSpec[],
+															config: null as ResolvedApiConfig | null,
+														};
+													}
+
+													return yield* Effect.promise(async () => {
+														// Normalize version value to VersionConfig
+														const versionConfig: VersionConfig = isVersionConfig(versionValue)
+															? versionValue
+															: { model: versionValue };
+
+														const {
+															apiPackage,
+															packageJson: versionPackageJson,
+															categories: versionCategories,
+															source: versionSource,
+															externalPackages: versionExternalPackages,
+															autoDetectDependencies: versionAutoDetectDependencies,
+															llmsPlugin: versionLlms,
+															ogImage: versionOgImage,
+														} = await ApiModelLoader.loadVersionModel(versionConfig);
+
+														Effect.runSync(Metric.increment(BuildMetrics.apiVersionsLoaded));
+														const resolvedCategories = categoryResolver.resolveCategoryConfig(
+															pluginDefaults,
+															api.categories,
+															versionCategories,
+														);
+														const resolvedSource = categoryResolver.resolveSourceConfig(api.source, versionSource);
+														const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin, versionLlms);
+
+														// Load package.json (version config takes precedence)
+														const packageJson =
+															versionPackageJson ||
+															(api.packageJson
+																? await ApiModelLoader.loadPackageJson(
+																		api.packageJson as PathLike | (() => Promise<PackageJson>),
+																	)
+																: undefined);
+
+														// Validate external packages
+														validateExternalPackages(versionExternalPackages || api.externalPackages, packageJson);
+
+														// Collect external packages (version > package > auto-detected)
+														const autoDetectOptions = versionAutoDetectDependencies || api.autoDetectDependencies;
+														const externalPackages =
+															versionExternalPackages ||
+															api.externalPackages ||
+															extractAutoDetectedPackages(packageJson, autoDetectOptions);
+
+														if (externalPackages && externalPackages.length > 0) {
+															Effect.runSync(
+																Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length),
+															);
+														}
+
+														// Generate VFS
+														const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
+														const vfs = pkg.generateVfs();
+														const vfsPayloads = prependImportsToVfs(vfs, apiPackage, api.packageName, wantTrace);
+
+														// Resolve ogImage with cascading: version > API > global
+														const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
+														const resolvedTheme = normalizeThemeConfig(api.theme);
+
+														const outputDir = versionDp.outputDir;
+														const fullRoute = versionDp.routeBase;
+
+														return {
+															vfs,
+															vfsPayloads,
+															externalPackages: externalPackages || [],
+															config: {
+																apiPackage,
+																packageName: `${api.packageName} (${version})`,
+																...(api.name != null ? { apiName: api.name } : {}),
+																outputDir,
+																baseRoute: fullRoute,
+																categories: resolvedCategories,
+																...(resolvedSource != null ? { source: resolvedSource } : {}),
+																...(packageJson != null ? { packageJson } : {}),
+																...(resolvedLlms != null ? { llmsPlugin: resolvedLlms } : {}),
+																...(options.siteUrl != null ? { siteUrl: options.siteUrl } : {}),
+																...(resolvedOgImage != null ? { ogImage: resolvedOgImage } : {}),
+																docsDir: path.dirname(outputDir),
+																...(docsRoot != null ? { docsRoot } : {}),
+																...(resolvedTheme != null ? { theme: resolvedTheme } : {}),
+															} satisfies ResolvedApiConfig,
+														};
+													});
+												}),
+											{ concurrency: "unbounded" },
+										);
+
+										// Flatten and merge version results
+										for (const result of versionResults) {
+											for (const [filepath, content] of result.vfs.entries()) {
+												combinedVfs.set(filepath, content);
 											}
-
-											return yield* Effect.promise(async () => {
-												// Normalize version value to VersionConfig
-												const versionConfig: VersionConfig = isVersionConfig(versionValue)
-													? versionValue
-													: { model: versionValue };
-
-												const {
-													apiPackage,
-													packageJson: versionPackageJson,
-													categories: versionCategories,
-													source: versionSource,
-													externalPackages: versionExternalPackages,
-													autoDetectDependencies: versionAutoDetectDependencies,
-													llmsPlugin: versionLlms,
-													ogImage: versionOgImage,
-												} = await ApiModelLoader.loadVersionModel(versionConfig);
-
-												Effect.runSync(Metric.increment(BuildMetrics.apiVersionsLoaded));
-												const resolvedCategories = categoryResolver.resolveCategoryConfig(
-													pluginDefaults,
-													api.categories,
-													versionCategories,
+											if (result.externalPackages.length > 0) {
+												allExternalPackages.push(...result.externalPackages);
+											}
+											if (result.config) {
+												apiConfigs.push(result.config);
+											}
+											for (const payload of result.vfsPayloads) {
+												yield* emit(
+													PluginEvent.VfsGenerated({
+														ctx: {
+															buildId: "",
+															packageName: api.packageName,
+															...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+														},
+														level: "debug",
+														file: payload.file,
+														declCount: payload.declCount,
+														contentHash: payload.contentHash,
+														...(wantTrace && payload.content ? { content: payload.content } : {}),
+													}),
 												);
-												const resolvedSource = categoryResolver.resolveSourceConfig(api.source, versionSource);
-												const resolvedLlms = mergeLlmsPluginConfig(options.llmsPlugin, api.llmsPlugin, versionLlms);
-
-												// Load package.json (version config takes precedence)
-												const packageJson =
-													versionPackageJson ||
-													(api.packageJson
-														? await ApiModelLoader.loadPackageJson(
-																api.packageJson as PathLike | (() => Promise<PackageJson>),
-															)
-														: undefined);
-
-												// Validate external packages
-												validateExternalPackages(versionExternalPackages || api.externalPackages, packageJson);
-
-												// Collect external packages (version > package > auto-detected)
-												const autoDetectOptions = versionAutoDetectDependencies || api.autoDetectDependencies;
-												const externalPackages =
-													versionExternalPackages ||
-													api.externalPackages ||
-													extractAutoDetectedPackages(packageJson, autoDetectOptions);
-
-												if (externalPackages && externalPackages.length > 0) {
-													Effect.runSync(
-														Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length),
+												if (payload.hasImports) {
+													yield* emit(
+														PluginEvent.ImportsPrepended({
+															ctx: {
+																buildId: "",
+																packageName: api.packageName,
+																...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+															},
+															level: "debug",
+															file: payload.file,
+															imports: wantTrace ? payload.importRefs : [],
+														}),
 													);
 												}
-
-												// Generate VFS
-												const pkg = ApiExtractedPackage.fromPackage(apiPackage, api.packageName);
-												const vfs = pkg.generateVfs();
-												prependImportsToVfs(vfs, apiPackage, api.packageName);
-
-												// Resolve ogImage with cascading: version > API > global
-												const resolvedOgImage = versionOgImage ?? api.ogImage ?? options.ogImage;
-												const resolvedTheme = normalizeThemeConfig(api.theme);
-
-												const outputDir = versionDp.outputDir;
-												const fullRoute = versionDp.routeBase;
-
-												return {
-													vfs,
-													externalPackages: externalPackages || [],
-													config: {
-														apiPackage,
-														packageName: `${api.packageName} (${version})`,
-														...(api.name != null ? { apiName: api.name } : {}),
-														outputDir,
-														baseRoute: fullRoute,
-														categories: resolvedCategories,
-														...(resolvedSource != null ? { source: resolvedSource } : {}),
-														...(packageJson != null ? { packageJson } : {}),
-														...(resolvedLlms != null ? { llmsPlugin: resolvedLlms } : {}),
-														...(options.siteUrl != null ? { siteUrl: options.siteUrl } : {}),
-														...(resolvedOgImage != null ? { ogImage: resolvedOgImage } : {}),
-														docsDir: path.dirname(outputDir),
-														...(docsRoot != null ? { docsRoot } : {}),
-														...(resolvedTheme != null ? { theme: resolvedTheme } : {}),
-													} satisfies ResolvedApiConfig,
-												};
-											});
-										}),
-									{ concurrency: "unbounded" },
-								);
-
-								// Flatten and merge version results
-								for (const result of versionResults) {
-									for (const [filepath, content] of result.vfs.entries()) {
-										combinedVfs.set(filepath, content);
-									}
-									if (result.externalPackages.length > 0) {
-										allExternalPackages.push(...result.externalPackages);
-									}
-									if (result.config) {
-										apiConfigs.push(result.config);
-									}
-								}
-							} else if (api.model) {
-								// Non-versioned single-API mode
-								const derivedPaths = yield* pathService.derivePaths({
-									mode: "single",
-									docsRoot: rspressRoot,
-									baseRoute,
-									apiFolder: api.apiFolder ?? "api",
-									locales: rspressLocales,
-									defaultLang: rspressLang,
-									versions: [],
-									defaultVersion: undefined,
-								});
-
-								const dp = derivedPaths[0];
-								if (dp) {
-									const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
-									for (const [filepath, content] of result.vfs.entries()) {
-										combinedVfs.set(filepath, content);
-									}
-									if (result.externalPackages.length > 0) {
-										allExternalPackages.push(...result.externalPackages);
-									}
-									apiConfigs.push(result.config);
-								}
-							}
-						} else if (options.apis) {
-							// === Multi-API mode ===
-							// Deterministically select tsconfig: first API with tsconfig wins
-							const apisWithTsconfig = options.apis.filter((a) => a.tsconfig);
-							if (apisWithTsconfig.length > 0) {
-								firstApiTsconfig = apisWithTsconfig[0].tsconfig;
-								const uniqueTsconfigs = new Set(apisWithTsconfig.map((a) => String(a.tsconfig)));
-								if (uniqueTsconfigs.size > 1) {
-									yield* Effect.logWarning(
-										`Multiple APIs specify different tsconfig values: ${[...uniqueTsconfigs].join(", ")}. ` +
-											`Using '${String(firstApiTsconfig)}' for TypeScript resolution. ` +
-											`Per-API tsconfig resolution will be supported in a future release.`,
-									);
-								}
-							}
-							const apisWithCompilerOptions = options.apis.filter((a) => a.compilerOptions);
-							if (apisWithCompilerOptions.length > 0) {
-								firstApiCompilerOptions = apisWithCompilerOptions[0].compilerOptions;
-							}
-
-							const multiResults = yield* Effect.forEach(
-								options.apis,
-								(api) =>
-									Effect.gen(function* () {
-										const apiBaseRoute = yield* pathService.normalizeBaseRoute(
-											api.baseRoute ?? `/${unscopedName(api.packageName)}`,
-										);
+											}
+										}
+									} else if (api.model) {
+										// Non-versioned single-API mode
 										const derivedPaths = yield* pathService.derivePaths({
-											mode: "multi",
+											mode: "single",
 											docsRoot: rspressRoot,
-											baseRoute: apiBaseRoute,
+											baseRoute,
 											apiFolder: api.apiFolder ?? "api",
 											locales: rspressLocales,
 											defaultLang: rspressLang,
@@ -488,30 +545,160 @@ export function ConfigServiceLive(
 										});
 
 										const dp = derivedPaths[0];
-										if (!dp) return [];
-
-										const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase);
-										return [result];
-									}),
-								{ concurrency: "unbounded" },
-							);
-
-							// Flatten and merge results
-							for (const results of multiResults) {
-								for (const result of results) {
-									for (const [filepath, content] of result.vfs.entries()) {
-										combinedVfs.set(filepath, content);
+										if (dp) {
+											const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase, wantTrace);
+											for (const [filepath, content] of result.vfs.entries()) {
+												combinedVfs.set(filepath, content);
+											}
+											if (result.externalPackages.length > 0) {
+												allExternalPackages.push(...result.externalPackages);
+											}
+											apiConfigs.push(result.config);
+											for (const payload of result.vfsPayloads) {
+												yield* emit(
+													PluginEvent.VfsGenerated({
+														ctx: {
+															buildId: "",
+															packageName: api.packageName,
+															...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+														},
+														level: "debug",
+														file: payload.file,
+														declCount: payload.declCount,
+														contentHash: payload.contentHash,
+														...(wantTrace && payload.content ? { content: payload.content } : {}),
+													}),
+												);
+												if (payload.hasImports) {
+													yield* emit(
+														PluginEvent.ImportsPrepended({
+															ctx: {
+																buildId: "",
+																packageName: api.packageName,
+																...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+															},
+															level: "debug",
+															file: payload.file,
+															imports: wantTrace ? payload.importRefs : [],
+														}),
+													);
+												}
+											}
+										}
 									}
-									if (result.externalPackages.length > 0) {
-										allExternalPackages.push(...result.externalPackages);
+								} else if (options.apis) {
+									// === Multi-API mode ===
+									// Deterministically select tsconfig: first API with tsconfig wins
+									const apisWithTsconfig = options.apis.filter((a) => a.tsconfig);
+									if (apisWithTsconfig.length > 0) {
+										firstApiTsconfig = apisWithTsconfig[0].tsconfig;
+										const uniqueTsconfigs = new Set(apisWithTsconfig.map((a) => String(a.tsconfig)));
+										if (uniqueTsconfigs.size > 1) {
+											const chosen = String(firstApiTsconfig);
+											const ignored = [...uniqueTsconfigs].filter((t) => t !== chosen);
+											yield* emit(
+												PluginEvent.ConfigCascadeWarning({
+													ctx: { buildId: "" },
+													level: "warn",
+													field: "tsconfig",
+													chosen,
+													ignored,
+												}),
+											);
+										}
 									}
-									apiConfigs.push(result.config);
+									const apisWithCompilerOptions = options.apis.filter((a) => a.compilerOptions);
+									if (apisWithCompilerOptions.length > 0) {
+										firstApiCompilerOptions = apisWithCompilerOptions[0].compilerOptions;
+									}
+
+									const multiResults = yield* Effect.forEach(
+										options.apis,
+										(api) =>
+											Effect.gen(function* () {
+												const apiBaseRoute = yield* pathService.normalizeBaseRoute(
+													api.baseRoute ?? `/${unscopedName(api.packageName)}`,
+												);
+												const derivedPaths = yield* pathService.derivePaths({
+													mode: "multi",
+													docsRoot: rspressRoot,
+													baseRoute: apiBaseRoute,
+													apiFolder: api.apiFolder ?? "api",
+													locales: rspressLocales,
+													defaultLang: rspressLang,
+													versions: [],
+													defaultVersion: undefined,
+												});
+
+												const dp = derivedPaths[0];
+												if (!dp) return [];
+
+												const result = yield* processSimpleApi(api, api.model, dp.outputDir, dp.routeBase, wantTrace);
+												for (const payload of result.vfsPayloads) {
+													yield* emit(
+														PluginEvent.VfsGenerated({
+															ctx: {
+																buildId: "",
+																packageName: api.packageName,
+																...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+															},
+															level: "debug",
+															file: payload.file,
+															declCount: payload.declCount,
+															contentHash: payload.contentHash,
+															...(wantTrace && payload.content ? { content: payload.content } : {}),
+														}),
+													);
+													if (payload.hasImports) {
+														yield* emit(
+															PluginEvent.ImportsPrepended({
+																ctx: {
+																	buildId: "",
+																	packageName: api.packageName,
+																	...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+																},
+																level: "debug",
+																file: payload.file,
+																imports: wantTrace ? payload.importRefs : [],
+															}),
+														);
+													}
+												}
+												return [result];
+											}),
+										{ concurrency: "unbounded" },
+									);
+
+									// Flatten and merge results
+									for (const results of multiResults) {
+										for (const result of results) {
+											for (const [filepath, content] of result.vfs.entries()) {
+												combinedVfs.set(filepath, content);
+											}
+											if (result.externalPackages.length > 0) {
+												allExternalPackages.push(...result.externalPackages);
+											}
+											apiConfigs.push(result.config);
+										}
+									}
 								}
-							}
-						}
+							}),
+							resolvedThresholds ?? DEFAULT_THRESHOLDS,
+						);
 
 						const loadMs = performance.now() - loadStart;
-						yield* Effect.logDebug(`Loading API models: ${loadMs.toFixed(0)}ms`);
+						yield* emit(
+							PluginEvent.ModelLoaded({
+								ctx: { buildId: "" },
+								level: "debug",
+								entryPoints: apiConfigs.length,
+								itemCount: apiConfigs.reduce(
+									(sum, cfg) => sum + cfg.apiPackage.entryPoints.reduce((s, ep) => s + ep.members.length, 0),
+									0,
+								),
+								durationMs: Math.round(loadMs),
+							}),
+						);
 
 						// --- 5. Resolve TypeScript compiler options ---
 						const projectRoot = process.cwd();
@@ -529,50 +716,77 @@ export function ConfigServiceLive(
 							resolveTypeScriptConfig(projectRoot, globalTsConfig),
 						);
 
-						yield* Effect.logDebug(
-							`Resolved TypeScript config: target=${resolvedCompilerOptions.target}, ` +
-								`module=${resolvedCompilerOptions.module}, lib=[${resolvedCompilerOptions.lib?.join(", ")}]`,
-						);
-
-						// --- 6. External type loading (recoverable) ---
-						let tsEnvCache = new Map<string, VirtualTypeScriptEnvironment>();
-
-						const typeLoadResult = yield* Effect.either(
-							Effect.gen(function* () {
-								if (allExternalPackages.length > 0) {
-									const typesStart = performance.now();
-									const result = yield* typeRegistry.loadPackages(allExternalPackages);
-									const cache = yield* typeRegistry.createTypeScriptCache(allExternalPackages, resolvedCompilerOptions);
-
-									// Merge external package VFS into combined VFS
-									for (const [filePath, content] of result.vfs.entries()) {
-										combinedVfs.set(filePath, content);
-									}
-
-									yield* Effect.logDebug(
-										`Loading external package types: ${(performance.now() - typesStart).toFixed(0)}ms`,
-									);
-									return cache;
-								}
-
-								// No external packages - still create TypeScript cache for lib files
-								return yield* typeRegistry.createTypeScriptCache([], resolvedCompilerOptions);
+						yield* emit(
+							PluginEvent.TsCacheCreated({
+								ctx: { buildId: "" },
+								level: "debug",
+								compilerOptions: `target=${resolvedCompilerOptions.target}, module=${resolvedCompilerOptions.module}, lib=[${resolvedCompilerOptions.lib?.join(", ") ?? ""}]`,
+								durationMs: 0,
 							}),
 						);
 
-						if (typeLoadResult._tag === "Right") {
-							tsEnvCache = typeLoadResult.right;
-						} else {
-							yield* Effect.logWarning(
-								`Failed to load external types: ${typeLoadResult.left.message}. Continuing with empty VFS.`,
+						// --- 6. External type loading (recoverable) ---
+						// Twoslash builds its own per-block TypeScript environment from the
+						// combined VFS, so we only need to fetch the external declarations and
+						// merge them in here — no separate TypeScript-cache pre-build.
+						//
+						// First-party packages (the ones being documented) are served from their
+						// generated virtual VFS, which is authoritative — their published version
+						// may not exist (an optimistic next version) and, if it did, fetching it
+						// would clobber the api.json-derived declarations. Exclude them.
+						const documentedPackageNames = new Set(apiConfigs.map((config) => config.packageName));
+						const externalPackagesToLoad = allExternalPackages.filter((pkg) => !documentedPackageNames.has(pkg.name));
+
+						const typeLoadResult = yield* Effect.either(
+							Effect.gen(function* () {
+								if (externalPackagesToLoad.length > 0) {
+									// Resolve version specs (ranges / npm tags) to exact published
+									// versions and drop unpublished / workspace-only packages: the CDN
+									// backing loadPackages requires exact versions and 404s on ranges
+									// or unpublished packages.
+									const resolvedPackages = yield* typeRegistry.resolveVersions(externalPackagesToLoad);
+									const droppedCount = externalPackagesToLoad.length - resolvedPackages.length;
+									if (droppedCount > 0) {
+										yield* emit(
+											PluginEvent.ExternalPackageSkipped({
+												ctx: { buildId: "" },
+												level: "debug",
+												reason: `${droppedCount} unresolvable package(s) (unpublished or workspace-only)`,
+											}),
+										);
+									}
+
+									if (resolvedPackages.length > 0) {
+										const result = yield* typeRegistry.loadPackages(resolvedPackages);
+
+										// Merge external package VFS into combined VFS
+										for (const [filePath, content] of result.vfs.entries()) {
+											combinedVfs.set(filePath, content);
+										}
+
+										yield* emit(
+											PluginEvent.VfsMerged({
+												ctx: { buildId: "" },
+												level: "debug",
+												totalFiles: result.vfs.size,
+												packages: resolvedPackages.map((p) => p.name),
+											}),
+										);
+									}
+								}
+							}),
+						);
+
+						if (typeLoadResult._tag === "Left") {
+							yield* emit(
+								PluginEvent.ConfigCascadeWarning({
+									ctx: { buildId: "" },
+									level: "warn",
+									field: "externalTypes",
+									chosen: "empty VFS",
+									ignored: [typeLoadResult.left.message ?? String(typeLoadResult.left)],
+								}),
 							);
-							// Still create TypeScript cache for lib files
-							const fallbackCache = yield* Effect.either(
-								typeRegistry.createTypeScriptCache([], resolvedCompilerOptions),
-							);
-							if (fallbackCache._tag === "Right") {
-								tsEnvCache = fallbackCache.right;
-							}
 						}
 
 						// --- 7. Twoslash init ---
@@ -581,10 +795,17 @@ export function ConfigServiceLive(
 							combinedVfs,
 							undefined,
 							undefined,
-							tsEnvCache,
+							undefined,
 							resolvedCompilerOptions,
 						);
-						yield* Effect.logDebug(`Initializing Twoslash: ${(performance.now() - twoslashStartMs).toFixed(0)}ms`);
+						yield* emit(
+							PluginEvent.TwoslashInitialized({
+								ctx: { buildId: "" },
+								level: "debug",
+								durationMs: Math.round(performance.now() - twoslashStartMs),
+								vfsFileCount: combinedVfs.size,
+							}),
+						);
 
 						// --- 8. Shiki highlighter ---
 						const shikiStartMs = performance.now();
@@ -621,8 +842,13 @@ export function ConfigServiceLive(
 						const themes: Array<string | Record<string, unknown>> = [...themeSet, ...customThemes];
 						const langs = ["typescript", "javascript", "json", "bash", "sh"];
 						const highlighter = yield* Effect.promise(() => createHighlighter({ themes, langs }));
-						yield* Effect.logDebug(
-							`Initializing Shiki highlighter: ${(performance.now() - shikiStartMs).toFixed(0)}ms`,
+						yield* emit(
+							PluginEvent.PhaseCompleted({
+								ctx: { buildId: "" },
+								level: "debug",
+								phase: "shikiInit",
+								durationMs: Math.round(performance.now() - shikiStartMs),
+							}),
 						);
 
 						// --- 9. OG resolver ---
@@ -647,7 +873,6 @@ export function ConfigServiceLive(
 							apiConfigs,
 							combinedVfs,
 							highlighter,
-							tsEnvCache,
 							resolvedCompilerOptions,
 							ogResolver,
 							shikiCrossLinker,
@@ -657,6 +882,8 @@ export function ConfigServiceLive(
 							pageConcurrency: os.cpus().length,
 							logLevel: logLevel === "none" ? "info" : logLevel,
 							suppressExampleErrors,
+							thresholds: resolvedThresholds ?? DEFAULT_THRESHOLDS,
+							buildId,
 						} satisfies ResolvedBuildContext;
 					}) as Effect.Effect<
 						ResolvedBuildContext,

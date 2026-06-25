@@ -50,6 +50,15 @@ describe("generateApiDocs (Effect program)", () => {
 			pageConcurrency: 2,
 			logLevel: "info" as const,
 			suppressExampleErrors: true,
+			buildId: "test-build",
+			thresholds: {
+				slowCodeBlock: 100,
+				slowPageGeneration: 500,
+				slowApiLoad: 1000,
+				slowFileOperation: 50,
+				slowHttpRequest: 2000,
+				slowDbOperation: 100,
+			},
 		};
 
 		const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();

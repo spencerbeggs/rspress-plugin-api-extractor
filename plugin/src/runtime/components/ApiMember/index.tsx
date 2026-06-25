@@ -3,6 +3,11 @@ import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
 import { MemberSignature } from "../MemberSignature/index.js";
 
+/**
+ * Props for the {@link ApiMember} component used in generated MDX pages.
+ *
+ * @public
+ */
 export interface ApiMemberProps {
 	/** Member signature code (not wrapped in class/interface) */
 	code: string;
@@ -22,15 +27,13 @@ export interface ApiMemberProps {
 }
 
 /**
- * Renders an individual class/interface member signature block.
+ * Renders an individual class or interface member signature block.
  *
- * Replaces MemberSignatureWrapper with a simpler component that takes plain
- * string props. The `code` prop contains only the member signature (not
- * wrapped in a class skeleton), and `summary` is plain markdown-compatible
- * text (not HTML with anchor tags, not base64-encoded).
+ * In browser mode renders an `h3` heading with a Shiki-highlighted signature.
+ * In SSG-MD mode renders a heading, summary, and plain fenced code block.
  *
- * In SSG-MD mode, renders a heading with member name, summary text,
- * and a plain code block with the member signature.
+ * @param props - {@link ApiMemberProps}
+ * @public
  */
 export function ApiMember({ code, memberName, summary, id, hast, hasParameters }: ApiMemberProps): ReactElement {
 	const parsedHast = useMemo(() => decodeHast(hast, "ApiMember"), [hast]);

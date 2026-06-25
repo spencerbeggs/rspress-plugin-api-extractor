@@ -12,6 +12,7 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
  *
  * @param hast - The HAST root node from Shiki's `codeToHast()`
  * @returns A React element representing the HAST tree
+ * @internal
  */
 export function hastToReact(hast: Root): ReactElement {
 	return toJsxRuntime(hast, { Fragment, jsx, jsxs }) as ReactElement;

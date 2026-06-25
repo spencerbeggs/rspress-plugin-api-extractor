@@ -18,16 +18,10 @@ export type { ApiSignatureProps } from "./components/ApiSignature/index.js";
 export { ApiSignature } from "./components/ApiSignature/index.js";
 export type { EnumMember, EnumMembersTableProps } from "./components/EnumMembersTable/index.js";
 export { EnumMembersTable } from "./components/EnumMembersTable/index.js";
-export type { ExampleBlockProps } from "./components/ExampleBlock/index.js";
-export { ExampleBlock } from "./components/ExampleBlock/index.js";
-export type { MemberSignatureProps } from "./components/MemberSignature/index.js";
-export { MemberSignature } from "./components/MemberSignature/index.js";
+// ExampleBlock, MemberSignature, SignatureBlock are @internal — used by the
+// Api* wrappers above and not part of the public API surface. They accept
+// `hast: Root | null` (from @types/hast) which must not leak into index.d.ts.
 export type { Parameter, ParametersTableProps } from "./components/ParametersTable/index.js";
 export { ParametersTable } from "./components/ParametersTable/index.js";
-export type { SignatureBlockProps } from "./components/SignatureBlock/index.js";
-export { SignatureBlock } from "./components/SignatureBlock/index.js";
-
-// Utilities
-export { hastToReact } from "./utils/hast-renderer.js";
 
 // Global styles will be injected via BannerPlugin in rslib.config.ts

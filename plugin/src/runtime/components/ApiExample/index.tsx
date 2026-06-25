@@ -3,6 +3,11 @@ import { createElement, useMemo } from "react";
 import { decodeHast } from "../../utils/decode-hast.js";
 import { ExampleBlock } from "../ExampleBlock/index.js";
 
+/**
+ * Props for the {@link ApiExample} component used in generated MDX pages.
+ *
+ * @public
+ */
 export interface ApiExampleProps {
 	/** Example code (no Twoslash directives) */
 	code: string;
@@ -14,13 +19,13 @@ export interface ApiExampleProps {
 }
 
 /**
- * Renders an example code block.
+ * Renders an example code block in generated API documentation pages.
  *
- * Replaces ExampleBlockWrapper with a simpler component that takes a plain
- * code string (no base64, no HAST for code). The code should already have
- * Twoslash directives stripped.
+ * In browser mode renders a Shiki-highlighted code block with copy and wrap
+ * controls. In SSG-MD mode renders a plain fenced code block.
  *
- * In SSG-MD mode, renders a plain code block with the example code.
+ * @param props - {@link ApiExampleProps}
+ * @public
  */
 export function ApiExample({ code, hast }: ApiExampleProps): ReactElement {
 	const parsedHast = useMemo(() => decodeHast(hast, "ApiExample"), [hast]);

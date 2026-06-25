@@ -1,149 +1,139 @@
-import type { HashMap } from "effect";
-import { Effect, Layer, LogLevel, Logger, Metric, MetricBoundaries } from "effect";
+import { Effect, Layer, LogLevel, Logger, Metric } from "effect";
+import { makeEventBusLayer } from "../observability/EventBus.js";
+import type { EventLevel } from "../observability/events.js";
+import { makeConsoleSink } from "../observability/sinks/console-sink.js";
+import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
+import { makeTraceSink } from "../observability/sinks/trace-sink.js";
+import type { EventSink } from "../observability/sinks/types.js";
+import type { ResolvedObservability } from "../schemas/observability.js";
+import { BuildMetrics } from "./build-metrics.js";
 
-/**
- * All build metrics as named counters/histograms.
- *
- * Note: Effect Metrics use a process-wide registry. In tests, counters
- * accumulate across test cases within the same process. Test assertions
- * should use loose matching (toContain) rather than exact count checks.
- */
-export const BuildMetrics = {
-	filesTotal: Metric.counter("files.total"),
-	filesNew: Metric.counter("files.new"),
-	filesModified: Metric.counter("files.modified"),
-	filesUnchanged: Metric.counter("files.unchanged"),
-	codeblockDuration: Metric.histogram(
-		"codeblock.duration",
-		MetricBoundaries.fromIterable([10, 25, 50, 100, 200, 500, 1000]),
-	),
-	codeblockShikiDuration: Metric.histogram(
-		"codeblock.shiki.duration",
-		MetricBoundaries.fromIterable([5, 10, 25, 50, 100, 250]),
-	),
-	codeblockTotal: Metric.counter("codeblock.total"),
-	codeblockSlow: Metric.counter("codeblock.slow"),
-	twoslashErrors: Metric.counter("twoslash.errors"),
-	prettierErrors: Metric.counter("prettier.errors"),
-	pagesGenerated: Metric.counter("pages.generated"),
-	apiVersionsLoaded: Metric.counter("api.versions.loaded"),
-	externalPackagesTotal: Metric.counter("external.packages.total"),
-} as const;
+export { BuildMetrics } from "./build-metrics.js";
 
-/**
- * Format a Date as HH:MM:SS for console output.
- */
 function formatTime(date: Date): string {
 	return date.toTimeString().slice(0, 8);
 }
 
 /**
- * Extract annotations from HashMap to a plain object.
- */
-function annotationsToObject(annotations: HashMap.HashMap<string, unknown>): Record<string, unknown> {
-	const obj: Record<string, unknown> = {};
-	for (const [key, value] of annotations) {
-		obj[key] = value;
-	}
-	return obj;
-}
-
-/**
- * Create a custom plugin logger for the given mode.
- * Uses a closure to capture debugMode — no mutable module state.
- */
-function makePluginLogger(debugMode: boolean) {
-	return Logger.make(({ logLevel, message, date, annotations }) => {
-		if (debugMode) {
-			// Structured JSON for LLM consumption
-			const entry: Record<string, unknown> = {
-				timestamp: date.getTime(),
-				level: logLevel.label.toLowerCase(),
-				message: typeof message === "string" ? message : String(message),
-				...annotationsToObject(annotations),
-			};
-			console.log(JSON.stringify(entry));
-		} else {
-			// Human-readable with emoji prefix
-			const time = formatTime(date);
-			const msg = typeof message === "string" ? message : String(message);
-			const prefix = logLevel._tag === "Warning" ? "\u26A0\uFE0F  " : logLevel._tag === "Error" ? "\uD83D\uDD34 " : "";
-			console.log(`[${time}] ${prefix}${msg}`);
-		}
-	});
-}
-
-/**
- * Create the complete observability layer for the plugin.
- * Replaces the default Effect logger with a custom one and sets minimum log level.
+ * A slim Effect Logger layer that gates the residual `Effect.log*` calls in
+ * `build-program.ts` and `logBuildSummary` at the configured level.
  *
- * @param logLevel - Plugin log level from options
+ * Level mapping: none→None, error→Error, warn→Warning, info→Info,
+ * debug/trace→Debug.  Format: `[HH:MM:SS] <prefix><message>` with
+ * `⚠️  ` / `🔴 ` prefixes for Warning / Error to match the EventBus
+ * console-sink style.
  */
-export function PluginLoggerLayer(
-	logLevel: "debug" | "verbose" | "info" | "warn" | "error" | "none" = "info",
-): Layer.Layer<never> {
-	const debugMode = logLevel === "debug";
-	const pluginLogger = makePluginLogger(debugMode);
+export function makeSummaryLoggerLayer(logLevel: EventLevel | "none"): Layer.Layer<never> {
+	const effectLevel =
+		logLevel === "none"
+			? LogLevel.None
+			: logLevel === "error"
+				? LogLevel.Error
+				: logLevel === "warn"
+					? LogLevel.Warning
+					: logLevel === "info"
+						? LogLevel.Info
+						: LogLevel.Debug; // debug | trace
 
-	const effectLogLevel = {
-		debug: LogLevel.Debug,
-		verbose: LogLevel.Debug,
-		info: LogLevel.Info,
-		warn: LogLevel.Warning,
-		error: LogLevel.Error,
-		none: LogLevel.None,
-	}[logLevel];
+	const pluginLogger = Logger.make(({ logLevel: lvl, message, date }) => {
+		const time = formatTime(date);
+		const msg = typeof message === "string" ? message : String(message);
+		const prefix = lvl._tag === "Warning" ? "⚠️  " : lvl._tag === "Error" ? "🔴 " : "";
+		console.log(`[${time}] ${prefix}${msg}`);
+	});
 
-	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLogLevel));
+	return Layer.mergeAll(Logger.replace(Logger.defaultLogger, pluginLogger), Logger.minimumLogLevel(effectLevel));
+}
+
+export interface BuiltSinks {
+	readonly layer: ReturnType<typeof makeEventBusLayer>;
+	readonly trace: (EventSink & { flush: () => void; setPath: (p: string) => void }) | null;
+}
+
+/**
+ * Compose the console + metrics (+ optional trace) sinks into an EventBus layer.
+ *
+ * When `traceIsDefault` is true the trace path was derived from the guessed
+ * outDir at factory time.  In that case we create the sink in deferred mode
+ * (no `initialPath`) so no stray empty file is written to the guessed path;
+ * `plugin.ts` must call `trace.setPath(realPath)` in the `config()` hook once
+ * the real RSPress `outDir` is known.
+ *
+ * When `traceIsDefault` is false the caller supplied an explicit path string,
+ * so we open the file eagerly (existing behaviour).
+ */
+export function buildEventBus(obs: ResolvedObservability, traceIsDefault = false): BuiltSinks {
+	const sinks: EventSink[] = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink()];
+	const trace = obs.tracePath ? makeTraceSink(traceIsDefault ? undefined : obs.tracePath) : null;
+	if (trace) sinks.push(trace);
+	return { layer: makeEventBusLayer(sinks), trace };
 }
 
 /**
  * Log a build summary by reading all metric snapshots.
+ * Accepts the configured slow-codeblock threshold so the warning message
+ * interpolates the actual threshold rather than a hard-coded 100ms.
  * Replaces the 4 separate logSummary() calls in afterBuild.
  */
-export const logBuildSummary = Effect.gen(function* () {
-	const filesTotal = yield* Metric.value(BuildMetrics.filesTotal);
-	const filesNew = yield* Metric.value(BuildMetrics.filesNew);
-	const filesModified = yield* Metric.value(BuildMetrics.filesModified);
-	const filesUnchanged = yield* Metric.value(BuildMetrics.filesUnchanged);
-	const twoslashErrors = yield* Metric.value(BuildMetrics.twoslashErrors);
-	const prettierErrors = yield* Metric.value(BuildMetrics.prettierErrors);
-	const codeblockTotal = yield* Metric.value(BuildMetrics.codeblockTotal);
-	const codeblockSlow = yield* Metric.value(BuildMetrics.codeblockSlow);
+export const logBuildSummary = (slowCodeBlockMs: number) =>
+	Effect.gen(function* () {
+		const filesTotal = yield* Metric.value(BuildMetrics.filesTotal);
+		const filesNew = yield* Metric.value(BuildMetrics.filesNew);
+		const filesModified = yield* Metric.value(BuildMetrics.filesModified);
+		const filesUnchanged = yield* Metric.value(BuildMetrics.filesUnchanged);
+		const twoslashErrors = yield* Metric.value(BuildMetrics.twoslashErrors);
+		const prettierErrors = yield* Metric.value(BuildMetrics.prettierErrors);
+		const codeblockTotal = yield* Metric.value(BuildMetrics.codeblockTotal);
+		const codeblockSlow = yield* Metric.value(BuildMetrics.codeblockSlow);
+		const pagesGenerated = yield* Metric.value(BuildMetrics.pagesGenerated);
+		const externalPackages = yield* Metric.value(BuildMetrics.externalPackagesTotal);
+		const phaseDurationSnapshot = yield* Metric.value(BuildMetrics.phaseDuration);
 
-	const total = filesTotal.count;
-	const newCount = filesNew.count;
-	const modified = filesModified.count;
-	const unchanged = filesUnchanged.count;
-	const tsErrors = twoslashErrors.count;
-	const prErrors = prettierErrors.count;
-	const blocks = codeblockTotal.count;
-	const slowBlocks = codeblockSlow.count;
+		const total = filesTotal.count;
+		const newCount = filesNew.count;
+		const modified = filesModified.count;
+		const unchanged = filesUnchanged.count;
+		const tsErrors = twoslashErrors.count;
+		const prErrors = prettierErrors.count;
+		const blocks = codeblockTotal.count;
+		const slowBlocks = codeblockSlow.count;
 
-	// File summary
-	if (total === 0) {
-		yield* Effect.log("📝 No files generated");
-	} else if (newCount === 0 && modified === 0) {
-		yield* Effect.log(`📝 ${total} files (all unchanged)`);
-	} else {
-		const parts: string[] = [];
-		if (newCount > 0) parts.push(`${newCount} new`);
-		if (modified > 0) parts.push(`${modified} modified`);
-		if (unchanged > 0) parts.push(`${unchanged} unchanged`);
-		yield* Effect.log(`📝 ${total} files (${parts.join(", ")})`);
-	}
+		// File summary
+		if (total === 0) {
+			yield* Effect.log("📝 No files generated");
+		} else if (newCount === 0 && modified === 0) {
+			yield* Effect.log(`📝 ${total} files (all unchanged)`);
+		} else {
+			const parts: string[] = [];
+			if (newCount > 0) parts.push(`${newCount} new`);
+			if (modified > 0) parts.push(`${modified} modified`);
+			if (unchanged > 0) parts.push(`${unchanged} unchanged`);
+			yield* Effect.log(`📝 ${total} files (${parts.join(", ")})`);
+		}
 
-	// Code block summary
-	if (blocks > 0 && slowBlocks > 0) {
-		yield* Effect.logWarning(`⚠️  Code block performance: ${slowBlocks} of ${blocks} blocks were slow (>${100}ms)`);
-	}
+		// Pages and external packages summary
+		if (pagesGenerated.count > 0) {
+			yield* Effect.log(`🧩 ${pagesGenerated.count} pages, ${externalPackages.count} external package(s)`);
+		}
 
-	// Error summary
-	const totalErrors = tsErrors + prErrors;
-	if (totalErrors > 0) {
-		const errorParts: string[] = [];
-		if (tsErrors > 0) errorParts.push(`${tsErrors} Twoslash`);
-		if (prErrors > 0) errorParts.push(`${prErrors} Prettier`);
-		yield* Effect.logWarning(`🔴 ${totalErrors} error(s) in code blocks (${errorParts.join(", ")})`);
-	}
-});
+		// Per-phase duration summary (silent until Task 12 wires phaseDuration increments)
+		if (phaseDurationSnapshot.count > 0) {
+			yield* Effect.log(`⏱ ${phaseDurationSnapshot.count} phase(s) timed`);
+		}
+
+		// Code block summary
+		if (blocks > 0 && slowBlocks > 0) {
+			yield* Effect.logWarning(
+				`Code block performance: ${slowBlocks} of ${blocks} blocks were slow (>${slowCodeBlockMs}ms)`,
+			);
+		}
+
+		// Error summary
+		const totalErrors = tsErrors + prErrors;
+		if (totalErrors > 0) {
+			const errorParts: string[] = [];
+			if (tsErrors > 0) errorParts.push(`${tsErrors} Twoslash`);
+			if (prErrors > 0) errorParts.push(`${prErrors} Prettier`);
+			yield* Effect.logWarning(`${totalErrors} error(s) in code blocks (${errorParts.join(", ")})`);
+		}
+	});

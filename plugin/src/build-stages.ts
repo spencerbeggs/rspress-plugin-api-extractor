@@ -31,6 +31,8 @@ import {
 } from "./markdown/index.js";
 import type { ResolvedEntryItem } from "./multi-entry-resolver.js";
 import { resolveEntryPoints } from "./multi-entry-resolver.js";
+import { emit } from "./observability/EventBus.js";
+import { PluginEvent } from "./observability/events.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import type { RouteCandidate } from "./route-collisions.js";
 import { assertNoRouteCollisions } from "./route-collisions.js";
@@ -318,6 +320,7 @@ export function normalizeMarkdownSpacing(content: string): string {
  * for every item in a single API build.
  */
 export interface GenerateSinglePageContext {
+	readonly buildId: string;
 	readonly existingSnapshots: Map<string, FileSnapshot>;
 	readonly baseRoute: string;
 	readonly packageName: string;
@@ -340,6 +343,7 @@ export function generateSinglePage(
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
 		const {
+			buildId,
 			existingSnapshots,
 			baseRoute,
 			packageName,
@@ -352,6 +356,7 @@ export function generateSinglePage(
 			llmsPlugin,
 		} = ctx;
 		const { item, categoryConfig, namespaceMember } = workItem;
+		const pageGenStart = performance.now();
 		let page: { routePath: string; content: string } | null = null;
 
 		// Generate appropriate page based on item kind
@@ -511,8 +516,14 @@ export function generateSinglePage(
 				break;
 			}
 			default: {
-				yield* Effect.logDebug(
-					`Skipping item "${item.displayName}" with unsupported kind: ${item.kind} (${ApiItemKind[item.kind] || "unknown"}) in category "${categoryConfig.displayName}"`,
+				yield* emit(
+					PluginEvent.ItemSkipped({
+						ctx: { buildId, packageName, apiScope },
+						item: item.displayName,
+						kind: String(item.kind),
+						reason: "unsupported kind",
+						level: "trace",
+					}),
 				);
 				return null;
 			}
@@ -532,8 +543,18 @@ export function generateSinglePage(
 			};
 		}
 
-		// Track page generation
-		yield* Metric.increment(BuildMetrics.pagesGenerated);
+		// Track page generation (metric derived from PageGenerated event in MetricsSink)
+		const codeblockCount = (page.content.match(/<(ApiSignature|ApiMember|ApiExample)\b/g) ?? []).length;
+		yield* emit(
+			PluginEvent.PageGenerated({
+				ctx: { buildId, packageName, apiScope, route: page.routePath },
+				item: item.displayName,
+				category: categoryConfig.displayName,
+				codeblockCount,
+				durationMs: Math.round(performance.now() - pageGenStart),
+				level: "debug",
+			}),
+		);
 
 		// Parse the generated content to extract frontmatter and body
 		const parsed = matter(page.content);
@@ -626,6 +647,7 @@ export function generateSinglePage(
  * for every item in a single API build.
  */
 export interface WriteSingleFileContext {
+	readonly buildId: string;
 	readonly resolvedOutputDir: string;
 	readonly buildTime: string;
 	readonly ogResolver?: import("./og-resolver.js").OpenGraphResolver | null;
@@ -644,7 +666,7 @@ export function writeSingleFile(
 ): Effect.Effect<FileWriteResult, never, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
-		const { resolvedOutputDir, buildTime, ogResolver, siteUrl, ogImage, packageName, apiName } = ctx;
+		const { buildId, resolvedOutputDir, buildTime, ogResolver, siteUrl, ogImage, packageName, apiName } = ctx;
 		const {
 			workItem,
 			bodyContent,
@@ -675,10 +697,19 @@ export function writeSingleFile(
 			buildTime,
 		};
 
-		// Handle unchanged files - skip write
+		// Handle unchanged files - skip write (metrics derived from FileDecision event in MetricsSink)
 		if (isUnchanged) {
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesUnchanged);
+			yield* emit(
+				PluginEvent.FileDecision({
+					ctx: { buildId, ...(packageName != null ? { packageName } : {}) },
+					file: relativePathWithExt,
+					status: "unchanged",
+					contentHash,
+					frontmatterHash,
+					source: "snapshot",
+					level: "debug",
+				}),
+			);
 
 			return {
 				relativePathWithExt,
@@ -735,13 +766,18 @@ export function writeSingleFile(
 
 		const status: "new" | "modified" = fileExisted ? "modified" : "new";
 
-		// Increment metrics
-		yield* Metric.increment(BuildMetrics.filesTotal);
-		if (status === "new") {
-			yield* Metric.increment(BuildMetrics.filesNew);
-		} else {
-			yield* Metric.increment(BuildMetrics.filesModified);
-		}
+		// Metrics derived from FileDecision event in MetricsSink
+		yield* emit(
+			PluginEvent.FileDecision({
+				ctx: { buildId, ...(packageName != null ? { packageName } : {}) },
+				file: relativePathWithExt,
+				status,
+				contentHash,
+				frontmatterHash,
+				source: "snapshot",
+				level: "debug",
+			}),
+		);
 
 		return {
 			relativePathWithExt,
@@ -756,6 +792,7 @@ export function writeSingleFile(
 }
 
 export interface WriteMetadataInput {
+	readonly buildId: string;
 	readonly fileResults: readonly FileWriteResult[];
 	readonly categories: Record<string, CategoryConfig>;
 	readonly resolvedOutputDir: string;
@@ -788,6 +825,7 @@ export function writeMetadata(
 		const fileSystem = yield* FileSystem.FileSystem;
 		const snapshotSvc = yield* SnapshotService;
 		const {
+			buildId,
 			fileResults,
 			categories,
 			resolvedOutputDir,
@@ -872,15 +910,31 @@ export function writeMetadata(
 
 		if (!apiMetaUnchanged) {
 			yield* fileSystem.writeFileString(apiMetaJsonPath, apiMetaJsonContent).pipe(Effect.orDie);
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			if (apiMetaOldSnapshot) {
-				yield* Metric.increment(BuildMetrics.filesModified);
-			} else {
-				yield* Metric.increment(BuildMetrics.filesNew);
-			}
+			// Metrics derived from FileDecision event in MetricsSink
+			yield* emit(
+				PluginEvent.FileDecision({
+					ctx: { buildId, packageName },
+					file: apiMetaJsonRelPath,
+					status: apiMetaOldSnapshot ? "modified" : "new",
+					contentHash: apiMetaContentHash,
+					frontmatterHash: "",
+					source: "snapshot",
+					level: "debug",
+				}),
+			);
 		} else {
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesUnchanged);
+			// Metrics derived from FileDecision event in MetricsSink
+			yield* emit(
+				PluginEvent.FileDecision({
+					ctx: { buildId, packageName },
+					file: apiMetaJsonRelPath,
+					status: "unchanged",
+					contentHash: apiMetaContentHash,
+					frontmatterHash: "",
+					source: "snapshot",
+					level: "debug",
+				}),
+			);
 		}
 
 		yield* snapshotSvc
@@ -1002,15 +1056,31 @@ export function writeMetadata(
 						const categoryDir = path.dirname(categoryMetaPath);
 						yield* fileSystem.makeDirectory(categoryDir, { recursive: true }).pipe(Effect.orDie);
 						yield* fileSystem.writeFileString(categoryMetaPath, content).pipe(Effect.orDie);
-						yield* Metric.increment(BuildMetrics.filesTotal);
-						if (oldSnapshot) {
-							yield* Metric.increment(BuildMetrics.filesModified);
-						} else {
-							yield* Metric.increment(BuildMetrics.filesNew);
-						}
+						// Metrics derived from FileDecision event in MetricsSink
+						yield* emit(
+							PluginEvent.FileDecision({
+								ctx: { buildId, packageName },
+								file: relPath,
+								status: oldSnapshot ? "modified" : "new",
+								contentHash,
+								frontmatterHash: "",
+								source: "snapshot",
+								level: "debug",
+							}),
+						);
 					} else {
-						yield* Metric.increment(BuildMetrics.filesTotal);
-						yield* Metric.increment(BuildMetrics.filesUnchanged);
+						// Metrics derived from FileDecision event in MetricsSink
+						yield* emit(
+							PluginEvent.FileDecision({
+								ctx: { buildId, packageName },
+								file: relPath,
+								status: "unchanged",
+								contentHash,
+								frontmatterHash: "",
+								source: "snapshot",
+								level: "debug",
+							}),
+						);
 					}
 
 					generatedFiles.add(relPath);
@@ -1041,6 +1111,7 @@ export function writeMetadata(
 }
 
 export interface CleanupAndCommitInput {
+	readonly buildId: string;
 	readonly fileResults: readonly FileWriteResult[];
 	readonly resolvedOutputDir: string;
 	readonly generatedFiles: ReadonlySet<string>;
@@ -1065,7 +1136,7 @@ export function cleanupAndCommit(
 	return Effect.gen(function* () {
 		const fileSystem = yield* FileSystem.FileSystem;
 		const snapshotSvc = yield* SnapshotService;
-		const { fileResults, resolvedOutputDir, generatedFiles } = input;
+		const { buildId, fileResults, resolvedOutputDir, generatedFiles } = input;
 
 		// 1. Batch-upsert snapshots for written (non-unchanged) files only
 		const snapshotsToUpdate = fileResults.filter((r) => r.status !== "unchanged").map((r) => r.snapshot);
@@ -1084,7 +1155,7 @@ export function cleanupAndCommit(
 				Effect.gen(function* () {
 					const fullPath = path.join(resolvedOutputDir, staleFile);
 					yield* fileSystem.remove(fullPath).pipe(Effect.ignore);
-					yield* Effect.logDebug(`🗑️  DELETED STALE: ${staleFile}`);
+					yield* emit(PluginEvent.StaleDeleted({ ctx: { buildId }, file: staleFile, level: "trace" }));
 				}),
 			{ concurrency: "unbounded" },
 		);
@@ -1113,7 +1184,7 @@ export function cleanupAndCommit(
 					const fullPath = path.join(resolvedOutputDir, orphan);
 					yield* fileSystem.remove(fullPath).pipe(Effect.ignore);
 					yield* snapshotSvc.deleteSnapshot(resolvedOutputDir, orphan).pipe(Effect.ignore);
-					yield* Effect.logDebug(`🗑️  DELETED ORPHAN: ${orphan}`);
+					yield* emit(PluginEvent.OrphanDeleted({ ctx: { buildId }, file: orphan, level: "trace" }));
 				}),
 			{ concurrency: "unbounded" },
 		);
@@ -1136,7 +1207,7 @@ export function cleanupAndCommit(
 					.pipe(Effect.orElseSucceed(() => ["placeholder"] as string[]));
 				if (entries.length === 0) {
 					yield* fileSystem.remove(fullDir).pipe(Effect.ignore);
-					yield* Effect.logDebug(`🗑️  REMOVED EMPTY DIR: ${dir}`);
+					yield* emit(PluginEvent.EmptyDirRemoved({ ctx: { buildId }, dir, level: "trace" }));
 				}
 			}
 		}
@@ -1144,6 +1215,7 @@ export function cleanupAndCommit(
 }
 
 export interface BuildPipelineInput {
+	readonly buildId: string;
 	readonly workItems: readonly WorkItem[];
 	readonly baseRoute: string;
 	readonly packageName: string;
@@ -1178,6 +1250,7 @@ export function buildPipelineForApi(
 	input: BuildPipelineInput,
 ): Effect.Effect<FileWriteResult[], never, FileSystem.FileSystem> {
 	const generateCtx: GenerateSinglePageContext = {
+		buildId: input.buildId,
 		existingSnapshots: input.existingSnapshots,
 		baseRoute: input.baseRoute,
 		packageName: input.packageName,
@@ -1191,6 +1264,7 @@ export function buildPipelineForApi(
 	};
 
 	const writeCtx: WriteSingleFileContext = {
+		buildId: input.buildId,
 		resolvedOutputDir: input.resolvedOutputDir,
 		buildTime: input.buildTime,
 		...(input.ogResolver !== undefined ? { ogResolver: input.ogResolver } : {}),

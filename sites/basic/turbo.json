@@ -4,13 +4,13 @@
 	"tasks": {
 		"build": {
 			"cache": false,
-			"dependsOn": ["^build:meta"],
+			"dependsOn": ["^build:prod"],
 			"outputLogs": "full",
 			"outputs": ["dist/**"]
 		},
 		"dev": {
 			"cache": false,
-			"dependsOn": ["^build:meta"],
+			"dependsOn": ["^build:prod"],
 			"persistent": true
 		},
 		"preview": {

@@ -2,16 +2,35 @@ import type { ReactElement } from "react";
 import { MarkdownContent } from "../MarkdownContent/index.js";
 import styles from "./index.module.css";
 
+/**
+ * A single parameter entry for {@link ParametersTable}.
+ *
+ * @public
+ */
 export interface Parameter {
+	/** Parameter name. */
 	name: string;
+	/** TypeScript type string, if available. */
 	type?: string;
+	/** HTML description rendered in the table cell. */
 	description: string;
 }
 
+/**
+ * Props for the {@link ParametersTable} component.
+ *
+ * @public
+ */
 export interface ParametersTableProps {
+	/** Parameters to display. */
 	parameters: Parameter[];
 }
 
+/**
+ * Renders a table of function or method parameters with their types and descriptions.
+ *
+ * @public
+ */
 export const ParametersTable = ({ parameters }: ParametersTableProps): ReactElement | null => {
 	// Guard against undefined or empty parameters
 	if (!parameters || parameters.length === 0) {

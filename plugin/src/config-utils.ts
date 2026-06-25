@@ -155,20 +155,22 @@ export function extractTypeUtilities(packageJson: PackageJson | undefined): Exte
  *   devDependencies: { "type-fest": "^4.0.0" }
  * };
  *
- * // Default: only peerDependencies + type utilities
+ * // Default: dependencies + peerDependencies + type utilities (devDependencies excluded).
+ * // The documented type surface is usually written against runtime dependencies,
+ * // so those must be loaded for Twoslash to resolve them.
  * extractAutoDetectedPackages(pkg);
- * // Returns: [{ name: "zod", version: "^3.22.4" }, { name: "type-fest", version: "^4.0.0" }]
- *
- * // Include all dependency types
- * extractAutoDetectedPackages(pkg, { dependencies: true, peerDependencies: true, autoDependencies: true });
  * // Returns: [{ name: "effect", ... }, { name: "zod", ... }, { name: "type-fest", ... }]
+ *
+ * // Opt out of dependencies (peerDependencies + type utilities only)
+ * extractAutoDetectedPackages(pkg, { dependencies: false });
+ * // Returns: [{ name: "zod", version: "^3.22.4" }, { name: "type-fest", version: "^4.0.0" }]
  * ```
  */
 export function extractAutoDetectedPackages(
 	packageJson: PackageJson | undefined,
 	options: AutoDetectDependencies = {},
 ): ExternalPackageSpec[] {
-	const { dependencies = false, devDependencies = false, peerDependencies = true, autoDependencies = true } = options;
+	const { dependencies = true, devDependencies = false, peerDependencies = true, autoDependencies = true } = options;
 
 	const packages: ExternalPackageSpec[] = [];
 
@@ -246,6 +248,42 @@ export function resolvePackageVersionConflicts(packages: ExternalPackageSpec[]):
 	}
 
 	return resolved;
+}
+
+/**
+ * Resolve each external package's version spec to an exact, published version.
+ *
+ * The type registry's CDN (jsDelivr) requires an exact version — its flat-file
+ * API 404s on semver ranges (`^4.1.0`), npm tags, and unpublished/workspace
+ * versions. This helper maps each spec through the supplied `resolve` function
+ * and drops any package whose resolution fails. Failures are the intended skip
+ * signal: a workspace-only or unpublished package (e.g. `@scope/pkg@1.0.0` that
+ * was never pushed to the registry) resolves to an error and is omitted, so it
+ * never poisons the batch load. Input order is preserved for survivors.
+ *
+ * @param packages - External package specs (typically post-deduplication)
+ * @param resolve - Resolver mapping a spec to its exact published version
+ * @returns Effect yielding the resolved specs with unresolvable packages dropped
+ *
+ * @example
+ * ```ts
+ * // [{ name: "vitest", version: "^4.1.0" }] -> [{ name: "vitest", version: "4.1.9" }]
+ * // an unpublished workspace package resolves to an error and is dropped
+ * ```
+ */
+export function resolveExternalPackageVersions<R>(
+	packages: ReadonlyArray<ExternalPackageSpec>,
+	resolve: (pkg: ExternalPackageSpec) => Effect.Effect<string, unknown, R>,
+): Effect.Effect<ExternalPackageSpec[], never, R> {
+	return Effect.forEach(
+		packages,
+		(pkg) =>
+			resolve(pkg).pipe(
+				Effect.map((version): ExternalPackageSpec | null => ({ name: pkg.name, version })),
+				Effect.catchAll(() => Effect.succeed<ExternalPackageSpec | null>(null)),
+			),
+		{ concurrency: 5 },
+	).pipe(Effect.map((results) => results.filter((spec): spec is ExternalPackageSpec => spec !== null)));
 }
 
 /**

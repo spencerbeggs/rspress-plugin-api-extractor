@@ -225,9 +225,16 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		const jsDoc = this.formatJSDoc(apiFunction);
 		if (jsDoc) lines.push(jsDoc);
 
-		// Clean the excerpt and re-add export declare, ensure trailing semicolon
+		// Clean the excerpt and re-add export declare, ensure trailing semicolon.
+		// API Extractor classifies arrow-function consts (`name: (args) => ret`)
+		// as Function items but emits them in variable form. Emitting
+		// `export declare name: (...) => ret` is invalid TS (that needs `const`),
+		// which corrupts the whole .d.ts with parse errors. Only the
+		// `function name(...)` form is a real function declaration; everything
+		// else is a const binding and needs the `const` keyword.
 		const cleaned = this.cleanExcerpt(apiFunction.excerpt.text);
-		lines.push(`export declare ${cleaned};`);
+		const decl = cleaned.startsWith("function ") ? cleaned : `const ${cleaned}`;
+		lines.push(`export declare ${decl};`);
 
 		return lines.join("\n");
 	}

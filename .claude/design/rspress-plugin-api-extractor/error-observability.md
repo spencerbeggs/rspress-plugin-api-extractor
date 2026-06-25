@@ -3,13 +3,7 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-15
-updated: 2026-05-26
-last-synced: 2026-05-26
-completeness: 85
-related:
-  - rspress-plugin-api-extractor/performance-observability.md
-  - rspress-plugin-api-extractor/build-architecture.md
-dependencies: []
+updated: 2026-06-24
 ---
 
 # Error Observability System Design
@@ -17,9 +11,10 @@ dependencies: []
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture](#architecture)
-- [Twoslash Error Handling](#twoslash-error-handling)
-- [Prettier Error Handling](#prettier-error-handling)
+- [Error Event Variants](#error-event-variants)
+- [Twoslash Error Flow](#twoslash-error-flow)
+- [Prettier Error Flow](#prettier-error-flow)
+- [Metrics Derived from Error Events](#metrics-derived-from-error-events)
 - [Build Summary Integration](#build-summary-integration)
 - [File Locations](#file-locations)
 
@@ -27,200 +22,140 @@ dependencies: []
 
 ## Overview
 
-The error observability system tracks Twoslash and Prettier errors that
-occur during code block processing in API documentation. It uses Effect
-Metric counters for aggregate tracking and console output for inline
-error reporting.
+Twoslash and Prettier errors that occur during code-block processing are
+reported as **`PluginEvent` variants** through the EventBus, not as direct
+metric increments. Error events fan out synchronously to all registered sinks:
+the console sink logs a human-readable line (at `warn` level), the metrics sink
+increments the relevant `BuildMetrics` counters, and — when the trace artifact
+is enabled — the trace sink writes the full payload to JSONL.
 
-### Key Features
-
-- **Effect Metric counters** for Twoslash and Prettier error totals
-- **Inline console logging** when errors occur (immediate feedback)
-- **Aggregate summary** in `logBuildSummary` at build end
-- **Non-fatal errors** -- build continues, errors are informational
-
-### What Was Deleted
-
-The following files were removed during the Effect migration:
-
-- `twoslash-error-stats.ts` -- `TwoslashErrorStatsCollector` class with
-  multi-dimensional tracking (by error code, file, API, version)
-- `prettier-error-stats.ts` -- `PrettierErrorStatsCollector` class
-
-The new system is simpler: it counts errors via Effect Metrics and logs
-them inline. The multi-dimensional breakdown (by error code, by file,
-by API) was removed as unnecessary complexity.
-
-### What Are Twoslash Errors?
-
-Twoslash is a TypeScript-powered documentation tool that adds type
-information to code blocks. When Twoslash encounters TypeScript compiler
-errors (like `TS2440`), it reports them as "errors". These are **not
-build failures** -- they are warnings that Twoslash could not fully
-type-check a code example. Common causes:
-
-- Intentional type errors in examples
-- Missing `@errors` annotations for expected errors
-- Incomplete code examples (for brevity)
-- Type definition conflicts between packages
+Errors are **non-fatal**: the build continues and the affected code block
+renders without Twoslash enhancements.
 
 ---
 
-## Architecture
+## Error Event Variants
 
-### Error Tracking Flow
+Three variants in `PluginEvent` (`plugin/src/observability/events.ts`) cover
+code-block errors:
 
-```text
-Code block processing (remark plugin or page generator)
-    |
-    +-> Shiki with Twoslash transformer
-    |   |
-    |   +-> onTwoslashError callback
-    |       |
-    |       +-> Effect.runSync(
-    |       |     Metric.increment(BuildMetrics.twoslashErrors)
-    |       |   )
-    |       +-> console.error(`Twoslash error: ${msg}`)
-    |
-    +-> Prettier formatting
-        |
-        +-> catch block
-            |
-            +-> Effect.runSync(
-            |     Metric.increment(BuildMetrics.prettierErrors)
-            |   )
-            +-> console.error(`Prettier error: ${msg}`)
+| Variant | Level | Purpose |
+| ------- | ----- | ------- |
+| `TwoslashDiagnostic` | `"warn"` | A TypeScript diagnostic from Twoslash. Carries `file`, `line`, `col`, `code` (TS error number), `message`, `snippet`. |
+| `TwoslashCheckFailed` | `"trace"` | Environment snapshot emitted alongside every `TwoslashDiagnostic`. Carries `fsMapKeys` (VFS key list) and `compilerOptions` (JSON string) for offline reproduction. |
+| `PrettierError` | `"warn"` | A formatting failure from Prettier. Carries `file` and `reason`. |
 
-afterBuild hook (plugin.ts)
-    |
-    +-> logBuildSummary reads metric values
-    +-> Logs aggregate error count if > 0
-```
-
-### Why Effect.runSync?
-
-The Twoslash `onTwoslashError` callback runs inside Shiki's transformer
-pipeline, which is not an Effect fiber. To increment the Effect Metric
-counter from this synchronous callback context, `Effect.runSync` is used:
-
-```typescript
-onTwoslashError: (error: unknown, _code: string): void => {
-  Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
-  const errorMsg = error instanceof Error
-    ? error.message : String(error);
-  console.error(`Twoslash error: ${errorMsg}`);
-},
-```
-
-This is safe because `Metric.increment` is a pure synchronous operation
-that does not require asynchronous resources.
+`ShikiError` also exists in the taxonomy but is not currently mapped to a
+counter by the metrics sink (hits the `default` branch).
 
 ---
 
-## Twoslash Error Handling
+## Twoslash Error Flow
 
-### Location: `twoslash-transformer.ts`
+The Twoslash transformer (`plugin/src/twoslash-transformer.ts`) runs inside a
+synchronous Shiki callback, outside any Effect fiber. It stores a module-level
+`emitEvent` variable (default: no-op) that `plugin.ts` wires via
+`setEventEmitter(emitSync)` right after creating the runtime emitter.
 
-The `TwoslashManager` configures the Twoslash transformer with
-`throws: false` and an `onTwoslashError` callback:
-
-```typescript
-this.transformer = transformerTwoslash({
-  throws: false,
-  onTwoslashError: (error: unknown, _code: string): void => {
-    // Increment Effect Metric counter
-    Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
-    // Log inline for immediate visibility
-    const errorMsg = error instanceof Error
-      ? error.message : String(error);
-    console.error(`Twoslash error: ${errorMsg}`);
-  },
-  // ... other options
-});
-```
-
-### Error Behavior
-
-- **Non-fatal:** The build continues after a Twoslash error
-- **Code block still renders:** The code block is displayed without
-  Twoslash enhancements (no hover tooltips, no type annotations)
-- **Logged inline:** Each error is logged to stderr as it occurs
-- **Counted:** The aggregate count appears in the build summary
-
----
-
-## Prettier Error Handling
-
-### Location: `prettier-formatter.ts`
-
-When Prettier fails to format a code block, the error is caught and
-counted:
+When the Twoslash compiler reports an error, `handleTwoslashError` is called:
 
 ```typescript
-try {
-  formatted = await prettier.format(code, options);
-} catch (error) {
-  Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
-  console.error(`Prettier error: ${error}`);
-  // Fall back to unformatted code
-  formatted = code;
+private handleTwoslashError(error: unknown, _code: string, file: string): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const match = /TS(\d+)/.exec(message);
+  const tsCode = match ? Number(match[1]) : 0;
+
+  emitEvent(PluginEvent.TwoslashDiagnostic({
+    ctx: { buildId: "", file },
+    level: "warn",
+    file, line: 0, col: 0, code: tsCode, message, snippet: "",
+  }));
+
+  emitEvent(PluginEvent.TwoslashCheckFailed({
+    ctx: { buildId: "", file },
+    level: "trace",
+    file, code: tsCode,
+    fsMapKeys: this.vfsKeysSnapshot(),
+    compilerOptions: JSON.stringify(this.compilerOptionsSnapshot()),
+  }));
 }
 ```
+
+Both events are delivered synchronously via `emitEvent` — the sync-island
+bridge `makeRuntimeEmitter` calls `runtime.runSync(emit(event))`. The console
+sink logs the `TwoslashDiagnostic` at `warn` level; the metrics sink increments
+`twoslashDiagnostics` and `twoslashErrors`; the trace sink (if active) writes
+both payloads to the JSONL file, including the VFS keys and compiler options
+snapshot in `TwoslashCheckFailed`.
+
+---
+
+## Prettier Error Flow
+
+The Prettier formatter (`plugin/src/prettier-formatter.ts`) stores the same
+`emitEvent` module-level variable and emits a `PrettierError` from its
+`catch` block:
+
+```typescript
+emitEvent(
+  PluginEvent.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" })
+);
+```
+
+The console sink logs the error at `warn` level; the metrics sink increments
+`prettierErrors`. Formatting falls back to unformatted code.
+
+---
+
+## Metrics Derived from Error Events
+
+The metrics sink (`plugin/src/observability/sinks/metrics-sink.ts`) derives
+error counters from events:
+
+| Event | Counter incremented |
+| ----- | ------------------- |
+| `TwoslashDiagnostic` | `BuildMetrics.twoslashDiagnostics`, `BuildMetrics.twoslashErrors` |
+| `PrettierError` | `BuildMetrics.prettierErrors` |
+
+`twoslashDiagnostics` counts individual diagnostics. `twoslashErrors` counts
+affected code blocks (currently incremented once per diagnostic, same as
+`twoslashDiagnostics`; the distinction is reserved for future aggregation).
+
+`TwoslashCheckFailed` hits the `default` branch of the metrics sink and
+increments no counter — it is captured only by the console sink (at `trace`
+level, i.e. only visible in debug or trace mode) and the JSONL trace.
 
 ---
 
 ## Build Summary Integration
 
-### Aggregate Error Reporting
-
-The `logBuildSummary` program in `ObservabilityLive.ts` reads error
-metrics and logs a summary:
-
-```typescript
-const tsErrors = twoslashErrors.count;
-const prErrors = prettierErrors.count;
-const totalErrors = tsErrors + prErrors;
-
-if (totalErrors > 0) {
-  const errorParts: string[] = [];
-  if (tsErrors > 0) errorParts.push(`${tsErrors} Twoslash`);
-  if (prErrors > 0) errorParts.push(`${prErrors} Prettier`);
-  yield* Effect.logWarning(
-    `${totalErrors} error(s) in code blocks `
-    + `(${errorParts.join(", ")})`
-  );
-}
-```
-
-### Example Output
-
-No errors:
-
-```text
-(no error line in summary)
-```
-
-With errors:
+`logBuildSummary` (`plugin/src/layers/ObservabilityLive.ts`) reads error
+metric snapshots at the end of `afterBuild`:
 
 ```text
 [15:23:47] 3 error(s) in code blocks (2 Twoslash, 1 Prettier)
 ```
+
+No error line is printed when both counters are zero.
 
 ---
 
 ## File Locations
 
 | File | Purpose |
-| --- | --- |
-| `layers/ObservabilityLive.ts` | `BuildMetrics.twoslashErrors`, `BuildMetrics.prettierErrors`, `logBuildSummary` |
-| `twoslash-transformer.ts` | `onTwoslashError` callback with `Effect.runSync` |
-| `prettier-formatter.ts` | Prettier error catch with `Effect.runSync` |
+| ---- | ------- |
+| `src/observability/events.ts` | `TwoslashDiagnostic`, `TwoslashCheckFailed`, `PrettierError`, `ShikiError` variants |
+| `src/observability/sinks/metrics-sink.ts` | Maps error events to `BuildMetrics` counters |
+| `src/observability/sinks/console-sink.ts` | Renders error events as human-readable lines |
+| `src/observability/sinks/trace-sink.ts` | Captures full error payloads (incl. VFS snapshot) to JSONL |
+| `src/twoslash-transformer.ts` | Emits `TwoslashDiagnostic` + `TwoslashCheckFailed` via `emitEvent` |
+| `src/prettier-formatter.ts` | Emits `PrettierError` via `emitEvent` |
+| `src/layers/build-metrics.ts` | `twoslashDiagnostics`, `twoslashErrors`, `prettierErrors` counters |
+| `src/layers/ObservabilityLive.ts` | `logBuildSummary` reads error counters |
 
 ---
 
 ## Related Documentation
 
-- **Performance Observability:**
-  `performance-observability.md` -- Full metrics and logging system
-- **Build Architecture:**
-  `build-architecture.md` -- Plugin structure and service layer
+- **Performance Observability:** `performance-observability.md` — full EventBus and sink architecture
+- **Build Architecture:** `build-architecture.md` — plugin structure and service layer

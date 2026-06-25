@@ -1,5 +1,3 @@
-import type { PipelineError } from "./errors.js";
-
 /**
  * A callable interface that transforms a value from one type to another.
  *
@@ -44,7 +42,7 @@ export interface DataSink<T> {
 	 *
 	 * @param data - The record to write.
 	 * @returns A promise that resolves when the write is committed.
-	 * @throws {@link PipelineError} if the sink is closed or the write fails.
+	 * @throws `PipelineError` if the sink is closed or the write fails.
 	 */
 	write(data: T): Promise<void>;
 
@@ -61,7 +59,7 @@ export interface DataSink<T> {
  *
  * @remarks
  * All properties are optional. Omitted values fall back to their documented
- * defaults, which are also exported as {@link DEFAULT_PIPELINE_OPTIONS}.
+ * defaults, which are also exported as `DEFAULT_PIPELINE_OPTIONS`.
  *
  * @public
  */

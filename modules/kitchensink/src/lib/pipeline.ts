@@ -156,11 +156,6 @@ export class Pipeline<In, Out> {
 		return this._batchSize;
 	}
 
-	/**
-	 * Sets the maximum number of records per batch.
-	 *
-	 * @param value - A positive integer. Values less than `1` are clamped to `1`.
-	 */
 	set batchSize(value: number) {
 		this._batchSize = Math.max(1, value);
 	}
@@ -171,7 +166,7 @@ export class Pipeline<In, Out> {
 	 *
 	 * @remarks
 	 * This method bypasses the async execution lifecycle — it does not update
-	 * {@link Pipeline.status} and does not throw {@link PipelineError} on failure.
+	 * {@link Pipeline.status} and does not throw `PipelineError` on failure.
 	 * Migrate call sites to {@link Pipeline.execute} which provides proper
 	 * lifecycle management and error handling.
 	 *
@@ -201,7 +196,7 @@ export class Pipeline<In, Out> {
 	 * @param input - The input record to process.
 	 * @returns A promise that resolves with the transformed output.
 	 *
-	 * @throws {@link PipelineError} if the transform function throws or if the
+	 * @throws `PipelineError` if the transform function throws or if the
 	 *   pipeline is in a terminal {@link PipelineStatus.Failed} state.
 	 *
 	 * @example
@@ -242,7 +237,7 @@ export class Pipeline<In, Out> {
 	 *
 	 * @remarks
 	 * Each input is processed via an independent call to {@link Pipeline.execute},
-	 * so individual failures throw {@link PipelineError} and short-circuit the
+	 * so individual failures throw `PipelineError` and short-circuit the
 	 * entire batch via `Promise.all` semantics. For fault-tolerant parallel
 	 * processing, use `Promise.allSettled` on individual `execute` calls instead.
 	 *
@@ -253,7 +248,7 @@ export class Pipeline<In, Out> {
 	 * @returns A promise that resolves with an array of transformed outputs in the
 	 *   same order as `inputs`.
 	 *
-	 * @throws {@link PipelineError} if any individual execution fails.
+	 * @throws `PipelineError` if any individual execution fails.
 	 *
 	 * @example
 	 * ```typescript

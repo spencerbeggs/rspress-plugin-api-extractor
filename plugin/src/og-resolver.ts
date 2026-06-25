@@ -1,7 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { imageSizeFromFile } from "image-size/fromFile";
+import type { PluginEvent } from "./observability/events.js";
+import { PluginEvent as PE } from "./observability/events.js";
 import type { OpenGraphImageConfig, OpenGraphImageMetadata, OpenGraphMetadata } from "./schemas/index.js";
+
+/** Module-level emitter injected by plugin.ts at startup. */
+let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
+export function setOgResolverEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+	emitEvent = fn;
+	currentBuildId = buildId;
+}
 
 /**
  * MIME type mappings for common image formats.
@@ -144,7 +154,15 @@ export class OpenGraphResolver {
 		// Resolve the main URL
 		const resolvedUrl = this.resolveUrl(url);
 		if (!resolvedUrl) {
-			console.warn(`[og-resolver] Invalid ogImage URL format: "${url}"`);
+			emitEvent(
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
+					field: "ogImage.url",
+					value: url,
+					reason: "invalid URL format",
+					level: "warn",
+				}),
+			);
 			return undefined;
 		}
 
@@ -154,7 +172,15 @@ export class OpenGraphResolver {
 			if (secureUrl.startsWith("https://")) {
 				resolvedSecureUrl = secureUrl;
 			} else {
-				console.warn(`[og-resolver] ogImage secureUrl must be an absolute HTTPS URL: "${secureUrl}"`);
+				emitEvent(
+					PE.ConfigValidationWarning({
+						ctx: { buildId: currentBuildId },
+						field: "ogImage.secureUrl",
+						value: secureUrl,
+						reason: "secureUrl must be absolute HTTPS",
+						level: "warn",
+					}),
+				);
 			}
 		}
 
@@ -190,8 +216,14 @@ export class OpenGraphResolver {
 		// Resolve URL
 		const resolvedUrl = this.resolveUrl(imageUrl);
 		if (!resolvedUrl) {
-			console.warn(
-				`[og-resolver] Invalid ogImage format: "${imageUrl}" (must be absolute URL or path starting with /)`,
+			emitEvent(
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
+					field: "ogImage",
+					value: imageUrl,
+					reason: "invalid URL format",
+					level: "warn",
+				}),
 			);
 			return undefined;
 		}
@@ -271,7 +303,15 @@ export class OpenGraphResolver {
 				...(mimeType != null ? { type: mimeType } : {}),
 			};
 		} catch (error) {
-			console.warn(`[og-resolver] Failed to read image dimensions from ${filePath}:`, (error as Error).message);
+			emitEvent(
+				PE.ConfigValidationWarning({
+					ctx: { buildId: currentBuildId },
+					field: "ogImage",
+					value: filePath,
+					reason: (error as Error).message ?? String(error),
+					level: "warn",
+				}),
+			);
 			return undefined;
 		}
 	}

@@ -15,6 +15,7 @@ export {
 	ThemeConfig,
 	VersionConfig,
 } from "./config.js";
+export { EventLevelSchema, ObservabilityConfig, resolveObservability } from "./observability.js";
 export {
 	OpenGraphImageConfig,
 	OpenGraphImageMetadata,
