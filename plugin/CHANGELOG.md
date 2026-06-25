@@ -1,5 +1,70 @@
 # rspress-plugin-api-extractor
 
+## 0.3.0
+
+### Features
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) Auto-detection of external package types now includes runtime `dependencies` by default, not just `peerDependencies`.
+
+- A documented package's public type surface is usually written against its runtime dependencies (for example an Effect-based API whose options are `Schema.Struct<…>` from `effect`). Those declarations must be in the virtual file system for Twoslash to resolve them in `with-api` examples and signatures. Previously only `peerDependencies` and the type-utility packages were fetched, so types from regular `dependencies` were missing.
+- `autoDetectDependencies.dependencies` now defaults to `true`. `devDependencies` remains `false` and `peerDependencies` / `autoDependencies` remain `true`. Set `dependencies: false` to restore the previous peer-only behavior.
+- Workspace-only and unpublished dependencies that cannot be resolved to a published version are dropped during loading, so broadening the default does not fail the build on local packages.
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) ### Observability config block
+
+A new top-level `observability` option consolidates all build-output controls into one place.
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) External package types now load reliably for documentation code examples.
+
+- Auto-detected external package versions are resolved to exact published versions before their types are fetched. The type-registry CDN requires an exact version and rejected semver ranges (e.g. `^4.1.0`) and npm tags, which silently emptied the type VFS and broke Twoslash hover and type-checking across every example.
+- Workspace-only and unpublished packages are now skipped instead of failing the whole batch. A package whose version cannot be resolved to a published release is dropped, so one local dependency no longer prevents all external types from loading.
+- `.d.ts` reconstruction no longer emits invalid declarations for arrow-function consts (e.g. `name: (args) => ret`) that API Extractor reports as functions. These were written without the `const` keyword, producing parse errors that corrupted type resolution in the virtual file system.
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) Restored single-sourced build logging for external type loading. type-registry-effect v1 surfaces typed events instead of writing logs; the plugin now forwards those events to its own logger, so external-type progress is reported once in the plugin's configured format and log level. Previously the same operations were printed twice — once by the plugin runtime and once by a separate default-logger runtime.
+
+```ts
+import { ApiExtractorPlugin } from "rspress-plugin-api-extractor";
+
+export default ApiExtractorPlugin({
+  observability: {
+    logLevel: "info", // "none" | "error" | "warn" | "info" | "debug" | "trace"
+    trace: true, // write a JSONL trace artifact; or pass a custom path string
+    thresholds: {
+      slowCodeBlock: 100, // ms — slow code-block threshold for build summary
+      slowPageGeneration: 500,
+    },
+  },
+  // ...
+});
+```
+
+* **`logLevel`** — `none | error | warn | info | debug | trace` level ladder. Filters console output. The `LOG_LEVEL` environment variable takes precedence when set.
+* **`trace`** — opt-in JSONL trace artifact. Pass `true` to write to `<outDir>/.api-extractor/trace-<buildId>.jsonl`, or a string path to write to a custom location. Useful for diagnosing slow builds — every plugin event is recorded at full fidelity, independent of the console log level.
+* **`thresholds`** — slow-operation thresholds (ms) for the build summary: `slowCodeBlock`, `slowPageGeneration`, `slowApiLoad`, `slowFileOperation`, `slowHttpRequest`, `slowDbOperation`. Defaults are 100 ms for code blocks, 500 ms for pages, and so on.
+
+The build summary now reports per-phase timing and previously-unreported counts (LLMs post-processing, snapshot commits, stale-file deletions).
+
+### Bug Fixes
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) First-party packages (the ones being documented) are no longer fetched as external types. Their declarations come from their own generated virtual file system, which is authoritative — fetching a published version (when one exists) would overwrite the model-derived declarations, and when it does not exist (for example an optimistic next version) it produced a stream of 404 warnings. Documented package names are now excluded from external auto-detection.
+* A single non-2xx fetch is now reported at debug rather than warning. These are routinely handled (an unpublished or workspace dependency that is then dropped); a package that genuinely fails to load is still reported at warning.
+
+### Bug Fixes
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) External package types now load reliably for documentation code examples.
+
+- | [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) | Dependency | Type    | Action | From   | To |
+  | :------------------------------------------------------------------------------------------------------------------------ | :--------- | :------ | :----- | :----- | -- |
+  | type-registry-effect                                                                                                      | dependency | updated | ^0.2.3 | ^1.0.0 |    |
+
+### Bug Fixes
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) Restored single-sourced build logging for external type loading. type-registry-effect v1 surfaces typed events instead of writing logs; the plugin now forwards those events to its own logger, so external-type progress is reported once in the plugin's configured format and log level. Previously the same operations were printed twice — once by the plugin runtime and once by a separate default-logger runtime.
+
+### Performance
+
+* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) External package types are now fetched once per build. Previously the build fetched the external type VFS twice — once to assemble the combined VFS, and again inside a TypeScript-environment pre-build that Twoslash discarded. The redundant fetch and pre-build are removed.
+
 ## 0.2.2
 
 ### Dependencies
