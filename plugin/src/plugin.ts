@@ -99,7 +99,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	const effectRuntime = ManagedRuntime.make(EffectAppLayer);
 	const emitSync = makeRuntimeEmitter(effectRuntime);
 	setEventEmitter(emitSync, buildId);
-	setLoaderEventEmitter(emitSync);
+	setLoaderEventEmitter(emitSync, buildId);
 	setShikiUtilsEventEmitter(emitSync, buildId);
 	setPrettierEventEmitter(emitSync, buildId);
 	setOgResolverEventEmitter(emitSync, buildId);

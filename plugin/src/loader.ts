@@ -18,8 +18,10 @@ import type { CategoryConfig, SourceConfig } from "./schemas/index.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
-export function setLoaderEventEmitter(fn: (event: PluginEvent) => void): void {
+let currentBuildId = "";
+export function setLoaderEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
 	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 /**
@@ -115,7 +117,7 @@ export class ApiParser {
 			if (!categorized && typeof process !== "undefined" && !process.env.VITEST) {
 				emitEvent(
 					PE.ItemSkipped({
-						ctx: { buildId: "" },
+						ctx: { buildId: currentBuildId },
 						item: member.displayName,
 						kind: String(member.kind),
 						reason: "uncategorized",
