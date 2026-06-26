@@ -1,5 +1,25 @@
 # rspress-plugin-api-extractor
 
+## 0.3.2
+
+### Bug Fixes
+
+* [`9aa4fe4`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/9aa4fe43b145cfd95f2625a80865f0ed7b51106b) Abstract classes are now reconstructed with the `abstract` modifier on the class
+  header. Previously the modifier was dropped while abstract members were kept,
+  producing `TS1244`/`TS1253` ("abstract member in a non-abstract class") errors in
+  the generated Twoslash VFS declarations. The modifier is also preserved for
+  abstract classes nested inside namespaces.
+
+- [`9aa4fe4`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/9aa4fe43b145cfd95f2625a80865f0ed7b51106b) Fixes spurious `TS2353 "X does not exist in type"` Twoslash errors on valid nested-struct fields in API doc code blocks for packages that use Effect Schema companion types (the `const T + type T` pattern). The type reference extractor now imports the namespace root (e.g., `Schema`) rather than a leaf member (e.g., `Struct`), matching the qualified form used in reconstructed `.d.ts` declarations. Previously, importing only the leaf left the namespace identifier undefined, causing companion types like `type T = typeof T.Type` to collapse to an error type in hover rendering.
+
+* [`9aa4fe4`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/9aa4fe43b145cfd95f2625a80865f0ed7b51106b) Reference tokens carrying a dts-rollup disambiguation suffix (e.g.
+  `CoverageLevelName$1`, emitted when a symbol is re-imported under an alias) are
+  now reconstructed using their canonical, un-suffixed name. The prepended import
+  uses the canonical name, so emitting the suffixed form previously left the
+  identifier undefined (`TS2304`) in the generated Twoslash VFS declarations. The
+  suffix is only stripped when the de-suffixed text matches the token's canonical
+  symbol, so identifiers that genuinely end in `$N` are left untouched.
+
 ## 0.3.1
 
 ### Dependencies
