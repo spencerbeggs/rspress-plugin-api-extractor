@@ -77,8 +77,8 @@ importers:
   .:
     devDependencies:
       '@savvy-web/silk':
-        specifier: ^1.3.3
-        version: 1.3.3(2adb4d2bf02b3270dee5e9c9fdabd4bc)
+        specifier: ^1.3.4
+        version: 1.3.4(823a414987928461a1b53f7ec25b81b7)
       '@vitest-agent/plugin':
         specifier: ^1.0.0
         version: 1.0.0(76297481c6e6991bfe14258a98ef3d2c)
@@ -90,8 +90,8 @@ importers:
         version: 3.21.4
     devDependencies:
       '@savvy-web/bundler':
-        specifier: ^0.11.0
-        version: 0.11.0(5ae97819d19dc533096dc16227579519)
+        specifier: ^0.11.1
+        version: 0.11.1(5ae97819d19dc533096dc16227579519)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.1
@@ -106,8 +106,8 @@ importers:
   modules/kitchensink:
     devDependencies:
       '@savvy-web/bundler':
-        specifier: ^0.11.0
-        version: 0.11.0(5ae97819d19dc533096dc16227579519)
+        specifier: ^0.11.1
+        version: 0.11.1(5ae97819d19dc533096dc16227579519)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.1
@@ -122,8 +122,8 @@ importers:
   modules/versioned-v1:
     devDependencies:
       '@savvy-web/bundler':
-        specifier: ^0.11.0
-        version: 0.11.0(5ae97819d19dc533096dc16227579519)
+        specifier: ^0.11.1
+        version: 0.11.1(5ae97819d19dc533096dc16227579519)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.1
@@ -138,8 +138,8 @@ importers:
   modules/versioned-v2:
     devDependencies:
       '@savvy-web/bundler':
-        specifier: ^0.11.0
-        version: 0.11.0(5ae97819d19dc533096dc16227579519)
+        specifier: ^0.11.1
+        version: 0.11.1(5ae97819d19dc533096dc16227579519)
       '@types/node':
         specifier: ^26.0.0
         version: 26.0.1
@@ -227,8 +227,8 @@ importers:
         specifier: ^2.0.15
         version: 2.0.15(@rspack/core@2.0.8(@swc/helpers@0.5.23))(@types/mdast@4.0.4)(@types/react@19.2.17)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@savvy-web/rspress-builder':
-        specifier: ^0.11.0
-        version: 0.11.0(5edcab3ef471ee24f9f39df5997b0001)
+        specifier: ^0.11.1
+        version: 0.11.1(5edcab3ef471ee24f9f39df5997b0001)
       '@tsdown/css':
         specifier: ^0.22.2
         version: 0.22.3(jiti@2.6.1)(postcss@8.5.15)(tsdown@0.22.3)(yaml@2.9.0)
@@ -1262,8 +1262,8 @@ packages:
   '@rushstack/ts-command-line@5.3.10':
     resolution: {integrity: sha512-fwI076HYknC0IrMXdY6UmjDv+PH7NHhNJX3/pY2UblSE5XrXgndXZPiOe/6ZtuFpn6DvVDVNhtkIzQ+Qu/MhVQ==}
 
-  '@savvy-web/bundler@0.11.0':
-    resolution: {integrity: sha512-d6uBICQgvsRv/Ybpl6ro/QFx5GTTPS6U24Cb5iIJnY7d1s/1JD+RCCLsXi+f5c04wBFeQe8B3Oslk6A3jhnrlw==}
+  '@savvy-web/bundler@0.11.1':
+    resolution: {integrity: sha512-DpAlYsJcs/P27jHapau2JlzvExvH6+AgfZQdsy/XtdEPUf9R06D9FMRzIxXGUD8X+FvNpwboraqiTzTxDeZA/Q==}
     peerDependencies:
       '@types/node': ^26.0.0
       '@types/react': ^19.2.0
@@ -1282,16 +1282,16 @@ packages:
       react-dom:
         optional: true
 
-  '@savvy-web/cli@1.3.3':
-    resolution: {integrity: sha512-iV05gkAvdefs8HxGTK3C2OE0PbKyC2CsYtH+vjAPSXnMwhS0hLKeUxCOyJWk3eJgforpMQvbPodxpYg6FOISiA==}
+  '@savvy-web/cli@1.3.4':
+    resolution: {integrity: sha512-+ZiHXjCiS5QHZtDAaxRlz7w/eiuwu7Q710adWcUUT6hdhQP3mWx3C3+neZvk2C9CgLYkSLX0HOBUjB3EJedjAw==}
     hasBin: true
 
-  '@savvy-web/mcp@1.3.3':
-    resolution: {integrity: sha512-iWGsglri4OyeRvTqAeyWPA+0ICkpc9SPx28KMQCZCZAsBPB7X5Dp3NWAewudoNYr8ERkU4ALklLn7vQDDMj+PQ==}
+  '@savvy-web/mcp@1.3.4':
+    resolution: {integrity: sha512-Oemf5C5Oydeof6jBPtrz3EqWn6OofEMp3aUN2Z511lSUKaFpFo379jusd2KPUYSWRJNIpsqDnUi9Mbs8I277zQ==}
     hasBin: true
 
-  '@savvy-web/rspress-builder@0.11.0':
-    resolution: {integrity: sha512-p6TqBPk5gxRbRtf2Qctur70xBUp0EVEBNjf5D87LpDjzbucdUNHtloJN7/cWD3WZwbPuMo63i2P1QeQawmvpew==}
+  '@savvy-web/rspress-builder@0.11.1':
+    resolution: {integrity: sha512-0v5cUMJoXLPVh8jk/WsCpKewbzjwXsFlOoysZ5BzEkObyPNoZSmmtPWcwOsd+oUYwz7OcTXUwStRJxmf8NmC4g==}
     peerDependencies:
       '@rspress/core': ^2.0.0
       '@types/node': ^26.0.0
@@ -1302,21 +1302,21 @@ packages:
       react-dom: ^19.2.0
       typescript: ^6.0.0
 
-  '@savvy-web/silk-effects@1.5.0':
-    resolution: {integrity: sha512-bqW6Ubb7/AZ24xL/jY3H+PFrd+TDQozrvLZqxIOyX6rJv86+NN+e5A46vhoQ7mGiwg6FGXvUj+nsQzDrU2LDwA==}
+  '@savvy-web/silk-effects@1.5.1':
+    resolution: {integrity: sha512-dPSzT8nd2YbG39Ow+OaWwv6dAl5b7aBeORjVRh64wcUiWPnacmShpkUmduWEUXpbU8CrzBo9IjtJ8a9DrGQoVA==}
     peerDependencies:
       '@effect/platform': '>=0.96.0'
       effect: '>=3.21.0'
 
-  '@savvy-web/silk@1.3.3':
-    resolution: {integrity: sha512-LNZzfdJCRW+fUKJY3hb6nwu1CnijthOqzjDijn1CJaWDxDdeEoHFppnWlyU8e2YCXPak16QlEhfBXYt4tYyshg==}
+  '@savvy-web/silk@1.3.4':
+    resolution: {integrity: sha512-mjNO3WCUFGK9nP9eEtgv7h1hD4oYC6cRbVe/g0/4CNaEm7LeyEodrs/p15qGZuoqkOsCWkOzdVu81tpGxTgi5w==}
     peerDependencies:
       '@biomejs/biome': ~2.5.0
       '@changesets/cli': ^2.31.0
       '@commitlint/cli': ^21.0.1
       '@commitlint/config-conventional': ^21.0.2
-      '@savvy-web/cli': 1.3.3
-      '@savvy-web/mcp': 1.3.3
+      '@savvy-web/cli': 1.3.4
+      '@savvy-web/mcp': 1.3.4
       '@types/node': ^26.0.0
       '@typescript/native-preview': ^7.0.0-dev.20260612.1
       commitizen: ^4.3.0
@@ -1335,52 +1335,28 @@ packages:
     peerDependencies:
       effect: '>=3.21.0'
 
-  '@shikijs/core@4.2.0':
-    resolution: {integrity: sha512-Hc87Ab1Ld/vEbZRCbwx344I5v+4RU8CVToUTRkqXL1+TjbuOp9U5Xa0M23V4GEWHxVn+yO5otb+HkQVm3ptWQQ==}
-    engines: {node: '>=20'}
-
   '@shikijs/core@4.3.0':
     resolution: {integrity: sha512-EooU3i9F6IAE8kEu+AnGf9DFZWkQBZ+hJn3tLVbsH+61mtQiva5biai66fAA6nvFPXkLgvrh7BrR7YcJU83xQQ==}
-    engines: {node: '>=20'}
-
-  '@shikijs/engine-javascript@4.2.0':
-    resolution: {integrity: sha512-fjETeq1k5ffyXqRgS6+3hpvqseLalp1kjNfRbXpUgWR8FpZ1CmQfiNHovc5lncYjt/Vg5JK/WJEmLahjwMa0og==}
     engines: {node: '>=20'}
 
   '@shikijs/engine-javascript@4.3.0':
     resolution: {integrity: sha512-hTv/KiFf2tpiqlACPiztGGurEARWIutB8YUhcrA1pUC7VzzwKO+g5crUocrLztrZ5ro5Z4hbXg7bYclETn3gSQ==}
     engines: {node: '>=20'}
 
-  '@shikijs/engine-oniguruma@4.2.0':
-    resolution: {integrity: sha512-hTorK1dffPkpbMUk6Z+828PgRo7d07HbnizoP0hNPFjhxMHctj0Px/qoHeGMYafc6ju+u9iMldN4JbVzNQM++g==}
-    engines: {node: '>=20'}
-
   '@shikijs/engine-oniguruma@4.3.0':
     resolution: {integrity: sha512-1vMdN3gHfnKfLYwecUI2ITJI4RhHt96xEaJumVn7Heb0IlJ8WQMIH0Voak+2j22BpSNKdnOfB/pCTPnPm2gq7A==}
-    engines: {node: '>=20'}
-
-  '@shikijs/langs@4.2.0':
-    resolution: {integrity: sha512-bwrVRlJ0wUhZxAbVdvBbv2TTC9yLsh4C/IO5Ofz0T8MQntgDvyVnkbjw9vi50r1kx7RCIJdnJnjZAwmAsXFLZQ==}
     engines: {node: '>=20'}
 
   '@shikijs/langs@4.3.0':
     resolution: {integrity: sha512-rnlqFbBRSys9bT4gl/5rw9RnS0W/I84ZldXPkO7cvlEMoV85TyF/aU01N7/NbSR776RNLjrJKjfFUXJR6wN1Cg==}
     engines: {node: '>=20'}
 
-  '@shikijs/primitive@4.2.0':
-    resolution: {integrity: sha512-NOq+DtUkVBJtZMVXL5A0vI0Xk8nvDYaXetFHSJFlOqjDZIVhIPRYFdGkSoElDqNuegikcc3A76SNUa8dTqtAYA==}
-    engines: {node: '>=20'}
-
   '@shikijs/primitive@4.3.0':
     resolution: {integrity: sha512-CPkz64PTa5diRW1ggzMZH9VM/du4RNChYgVtgqrFcgruvIybmCvySv8GkiHSczUHXYuuR8TdKEwFx+UnZMpgdg==}
     engines: {node: '>=20'}
 
-  '@shikijs/rehype@4.2.0':
-    resolution: {integrity: sha512-ST3EWye/dwF1gWskczJNBnwFtDzEQ9ceytXZtyc/GfwR5V0qJrkoSGZO55O3SAKDDsXkTDcsfwd9pVe7ROlAHg==}
-    engines: {node: '>=20'}
-
-  '@shikijs/themes@4.2.0':
-    resolution: {integrity: sha512-RX8IHYeLv8Cu2W6ruc3RxUqWn0IYCqSrMBzi/uRGAmfyDNOnNO5BF/Px7o97n4XTpmFTo5GbRaazuOWj+2ak2w==}
+  '@shikijs/rehype@4.3.0':
+    resolution: {integrity: sha512-1kk1N9scCNHeAtJICq0Me5rUxawKN+aGIlm8PZZ68zr4unYPnD3goHZ+HyPwSwbsRkT/OXkcY1JifKBH/FG88g==}
     engines: {node: '>=20'}
 
   '@shikijs/themes@4.3.0':
@@ -1392,10 +1368,6 @@ packages:
     engines: {node: '>=20'}
     peerDependencies:
       typescript: '>=5.5.0'
-
-  '@shikijs/types@4.2.0':
-    resolution: {integrity: sha512-VT/MKtlpOhEPZloSH3Pb9WCZEBDoQVMa9jedp5UAwmJOar1DVc9DRODAxmYPW9M93IK4ryuqRejFfmlvlVDemw==}
-    engines: {node: '>=20'}
 
   '@shikijs/types@4.3.0':
     resolution: {integrity: sha512-oc8b9U2SYvofKZk8e/737nIX0qwf6eV2vHFATeObAu7r+mUVpLs8Re0BmVkIjAWAYgkmG/CzLNo7rzuBzRu/wQ==}
@@ -3579,8 +3551,8 @@ packages:
     resolution: {integrity: sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw==}
     hasBin: true
 
-  node-releases@2.0.49:
-    resolution: {integrity: sha512-f06bl1D+8ZDkn2oOQQKAh5/otFWqVnM1Q5oerA8Pex7UfT66Tx4IPHIqVVFKqFT3FUtaDstdgkM7yT7JWhqxfw==}
+  node-releases@2.0.50:
+    resolution: {integrity: sha512-J6l92tKHX6w8Jy5nO1Vuc01NoIiRGi/d6qBKVxh+IQ8Cr3b6HbVNfKiF8ZpFKufTwpwxMmce2W3iQZ861ZRyTg==}
     engines: {node: '>=18'}
 
   nprogress@0.2.0:
@@ -4113,13 +4085,9 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.4:
-    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
+  shell-quote@1.9.0:
+    resolution: {integrity: sha512-Iov+JwFv/2HcTpcwNMKd8+IWNb8tboQJNQTkAY/LLVK7gGH9jy+LGkVqPxfekHl+yMmiqXszdGWXgkfml7hjqA==}
     engines: {node: '>= 0.4'}
-
-  shiki@4.2.0:
-    resolution: {integrity: sha512-hjNax6o/ylDy9lefQEaSDtzaT3iVNtZ3WmpQnbuQNoG4xvnSKf2kSKbihZVO4JRG1TTMejs7CmNRYlWgAL66pQ==}
-    engines: {node: '>=20'}
 
   shiki@4.3.0:
     resolution: {integrity: sha512-NKKjWzR6LIGL3sXBrWDw9sDS9cxx42/DkysaNqJEeOWE8Kix5gpak0bc00OfDVEO4oyXSyz8+aRaqKoBD1yo7A==}
@@ -5729,7 +5697,7 @@ snapshots:
       '@rsbuild/core': 2.0.15
       '@rsbuild/plugin-react': 2.0.1(@rsbuild/core@2.0.15)(@rspack/core@2.0.8(@swc/helpers@0.5.23))
       '@rspress/shared': 2.0.15
-      '@shikijs/rehype': 4.2.0
+      '@shikijs/rehype': 4.3.0
       '@types/unist': 3.0.3
       '@unhead/react': 2.1.15(react@19.2.7)
       body-scroll-lock: 4.0.0-beta.0
@@ -5775,7 +5743,7 @@ snapshots:
   '@rspress/shared@2.0.15':
     dependencies:
       '@rsbuild/core': 2.0.15
-      '@shikijs/rehype': 4.2.0
+      '@shikijs/rehype': 4.3.0
       unified: 11.0.5
     transitivePeerDependencies:
       - '@module-federation/runtime-tools'
@@ -5820,7 +5788,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@savvy-web/bundler@0.11.0(5ae97819d19dc533096dc16227579519)':
+  '@savvy-web/bundler@0.11.1(5ae97819d19dc533096dc16227579519)':
     dependencies:
       '@savvy-web/tsdown-plugins': 0.11.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.1)(effect@3.21.4)
       '@tsdown/exe': 0.22.3(tsdown@0.22.3)
@@ -5853,7 +5821,7 @@ snapshots:
       - utf-8-validate
       - vue-tsc
 
-  '@savvy-web/cli@1.3.3(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))':
+  '@savvy-web/cli@1.3.4(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))':
     dependencies:
       '@effect/cli': 0.75.2(@effect/platform@0.96.2(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
@@ -5861,7 +5829,7 @@ snapshots:
       '@effect/platform-node': 0.107.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/rpc': 0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@effect/sql': 0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
-      '@savvy-web/silk-effects': 1.5.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
+      '@savvy-web/silk-effects': 1.5.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       effect: 3.21.4
       jsonc-effect: 0.2.1(effect@3.21.4)
       workspaces-effect: 1.2.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -5876,7 +5844,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@savvy-web/mcp@1.3.3(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))':
+  '@savvy-web/mcp@1.3.4(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))':
     dependencies:
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/platform': 0.96.2(effect@3.21.4)
@@ -5884,7 +5852,7 @@ snapshots:
       '@effect/rpc': 0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@effect/sql': 0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
-      '@savvy-web/silk-effects': 1.5.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
+      '@savvy-web/silk-effects': 1.5.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       effect: 3.21.4
       fuse.js: 7.4.2
       workspaces-effect: 1.2.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -5898,10 +5866,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@savvy-web/rspress-builder@0.11.0(5edcab3ef471ee24f9f39df5997b0001)':
+  '@savvy-web/rspress-builder@0.11.1(5edcab3ef471ee24f9f39df5997b0001)':
     dependencies:
       '@rspress/core': 2.0.15(@rspack/core@2.0.8(@swc/helpers@0.5.23))(@types/mdast@4.0.4)(@types/react@19.2.17)(micromark-util-types@2.0.2)(micromark@4.0.2)
-      '@savvy-web/bundler': 0.11.0(5ae97819d19dc533096dc16227579519)
+      '@savvy-web/bundler': 0.11.1(5ae97819d19dc533096dc16227579519)
       '@savvy-web/tsdown-plugins': 0.11.0(@effect/cluster@0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@types/node@26.0.1)(effect@3.21.4)
       '@tsdown/css': 0.22.3(jiti@2.6.1)(postcss@8.5.15)(tsdown@0.22.3)(yaml@2.9.0)
       '@types/node': 26.0.1
@@ -5937,7 +5905,7 @@ snapshots:
       - vue-tsc
       - yaml
 
-  '@savvy-web/silk-effects@1.5.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)':
+  '@savvy-web/silk-effects@1.5.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)':
     dependencies:
       '@changesets/apply-release-plan': 7.1.1
       '@changesets/config': 3.1.4
@@ -5954,7 +5922,7 @@ snapshots:
       remark-parse: 11.0.0
       remark-stringify: 11.0.0
       semver-effect: 0.2.1(effect@3.21.4)
-      shell-quote: 1.8.4
+      shell-quote: 1.9.0
       sort-package-json: 4.0.0
       tinyglobby: 0.2.17
       unified: 11.0.5
@@ -5968,15 +5936,15 @@ snapshots:
       - encoding
       - supports-color
 
-  '@savvy-web/silk@1.3.3(2adb4d2bf02b3270dee5e9c9fdabd4bc)':
+  '@savvy-web/silk@1.3.4(823a414987928461a1b53f7ec25b81b7)':
     dependencies:
       '@changesets/cli': 2.31.0(@types/node@26.0.1)
       '@commitlint/cli': 21.1.0(@types/node@26.0.1)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@commitlint/config-conventional': 21.1.0
       '@effect/platform': 0.96.2(effect@3.21.4)
-      '@savvy-web/cli': 1.3.3(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))
-      '@savvy-web/mcp': 1.3.3(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))
-      '@savvy-web/silk-effects': 1.5.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
+      '@savvy-web/cli': 1.3.4(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))
+      '@savvy-web/mcp': 1.3.4(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))
+      '@savvy-web/silk-effects': 1.5.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@types/node': 26.0.1
       '@typescript/native-preview': 7.0.0-dev.20260624.1
       commitizen: 4.3.2(@types/node@26.0.1)(typescript@6.0.3)
@@ -6017,14 +5985,6 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@shikijs/core@4.2.0':
-    dependencies:
-      '@shikijs/primitive': 4.2.0
-      '@shikijs/types': 4.2.0
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.4
-      hast-util-to-html: 9.0.5
-
   '@shikijs/core@4.3.0':
     dependencies:
       '@shikijs/primitive': 4.3.0
@@ -6033,41 +5993,20 @@ snapshots:
       '@types/hast': 3.0.4
       hast-util-to-html: 9.0.5
 
-  '@shikijs/engine-javascript@4.2.0':
-    dependencies:
-      '@shikijs/types': 4.2.0
-      '@shikijs/vscode-textmate': 10.0.2
-      oniguruma-to-es: 4.3.6
-
   '@shikijs/engine-javascript@4.3.0':
     dependencies:
       '@shikijs/types': 4.3.0
       '@shikijs/vscode-textmate': 10.0.2
       oniguruma-to-es: 4.3.6
 
-  '@shikijs/engine-oniguruma@4.2.0':
-    dependencies:
-      '@shikijs/types': 4.2.0
-      '@shikijs/vscode-textmate': 10.0.2
-
   '@shikijs/engine-oniguruma@4.3.0':
     dependencies:
       '@shikijs/types': 4.3.0
       '@shikijs/vscode-textmate': 10.0.2
 
-  '@shikijs/langs@4.2.0':
-    dependencies:
-      '@shikijs/types': 4.2.0
-
   '@shikijs/langs@4.3.0':
     dependencies:
       '@shikijs/types': 4.3.0
-
-  '@shikijs/primitive@4.2.0':
-    dependencies:
-      '@shikijs/types': 4.2.0
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.4
 
   '@shikijs/primitive@4.3.0':
     dependencies:
@@ -6075,18 +6014,14 @@ snapshots:
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
 
-  '@shikijs/rehype@4.2.0':
+  '@shikijs/rehype@4.3.0':
     dependencies:
-      '@shikijs/types': 4.2.0
+      '@shikijs/types': 4.3.0
       '@types/hast': 3.0.4
       hast-util-to-string: 3.0.1
-      shiki: 4.2.0
+      shiki: 4.3.0
       unified: 11.0.5
       unist-util-visit: 5.1.0
-
-  '@shikijs/themes@4.2.0':
-    dependencies:
-      '@shikijs/types': 4.2.0
 
   '@shikijs/themes@4.3.0':
     dependencies:
@@ -6100,11 +6035,6 @@ snapshots:
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
-
-  '@shikijs/types@4.2.0':
-    dependencies:
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.4
 
   '@shikijs/types@4.3.0':
     dependencies:
@@ -6669,7 +6599,7 @@ snapshots:
       baseline-browser-mapping: 2.10.38
       caniuse-lite: 1.0.30001799
       electron-to-chromium: 1.5.378
-      node-releases: 2.0.49
+      node-releases: 2.0.50
       update-browserslist-db: 1.2.3(browserslist@4.28.4)
 
   buffer@5.7.1:
@@ -8678,7 +8608,7 @@ snapshots:
       detect-libc: 2.1.2
     optional: true
 
-  node-releases@2.0.49: {}
+  node-releases@2.0.50: {}
 
   nprogress@0.2.0: {}
 
@@ -9292,18 +9222,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.4: {}
-
-  shiki@4.2.0:
-    dependencies:
-      '@shikijs/core': 4.2.0
-      '@shikijs/engine-javascript': 4.2.0
-      '@shikijs/engine-oniguruma': 4.2.0
-      '@shikijs/langs': 4.2.0
-      '@shikijs/themes': 4.2.0
-      '@shikijs/types': 4.2.0
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.4
+  shell-quote@1.9.0: {}
 
   shiki@4.3.0:
     dependencies:
