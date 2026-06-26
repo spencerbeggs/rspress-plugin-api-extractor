@@ -1,0 +1,185 @@
+{
+	"version": 1,
+	"refs": [
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/build-architecture.md",
+			"hash": "27f655cd3ce469102625009b3a7395e7eed9f699b181724e3423d00c5c091f14",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/component-development.md",
+			"hash": "ff84cd6d8961d21514ff1c025ab1568c07a9ab806ada6368cf574e1b32ff1343",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md",
+			"hash": "7dfa4af9dfae138765f1187138fcc3a7a87758c6e97cf1e82d17cff1da409ba0",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/error-observability.md",
+			"hash": "181d4c7233240d84051a48256a53f5b4633095493780f14547a2061a6fca5774",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/import-generation-system.md",
+			"hash": "50a38df97021411f1298c4451712e64cf43d4b2ee2a4ac31e362bbcf0a3e42c8",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/llms-integration.md",
+			"hash": "72e1f466c1acb2245cbe03baebaeca7d20c0e66f6d72471465ccb3fa701f9beb",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md",
+			"hash": "2ea7b05c0bfd13165824a5cfa77558890635ca3bd40bb8e7dc12cacd554b361b",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-resolution.md",
+			"hash": "d92cb30abee6078d05ba28897a1a67f8fae8acd88fc30da8277881c5b7da3d9a",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-vfs.md",
+			"hash": "05c6bdaf15f219dbb38bc40a2700038e64b305c0ed3722fdea85294dc25ca880",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/page-generation-system.md",
+			"hash": "818560b65c6a197e30cad99b9694853a90e5fa5c0e8c3f627b07f6fbc98e320f",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/performance-observability.md",
+			"hash": "5271af905d75483923eda50fb64b054b5b15e5962ca87cd9706b997875423eaf",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md",
+			"hash": "b06aacf86d4182c9c57071ac50fcc8de4ced367a4aa0fa151bef1130789d40f8",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/source-mapping-system.md",
+			"hash": "334365ec2a08486e96e78e48d21a7400f725d3b5d7d8e03969e4eaad37e65803",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md",
+			"hash": "afd6b1694f87e9a2b0fdd02dd86129eb5b7629d06469075e1acb95f68be55887",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/type-loading-vfs.md",
+			"hash": "151e227a347cb2803807b5f40cf48c0b79e2a3ce4a8a7c605c7a67f2c1c27f0e",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/build-architecture.md",
+			"hash": "27f655cd3ce469102625009b3a7395e7eed9f699b181724e3423d00c5c091f14",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/component-development.md",
+			"hash": "ff84cd6d8961d21514ff1c025ab1568c07a9ab806ada6368cf574e1b32ff1343",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md",
+			"hash": "7dfa4af9dfae138765f1187138fcc3a7a87758c6e97cf1e82d17cff1da409ba0",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/error-observability.md",
+			"hash": "181d4c7233240d84051a48256a53f5b4633095493780f14547a2061a6fca5774",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/import-generation-system.md",
+			"hash": "50a38df97021411f1298c4451712e64cf43d4b2ee2a4ac31e362bbcf0a3e42c8",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/llms-integration.md",
+			"hash": "72e1f466c1acb2245cbe03baebaeca7d20c0e66f6d72471465ccb3fa701f9beb",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md",
+			"hash": "2ea7b05c0bfd13165824a5cfa77558890635ca3bd40bb8e7dc12cacd554b361b",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-resolution.md",
+			"hash": "d92cb30abee6078d05ba28897a1a67f8fae8acd88fc30da8277881c5b7da3d9a",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/multi-entry-vfs.md",
+			"hash": "05c6bdaf15f219dbb38bc40a2700038e64b305c0ed3722fdea85294dc25ca880",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/page-generation-system.md",
+			"hash": "818560b65c6a197e30cad99b9694853a90e5fa5c0e8c3f627b07f6fbc98e320f",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/performance-observability.md",
+			"hash": "5271af905d75483923eda50fb64b054b5b15e5962ca87cd9706b997875423eaf",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md",
+			"hash": "b06aacf86d4182c9c57071ac50fcc8de4ced367a4aa0fa151bef1130789d40f8",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/source-mapping-system.md",
+			"hash": "334365ec2a08486e96e78e48d21a7400f725d3b5d7d8e03969e4eaad37e65803",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md",
+			"hash": "afd6b1694f87e9a2b0fdd02dd86129eb5b7629d06469075e1acb95f68be55887",
+			"recordedAt": "2026-06-26"
+		},
+		{
+			"source": "plugin/CLAUDE.md",
+			"target": ".claude/design/rspress-plugin-api-extractor/type-loading-vfs.md",
+			"hash": "151e227a347cb2803807b5f40cf48c0b79e2a3ce4a8a7c605c7a67f2c1c27f0e",
+			"recordedAt": "2026-06-26"
+		}
+	]
+}

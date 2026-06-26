@@ -222,18 +222,38 @@ describe("TypeReferenceExtractor", () => {
 			expect(imports).toEqual([]);
 		});
 
-		it("reduces a namespaced token to the bare symbol name", () => {
+		it("imports the namespace root for a namespaced token", () => {
 			const extractor = makeExtractor("my-package");
-			// Token text is namespaced ("z.ZodType"); canonical symbol differs to prove
-			// the dotted token-text branch (not the canonical name) is used.
+			// Token text is namespaced ("Schema.Struct"); the reconstructed declaration
+			// body preserves the qualified form verbatim, so the binding that must be in
+			// scope is the namespace ROOT ("Schema"), not the leaf member ("Struct").
+			// Importing the leaf leaves "Schema" undefined and collapses `typeof X.Type`
+			// companion types to an error type (false TS2353). Canonical symbol differs to
+			// prove the dotted token-text branch (not the canonical name) is used.
 			const item = makeItem({
 				kind: ApiItemKind.Class,
-				excerpt: makeExcerpt([makeRefToken("zod!IGNORED:interface", "z.ZodType")]),
+				excerpt: makeExcerpt([makeRefToken("effect!IGNORED:interface", "Schema.Struct")]),
 			});
 
 			const imports = extractor.extractImportsForApiItem(item);
 
-			expect(importMap(imports)).toEqual({ zod: ["ZodType"] });
+			expect(importMap(imports)).toEqual({ effect: ["Schema"] });
+		});
+
+		it("dedupes multiple members of the same namespace to a single root import", () => {
+			const extractor = makeExtractor("my-package");
+			const item = makeItem({
+				kind: ApiItemKind.Class,
+				excerpt: makeExcerpt([
+					makeRefToken("effect!A:interface", "Schema.Struct"),
+					makeRefToken("effect!B:interface", "Schema.optional"),
+					makeRefToken("effect!C:interface", "Schema.Literal"),
+				]),
+			});
+
+			const imports = extractor.extractImportsForApiItem(item);
+
+			expect(importMap(imports)).toEqual({ effect: ["Schema"] });
 		});
 
 		it("uses the canonical symbol name when the token text is not namespaced", () => {

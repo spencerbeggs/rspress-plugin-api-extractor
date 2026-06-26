@@ -18,9 +18,11 @@ import type {
 	ApiPropertySignature,
 	ApiTypeAlias,
 	ApiVariable,
+	Excerpt,
+	ExcerptToken,
 	TypeParameter,
 } from "@microsoft/api-extractor-model";
-import { ApiItemKind, ApiModel } from "@microsoft/api-extractor-model";
+import { ApiItemKind, ApiModel, ExcerptTokenKind } from "@microsoft/api-extractor-model";
 import { VirtualPackage } from "type-registry-effect";
 
 // The published package exports VirtualPackage as a namespace containing the class
@@ -143,16 +145,19 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 			name += this.formatTypeParameters(apiClass.typeParameters);
 		}
 
-		const headerParts = ["export declare class", name];
+		// Propagate the `abstract` modifier. The class body retains abstract members
+		// (emitted by generateClassMember), so omitting it on the header produces
+		// TS1244/TS1253 (abstract member in a non-abstract class) in the VFS .d.ts.
+		const headerParts = apiClass.isAbstract ? ["export declare abstract class", name] : ["export declare class", name];
 
 		// Extends
 		if (apiClass.extendsType) {
-			headerParts.push(`extends ${apiClass.extendsType.excerpt.text}`);
+			headerParts.push(`extends ${this.renderExcerpt(apiClass.extendsType.excerpt)}`);
 		}
 
 		// Implements
 		if (apiClass.implementsTypes?.length) {
-			const impl = apiClass.implementsTypes.map((t) => t.excerpt.text).join(", ");
+			const impl = apiClass.implementsTypes.map((t) => this.renderExcerpt(t.excerpt)).join(", ");
 			headerParts.push(`implements ${impl}`);
 		}
 
@@ -185,7 +190,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 
 		// Extends
 		if (apiInterface.extendsTypes?.length) {
-			const ext = apiInterface.extendsTypes.map((t) => t.excerpt.text).join(", ");
+			const ext = apiInterface.extendsTypes.map((t) => this.renderExcerpt(t.excerpt)).join(", ");
 			headerParts.push(`extends ${ext}`);
 		}
 
@@ -214,7 +219,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 			name += this.formatTypeParameters(typeAlias.typeParameters);
 		}
 
-		lines.push(`export declare type ${name} = ${typeAlias.typeExcerpt.text};`);
+		lines.push(`export declare type ${name} = ${this.renderExcerpt(typeAlias.typeExcerpt)};`);
 		return lines.join("\n");
 	}
 
@@ -232,7 +237,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		// which corrupts the whole .d.ts with parse errors. Only the
 		// `function name(...)` form is a real function declaration; everything
 		// else is a const binding and needs the `const` keyword.
-		const cleaned = this.cleanExcerpt(apiFunction.excerpt.text);
+		const cleaned = this.cleanExcerpt(this.renderExcerpt(apiFunction.excerpt));
 		const decl = cleaned.startsWith("function ") ? cleaned : `const ${cleaned}`;
 		lines.push(`export declare ${decl};`);
 
@@ -277,7 +282,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		const jsDoc = this.formatJSDoc(apiVariable);
 		if (jsDoc) lines.push(jsDoc);
 
-		let cleaned = this.cleanExcerpt(apiVariable.excerpt.text);
+		let cleaned = this.cleanExcerpt(this.renderExcerpt(apiVariable.excerpt));
 
 		// Ensure variable declarations have const/let/var keyword
 		if (!cleaned.startsWith("const ") && !cleaned.startsWith("let ") && !cleaned.startsWith("var ")) {
@@ -337,7 +342,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		const jsDoc = this.formatJSDoc(apiFunction, "    ");
 		if (jsDoc) lines.push(jsDoc);
 
-		const cleaned = this.cleanExcerpt(apiFunction.excerpt.text);
+		const cleaned = this.cleanExcerpt(this.renderExcerpt(apiFunction.excerpt));
 		lines.push(`    export ${cleaned};`);
 		return lines.join("\n");
 	}
@@ -354,7 +359,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 
 		const headerParts = ["export interface", name];
 		if (apiInterface.extendsTypes?.length) {
-			const ext = apiInterface.extendsTypes.map((t) => t.excerpt.text).join(", ");
+			const ext = apiInterface.extendsTypes.map((t) => this.renderExcerpt(t.excerpt)).join(", ");
 			headerParts.push(`extends ${ext}`);
 		}
 		lines.push(`    ${headerParts.join(" ")} {`);
@@ -405,7 +410,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		if (typeAlias.typeParameters?.length) {
 			name += this.formatTypeParameters(typeAlias.typeParameters);
 		}
-		lines.push(`    export type ${name} = ${typeAlias.typeExcerpt.text};`);
+		lines.push(`    export type ${name} = ${this.renderExcerpt(typeAlias.typeExcerpt)};`);
 		return lines.join("\n");
 	}
 
@@ -414,7 +419,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		const jsDoc = this.formatJSDoc(apiVariable, "    ");
 		if (jsDoc) lines.push(jsDoc);
 
-		let cleaned = this.cleanExcerpt(apiVariable.excerpt.text);
+		let cleaned = this.cleanExcerpt(this.renderExcerpt(apiVariable.excerpt));
 		if (!cleaned.startsWith("const ") && !cleaned.startsWith("let ") && !cleaned.startsWith("var ")) {
 			cleaned = `const ${cleaned}`;
 		}
@@ -426,8 +431,8 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		// Delegate to class generator and indent
 		const decl = this.generateClassDeclaration(apiClass);
 		if (!decl) return "";
-		// Remove 'declare' and indent
-		const adjusted = decl.replace(/\bexport declare class\b/, "export class");
+		// Remove 'declare' and indent (preserving an `abstract` modifier if present)
+		const adjusted = decl.replace(/\bexport declare (abstract )?class\b/, "export $1class");
 		return adjusted
 			.split("\n")
 			.map((line) => (line.trim() ? `    ${line}` : line))
@@ -484,7 +489,7 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 		const jsDoc = this.formatJSDoc(member, indent);
 		if (jsDoc) lines.push(jsDoc);
 
-		const cleaned = this.cleanExcerpt(member.excerpt.text);
+		const cleaned = this.cleanExcerpt(this.renderExcerpt(member.excerpt));
 		lines.push(`${indent}${cleaned};`);
 		return lines.join("\n");
 	}
@@ -492,6 +497,40 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 	// ────────────────────────────────────────────────────────
 	// Utilities
 	// ────────────────────────────────────────────────────────
+
+	/**
+	 * Render an excerpt to source text, normalizing dts-rollup disambiguation
+	 * aliases. The dts rollup renames a re-imported symbol as `Name$1`, but its
+	 * canonical reference is the un-suffixed `Name` (the same symbol). The import
+	 * prepender ({@link TypeReferenceExtractor}) imports the canonical name, so
+	 * emitting the suffixed text would leave `Name$1` undefined (TS2304). Emit the
+	 * canonical name so the body and the prepended import agree.
+	 *
+	 * Equivalent to `excerpt.text` for excerpts without rollup aliases (the text
+	 * is the concatenation of the spanned tokens), so unaliased output is unchanged.
+	 */
+	private renderExcerpt(excerpt: Excerpt): string {
+		return excerpt.spannedTokens.map((token) => this.normalizeTokenText(token)).join("");
+	}
+
+	/**
+	 * Strip a dts-rollup `$N` suffix from a reference token when the de-suffixed
+	 * text matches the token's canonical symbol. Never touches a non-reference
+	 * token or a legitimate identifier that genuinely ends in `$N` (its canonical
+	 * name would carry the suffix too).
+	 */
+	private normalizeTokenText(token: ExcerptToken): string {
+		if (token.kind !== ExcerptTokenKind.Reference) return token.text;
+		const match = /^(.+)\$\d+$/.exec(token.text);
+		if (!match) return token.text;
+		const canonical = token.canonicalReference?.toString();
+		if (!canonical) return token.text;
+		const afterBang = canonical.slice(canonical.indexOf("!") + 1);
+		const colon = afterBang.indexOf(":");
+		const symbol = colon === -1 ? afterBang : afterBang.slice(0, colon);
+		const leaf = symbol.includes(".") ? symbol.slice(symbol.lastIndexOf(".") + 1) : symbol;
+		return match[1] === symbol || match[1] === leaf ? match[1] : token.text;
+	}
 
 	/**
 	 * Clean an excerpt text: strip export/declare keywords and trailing semicolons/whitespace.
@@ -509,11 +548,11 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 
 		const params = typeParameters.map((tp) => {
 			const parts = [tp.name];
-			if (tp.constraintExcerpt?.text.trim()) {
-				parts.push(`extends ${tp.constraintExcerpt.text.trim()}`);
+			if (tp.constraintExcerpt && this.renderExcerpt(tp.constraintExcerpt).trim()) {
+				parts.push(`extends ${this.renderExcerpt(tp.constraintExcerpt).trim()}`);
 			}
-			if (tp.defaultTypeExcerpt?.text.trim()) {
-				parts.push(`= ${tp.defaultTypeExcerpt.text.trim()}`);
+			if (tp.defaultTypeExcerpt && this.renderExcerpt(tp.defaultTypeExcerpt).trim()) {
+				parts.push(`= ${this.renderExcerpt(tp.defaultTypeExcerpt).trim()}`);
 			}
 			return parts.join(" ");
 		});

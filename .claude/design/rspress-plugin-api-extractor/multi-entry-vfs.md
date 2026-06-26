@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: source-mapping
 created: 2026-05-26
-updated: 2026-06-01
-last-synced: 2026-06-01
+updated: 2026-06-26
+last-synced: 2026-06-26
 completeness: 85
 related:
   - rspress-plugin-api-extractor/multi-entry-point-support.md
@@ -33,6 +33,13 @@ Factory methods:
 - `ApiExtractedPackage.fromPackage(apiPackage, packageName)` — build from an in-memory `ApiPackage`.
 
 `fromPackage` walks the package's entry points, derives each entry's file name (`index.d.ts` for the main entry, `<name>.d.ts` for named entries) and calls `generateDeclarations(entryPoint)` to populate the entries map passed to the `VirtualPackage` constructor.
+
+### Excerpt rendering and reference fidelity
+
+Declaration excerpts are rendered through a private `renderExcerpt` (token-by-token) rather than read as raw `excerpt.text`, which repairs two fidelity hazards in the API Extractor model that otherwise emit false Twoslash errors. All excerpt reads route through it — extends/implements, type aliases, variables, functions, members and type-parameter constraints/defaults.
+
+- **Abstract modifier** — `abstract` is propagated onto reconstructed class headers (and through the namespace-nested class path that strips `declare`). The class body keeps abstract members, so dropping the modifier on the header produces `TS1244`/`TS1253` ("abstract member in a non-abstract class") in the VFS `.d.ts`.
+- **dts-rollup `$N` alias normalization** — `normalizeTokenText` strips dts-rollup disambiguation suffixes from reference tokens. The rollup renames a re-imported symbol as `Name$1` while its canonical reference stays the un-suffixed `Name`; because the import prepender (see `import-generation-system.md`) imports the canonical name, emitting the suffixed text would leave `Name$1` undefined (`TS2304`). The suffix is stripped only when the de-suffixed text matches the token's canonical symbol (or its leaf), so identifiers that genuinely end in `$N` are untouched.
 
 `ApiExtractedPackage` keeps its OWN private `extractPlainText` and does NOT delegate to the `api-extractor-llms` library helper of the same name. The two share a name but are different algorithms: this one PRESERVES `{@link X.Y}` TSDoc syntax and reconstructs fenced code blocks (needed for faithful `.d.ts`/JSDoc reconstruction), whereas the library helper flattens `{@link}` to display text and drops code fences (for prose TSDoc extraction). They are not interchangeable. The plugin's other shells that DO delegate to the library are summarized in `build-architecture.md`.
 
