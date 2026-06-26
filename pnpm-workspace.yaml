@@ -6,3 +6,15 @@ autoInstallPeers: true
 configDependencies:
   "@savvy-web/pnpm-plugin-silk": 0.16.1+sha512-ezIsMs06mTSjPqip8fcXJCx0KXVzRd3vSyjHr2YvTiqksY3Q+l9yd+YZg7Yo4CMwnyndZAolaqXX2WrN0XEWAw==
 loglevel: info
+minimumReleaseAgeExclude:
+  - "@rspress/core@2.0.15"
+  - "@rspress/shared@2.0.15"
+  - "@shikijs/core@4.3.0"
+  - "@shikijs/engine-javascript@4.3.0"
+  - "@shikijs/engine-oniguruma@4.3.0"
+  - "@shikijs/langs@4.3.0"
+  - "@shikijs/primitive@4.3.0"
+  - "@shikijs/themes@4.3.0"
+  - "@shikijs/twoslash@4.3.0"
+  - "@shikijs/types@4.3.0"
+  - shiki@4.3.0
