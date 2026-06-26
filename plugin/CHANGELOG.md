@@ -1,5 +1,16 @@
 # rspress-plugin-api-extractor
 
+## 0.3.1
+
+### Dependencies
+
+* | [`99f2295`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/99f229534042bac423e7282bcaf265794ffe96a8) | Dependency    | Type    | Action  | From    | To |
+  | :------------------------------------------------------------------------------------------------------------------------ | :------------ | :------ | :------ | :------ | -- |
+  | @shikijs/twoslash                                                                                                         | dependency    | updated | ^4.2.0  | ^4.3.0  |    |
+  | shiki                                                                                                                     | dependency    | updated | ^4.2.0  | ^4.3.0  |    |
+  | @rspress/core                                                                                                             | devDependency | updated | ^2.0.14 | ^2.0.15 |    |
+  | @savvy-web/rspress-builder                                                                                                | devDependency | updated | ^0.10.0 | ^0.11.0 |    |
+
 ## 0.3.0
 
 ### Features
@@ -49,17 +60,13 @@ The build summary now reports per-phase timing and previously-unreported counts 
 * [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) First-party packages (the ones being documented) are no longer fetched as external types. Their declarations come from their own generated virtual file system, which is authoritative — fetching a published version (when one exists) would overwrite the model-derived declarations, and when it does not exist (for example an optimistic next version) it produced a stream of 404 warnings. Documented package names are now excluded from external auto-detection.
 * A single non-2xx fetch is now reported at debug rather than warning. These are routinely handled (an unpublished or workspace dependency that is then dropped); a package that genuinely fails to load is still reported at warning.
 
-### Bug Fixes
+- [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) External package types now load reliably for documentation code examples.
 
-* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) External package types now load reliably for documentation code examples.
-
-- | [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) | Dependency | Type    | Action | From   | To |
+* | [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) | Dependency | Type    | Action | From   | To |
   | :------------------------------------------------------------------------------------------------------------------------ | :--------- | :------ | :----- | :----- | -- |
   | type-registry-effect                                                                                                      | dependency | updated | ^0.2.3 | ^1.0.0 |    |
 
-### Bug Fixes
-
-* [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) Restored single-sourced build logging for external type loading. type-registry-effect v1 surfaces typed events instead of writing logs; the plugin now forwards those events to its own logger, so external-type progress is reported once in the plugin's configured format and log level. Previously the same operations were printed twice — once by the plugin runtime and once by a separate default-logger runtime.
+- [`1b311ce`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/1b311ce955b314aa221c4bf353f7eb2940ad03bb) Restored single-sourced build logging for external type loading. type-registry-effect v1 surfaces typed events instead of writing logs; the plugin now forwards those events to its own logger, so external-type progress is reported once in the plugin's configured format and log level. Previously the same operations were printed twice — once by the plugin runtime and once by a separate default-logger runtime.
 
 ### Performance
 

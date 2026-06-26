@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { PackageLlmsTxtInput, PackagePointer, PageContent } from "../src/llms-processing.js";
+import type { PackageLlmsTxtInput, PackagePointer, PackageScopeInfo, PageContent } from "../src/llms-processing.js";
 import {
 	filterLlmsFullTxt,
 	filterLlmsTxt,
 	generatePackageLlmsFullTxt,
 	generatePackageLlmsTxt,
+	generateStructuredLlmsTxt,
 	parseLlmsTxtLine,
 } from "../src/llms-processing.js";
 
@@ -312,6 +313,137 @@ describe("generatePackageLlmsFullTxt", () => {
 		// Sections should be separated by double newlines
 		const sections = result.split("\n\n\n---\nurl:");
 		expect(sections.length).toBe(2);
+	});
+});
+
+describe("generateStructuredLlmsTxt", () => {
+	const sampleContent = [
+		"# My Docs Site",
+		"",
+		"## Section",
+		"",
+		"- [Blog Post](/blog/post.md): A blog entry",
+		"- [About](/about.md)",
+		"- [Getting Started](/kitchensink/guides/getting-started.md): Setup guide",
+		"- [Pipeline](/kitchensink/api/class/pipeline.md): The pipeline class",
+		"",
+	].join("\n");
+
+	const kitchensink: PackageScopeInfo = {
+		name: "Kitchen Sink",
+		packageName: "kitchensink",
+		version: "1.0.0",
+		description: "A comprehensive test module.",
+		packageRoute: "/kitchensink",
+		llmsApiTxtUrl: "/kitchensink/llms-api.txt",
+	};
+
+	it("emits the title heading, Others, and Packages sections", () => {
+		const apiRoutes = new Set(["/kitchensink/api/class/pipeline.md"]);
+		const result = generateStructuredLlmsTxt(sampleContent, apiRoutes, [kitchensink]);
+		expect(result).toContain("# My Docs Site");
+		expect(result).toContain("## Others");
+		expect(result).toContain("## Packages");
+		expect(result).toContain("### Kitchen Sink 1.0.0");
+		expect(result).toContain("A comprehensive test module.");
+		expect(result).toContain("- [API Reference](/kitchensink/llms-api.txt)");
+	});
+
+	it("partitions unmatched entries into Others and matched entries under their package", () => {
+		const apiRoutes = new Set<string>();
+		const result = generateStructuredLlmsTxt(sampleContent, apiRoutes, [kitchensink]);
+		// Unmatched entries go to Others
+		expect(result).toContain("- [Blog Post](/blog/post.md): A blog entry");
+		expect(result).toContain("- [About](/about.md)");
+		// Matched entries appear under the package heading
+		expect(result).toContain("- [Getting Started](/kitchensink/guides/getting-started.md): Setup guide");
+		const othersIndex = result.indexOf("## Others");
+		const packagesIndex = result.indexOf("## Packages");
+		const guideIndex = result.indexOf("Getting Started");
+		expect(othersIndex).toBeGreaterThanOrEqual(0);
+		expect(packagesIndex).toBeGreaterThan(othersIndex);
+		// The guide entry should be in the Packages section, after the heading
+		expect(guideIndex).toBeGreaterThan(packagesIndex);
+	});
+
+	it("excludes API-route entries from the structured output entirely", () => {
+		const apiRoutes = new Set(["/kitchensink/api/class/pipeline.md"]);
+		const result = generateStructuredLlmsTxt(sampleContent, apiRoutes, [kitchensink]);
+		expect(result).not.toContain("[Pipeline]");
+		expect(result).not.toContain("The pipeline class");
+	});
+
+	it("omits the version suffix when version is undefined", () => {
+		const noVersion: PackageScopeInfo = { ...kitchensink, version: undefined };
+		const result = generateStructuredLlmsTxt(sampleContent, new Set<string>(), [noVersion]);
+		expect(result).toContain("### Kitchen Sink");
+		expect(result).not.toContain("### Kitchen Sink 1.0.0");
+	});
+
+	it("omits the description paragraph when description is undefined", () => {
+		const noDescription: PackageScopeInfo = { ...kitchensink, description: undefined };
+		const result = generateStructuredLlmsTxt(sampleContent, new Set<string>(), [noDescription]);
+		expect(result).not.toContain("A comprehensive test module.");
+		expect(result).toContain("### Kitchen Sink 1.0.0");
+	});
+
+	it("renders a package section with only the API Reference link when it has no matched entries", () => {
+		// Content has no entries under /other, so packageEntries.get(...) ?? [] is empty
+		const other: PackageScopeInfo = {
+			name: "Other",
+			packageName: "other",
+			version: "2.1.0",
+			description: undefined,
+			packageRoute: "/other",
+			llmsApiTxtUrl: "/other/llms-api.txt",
+		};
+		const result = generateStructuredLlmsTxt(sampleContent, new Set<string>(), [other]);
+		expect(result).toContain("### Other 2.1.0");
+		expect(result).toContain("- [API Reference](/other/llms-api.txt)");
+	});
+
+	it("omits the Others section when there are no unmatched entries", () => {
+		const onlyPackageContent = ["# Title", "", "- [Guide](/kitchensink/guides/intro.md): Intro"].join("\n");
+		const result = generateStructuredLlmsTxt(onlyPackageContent, new Set<string>(), [kitchensink]);
+		expect(result).not.toContain("## Others");
+		expect(result).toContain("## Packages");
+	});
+
+	it("omits the Packages section when no packages are provided", () => {
+		const result = generateStructuredLlmsTxt(sampleContent, new Set<string>(), []);
+		expect(result).toContain("## Others");
+		expect(result).not.toContain("## Packages");
+	});
+
+	it("emits no title heading when the content has no top-level heading", () => {
+		const noTitleContent = ["- [Blog Post](/blog/post.md): A blog entry"].join("\n");
+		const result = generateStructuredLlmsTxt(noTitleContent, new Set<string>(), []);
+		// With no title, the output begins directly with the Others section
+		expect(result.startsWith("## Others")).toBe(true);
+		expect(result).toContain("- [Blog Post](/blog/post.md): A blog entry");
+	});
+
+	it("matches an entry whose URL equals the package route exactly", () => {
+		const content = ["# Title", "", "- [Home](/kitchensink): Package home"].join("\n");
+		const result = generateStructuredLlmsTxt(content, new Set<string>(), [kitchensink]);
+		// The exact-route entry is matched into the package, not Others
+		expect(result).not.toContain("## Others");
+		expect(result).toContain("- [Home](/kitchensink): Package home");
+	});
+
+	it("matches entries when packageRoute already ends with a slash", () => {
+		const trailingSlash: PackageScopeInfo = { ...kitchensink, packageRoute: "/kitchensink/" };
+		const content = ["# Title", "", "- [Guide](/kitchensink/guides/intro.md): Intro"].join("\n");
+		const result = generateStructuredLlmsTxt(content, new Set<string>(), [trailingSlash]);
+		expect(result).not.toContain("## Others");
+		expect(result).toContain("- [Guide](/kitchensink/guides/intro.md): Intro");
+	});
+});
+
+describe("filterLlmsFullTxt edge cases", () => {
+	it("returns empty string for whitespace-only content", () => {
+		const result = filterLlmsFullTxt("   \n  \n", new Set<string>());
+		expect(result).toBe("");
 	});
 });
 

@@ -2,7 +2,7 @@ import type { PathLike } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
 import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
-import { ApiModel as ApiModelClass } from "@microsoft/api-extractor-model";
+import { loadApiModel } from "api-extractor-llms";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LoadedModel, PackageJson } from "./internal-types.js";
 import { ApiModelLoader } from "./model-loader.js";
@@ -15,6 +15,14 @@ import type { SourceConfig, VersionConfig } from "./schemas/index.js";
 // Mock modules
 vi.mock("node:fs");
 vi.mock("node:path");
+// loadFromPath delegates the actual model parse to api-extractor-llms'
+// loadApiModel. That package is externalized in node_modules, so its own
+// fs/path access bypasses the node:fs/node:path mocks above — stub the
+// delegated function directly to exercise the plugin's path-based loading.
+vi.mock("api-extractor-llms", async (importActual) => {
+	const actual = await importActual<typeof import("api-extractor-llms")>();
+	return { ...actual, loadApiModel: vi.fn() };
+});
 
 describe("ApiModelLoader", () => {
 	beforeEach(() => {
@@ -105,13 +113,14 @@ describe("ApiModelLoader", () => {
 			vi.mocked(path.resolve).mockReturnValue(mockPath);
 			vi.mocked(fs.existsSync).mockReturnValue(true);
 
-			vi.spyOn(ApiModelClass.prototype, "loadPackage").mockResolvedValue(mockPackage);
+			vi.mocked(loadApiModel).mockResolvedValue(mockPackage);
 
 			const result = await ApiModelLoader.loadApiModel(mockPath);
 
 			expect(result).toEqual({ apiPackage: mockPackage });
 			expect(path.resolve).toHaveBeenCalledWith(mockPath);
 			expect(fs.existsSync).toHaveBeenCalledWith(mockPath);
+			expect(loadApiModel).toHaveBeenCalledWith(mockPath);
 		});
 
 		it("should throw error if API model file not found", async () => {
@@ -224,7 +233,7 @@ describe("ApiModelLoader", () => {
 
 			vi.mocked(path.resolve).mockReturnValue(mockPath);
 			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.spyOn(ApiModelClass.prototype, "loadPackage").mockResolvedValue(mockPackage);
+			vi.mocked(loadApiModel).mockResolvedValue(mockPackage);
 
 			const result = await ApiModelLoader.loadVersionModel(mockPath);
 
@@ -442,7 +451,7 @@ describe("ApiModelLoader", () => {
 
 			vi.mocked(path.resolve).mockReturnValue(mockPath);
 			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.spyOn(ApiModelClass.prototype, "loadPackage").mockResolvedValue(mockPackage);
+			vi.mocked(loadApiModel).mockResolvedValue(mockPackage);
 
 			const versionConfig: VersionConfig = {
 				model: mockPath,
