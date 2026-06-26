@@ -55,7 +55,7 @@
 		"@tsdown/css": "^0.22.2",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
-		"@types/node": "^26.0.0",
+		"@types/node": "catalog:silk",
 		"@types/react": "catalog:silk",
 		"@types/react-dom": "catalog:silk",
 		"@types/unist": "^3.0.3",
