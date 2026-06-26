@@ -316,4 +316,38 @@ describe("ApiExtractedPackage", () => {
 			expect(generated).toBe(expectedDts);
 		});
 	});
+
+	describe("abstract classes", () => {
+		const ABSTRACT_MODEL_PATH = path.join(import.meta.dirname, "__fixtures__", "abstract-class", "abstract.api.json");
+		const generated = ApiExtractedPackage.fromApiModel(ABSTRACT_MODEL_PATH)
+			.generateVfs()
+			.get("node_modules/abstract-fixture/index.d.ts") as string;
+
+		it("emits the `abstract` modifier on an abstract class header", () => {
+			// Without it, abstract members produce TS1244/TS1253 (abstract member in
+			// non-abstract class) in the reconstructed VFS .d.ts.
+			expect(generated).toMatch(/export declare abstract class DiscoverStrategy\b/);
+		});
+
+		it("keeps abstract members inside the abstract class", () => {
+			expect(generated).toMatch(/abstract buildProject\b/);
+			expect(generated).toMatch(/abstract classify\b/);
+		});
+	});
+
+	describe("rollup alias collisions", () => {
+		const ALIAS_MODEL_PATH = path.join(import.meta.dirname, "__fixtures__", "alias-collision", "alias.api.json");
+		const generated = ApiExtractedPackage.fromApiModel(ALIAS_MODEL_PATH)
+			.generateVfs()
+			.get("node_modules/alias-fixture/index.d.ts") as string;
+
+		it("strips the rollup `$N` disambiguation suffix from reference tokens", () => {
+			// The dts rollup aliases a re-imported symbol as `CoverageLevelName$1`, but its
+			// canonical reference is the un-suffixed `CoverageLevelName`. The prepended import
+			// uses the canonical name, so emitting `$1` in the body would leave it undefined
+			// (TS2304). Emit the canonical name so body and import agree.
+			expect(generated).toContain("CoverageLevelName");
+			expect(generated).not.toContain("CoverageLevelName$1");
+		});
+	});
 });

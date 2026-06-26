@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: import-generation
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-06-26
+last-synced: 2026-06-26
 completeness: 85
 related:
   - rspress-plugin-api-extractor/type-loading-vfs.md
@@ -53,7 +53,7 @@ API Extractor encodes type references as canonical references of the form `packa
 - **Internal** (filtered out) — package name matches the package being documented; these types are declared in the same VFS and need no import.
 - **External** (imported) — any other non-empty package name; emitted as an `import type` statement.
 
-Namespaced token text (e.g. `z.ZodType`) is reduced to the bare symbol name (`ZodType`) by taking the last dotted segment. See the classification logic in `src/type-reference-extractor.ts` for the exact matching rules.
+Namespaced token text (e.g. `Schema.Struct` or `z.ZodType`) is reduced to its NAMESPACE ROOT — the first dotted segment (`Schema` / `z`), not the leaf member. The reconstructed declaration body preserves the qualified form verbatim, so the binding that must be in lexical scope is the namespace root (the package's importable export); importing the leaf (`Struct` / `ZodType`) would leave the namespace identifier undefined and collapse `typeof X.Type` companion types to an error type, producing a false `TS2353`. See the classification logic in `src/type-reference-extractor.ts` for the exact matching rules.
 
 ## Import statement rules
 
@@ -73,7 +73,7 @@ interface ImportStatement {
 
 ## Known limitations
 
-- **Namespaced types** — only simple `z.ZodType`-style patterns are reduced; deeply nested namespaces may need special handling.
+- **Namespaced types** — a qualified reference imports only its first segment (the namespace root); the leaf member is never imported separately. Nesting depth is irrelevant because the reconstructed body resolves the leaf through the imported root, so `A.B.C` needs only `A` imported.
 - **Re-exports** — imports assume direct ownership by the originating package; types re-exported through an intermediate package are not traced.
 - **Type parameters** — generic type parameters are not extracted as separate references.
 

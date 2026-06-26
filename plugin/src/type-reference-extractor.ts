@@ -353,13 +353,19 @@ export class TypeReferenceExtractor {
 		const isInternal = packagePart === this.currentPackageName;
 
 		// Clean up the symbol name:
-		// 1. For namespaced references (e.g., "z.ZodType"), extract just the type name
-		// 2. For direct references, use the canonical symbol name
+		// 1. For namespaced references (e.g., "Schema.Struct", "z.ZodType"), import the
+		//    NAMESPACE ROOT, not the leaf member. The reconstructed declaration body
+		//    preserves the qualified form verbatim (it renders `excerpt.text`, e.g.
+		//    `Schema.Struct<...>`), so the binding that must be in lexical scope is the
+		//    first segment (`Schema` / `z`) — that is the package's importable export.
+		//    Importing the leaf (`Struct`) leaves `Schema` undefined, which collapses
+		//    `typeof X.Type` companion types to an error type and produces false TS2353s.
+		// 2. For direct references, use the canonical symbol name.
 		let symbolName: string;
 		if (symbolText.includes(".")) {
-			// Extract the part after the last dot (e.g., "z.ZodType" → "ZodType")
+			// Extract the part before the first dot (e.g., "Schema.Struct" → "Schema")
 			const parts = symbolText.split(".");
-			symbolName = parts[parts.length - 1].trim();
+			symbolName = parts[0].trim();
 		} else {
 			// Use the canonical symbol name (cleaner than token text)
 			symbolName = symbolFromCanonical.trim();

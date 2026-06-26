@@ -171,37 +171,37 @@ NO_OPEN=1 pnpm dev:basic
 **Build & infrastructure** — load when modifying services, layers, or
 plugin lifecycle:
 
-- @./.claude/design/rspress-plugin-api-extractor/build-architecture.md
-- @./.claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md
+- @../.claude/design/rspress-plugin-api-extractor/build-architecture.md
+- @../.claude/design/rspress-plugin-api-extractor/snapshot-tracking-system.md
 
 **Page generation & markdown** — load when modifying Stream pipeline,
 page generators, or cross-linking:
 
-- @./.claude/design/rspress-plugin-api-extractor/page-generation-system.md
-- @./.claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md
-- @./.claude/design/rspress-plugin-api-extractor/import-generation-system.md
-- @./.claude/design/rspress-plugin-api-extractor/source-mapping-system.md
+- @../.claude/design/rspress-plugin-api-extractor/page-generation-system.md
+- @../.claude/design/rspress-plugin-api-extractor/cross-linking-architecture.md
+- @../.claude/design/rspress-plugin-api-extractor/import-generation-system.md
+- @../.claude/design/rspress-plugin-api-extractor/source-mapping-system.md
 
 **Runtime components & SSG** — load when modifying React components or
 SSG-MD rendering:
 
-- @./.claude/design/rspress-plugin-api-extractor/component-development.md
-- @./.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
+- @../.claude/design/rspress-plugin-api-extractor/component-development.md
+- @../.claude/design/rspress-plugin-api-extractor/ssg-compatible-components.md
 
 **Type loading, VFS & multi-entry points** — load when modifying Twoslash,
 external package types, VFS generation, or multi-entry point resolution:
 
-- @./.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
-- @./.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
-- @./.claude/design/rspress-plugin-api-extractor/multi-entry-resolution.md
-- @./.claude/design/rspress-plugin-api-extractor/multi-entry-vfs.md
+- @../.claude/design/rspress-plugin-api-extractor/type-loading-vfs.md
+- @../.claude/design/rspress-plugin-api-extractor/multi-entry-point-support.md
+- @../.claude/design/rspress-plugin-api-extractor/multi-entry-resolution.md
+- @../.claude/design/rspress-plugin-api-extractor/multi-entry-vfs.md
 
 **LLMs integration** — load when modifying llms.txt post-processing,
 per-package file generation, or scope-aware UI components:
 
-- @./.claude/design/rspress-plugin-api-extractor/llms-integration.md
+- @../.claude/design/rspress-plugin-api-extractor/llms-integration.md
 
 **Observability** — load when modifying metrics, logging, or error tracking:
 
-- @./.claude/design/rspress-plugin-api-extractor/performance-observability.md
-- @./.claude/design/rspress-plugin-api-extractor/error-observability.md
+- @../.claude/design/rspress-plugin-api-extractor/performance-observability.md
+- @../.claude/design/rspress-plugin-api-extractor/error-observability.md
