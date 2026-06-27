@@ -1,5 +1,13 @@
 # rspress-plugin-api-extractor
 
+## 0.3.3
+
+### Dependencies
+
+* | [`a6f5e47`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/a6f5e478b5dd704f163328ad7e0c8ca40a16175c) | Dependency    | Type    | Action   | From    | To |
+  | ------------------------------------------------------------------------------------------------------------------------- | ------------- | ------- | -------- | ------- | -- |
+  | @savvy-web/bundler                                                                                                        | devDependency | updated | ^11.12.2 | ^12.0.0 |    |
+
 ## 0.3.2
 
 ### Bug Fixes
