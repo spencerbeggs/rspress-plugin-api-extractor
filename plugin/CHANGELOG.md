@@ -1,5 +1,16 @@
 # rspress-plugin-api-extractor
 
+## 0.3.4
+
+### Dependencies
+
+* [`3b661fe`](https://github.com/spencerbeggs/rspress-plugin-api-extractor/commit/3b661fe73116d83e39664c898304d6079087df59) | Dependency | Type | Action | From | To |
+  \| :------------------------- | :------------ | :------ | :-------------------- | :-------------------- |
+  \| prettier | dependency | updated | ^3.8.5 | ^3.9.4 |
+  \| @types/node | devDependency | added | — | ^26.0.1 |
+  \| @typescript/native-preview | devDependency | updated | ^7.0.0-dev.20260621.1 | ^7.0.0-dev.20260630.1 |
+  \| @savvy-web/rspress-builder | devDependency | updated | ^0.12.0 | ^1.0.1 |
+
 ## 0.3.3
 
 ### Dependencies
