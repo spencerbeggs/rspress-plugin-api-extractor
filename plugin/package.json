@@ -40,7 +40,7 @@
 		"mdast-util-from-markdown": "^2.0.3",
 		"mdast-util-to-hast": "^13.2.1",
 		"open": "^11.0.0",
-		"prettier": "^3.8.5",
+		"prettier": "^3.9.4",
 		"react-markdown": "^10.1.0",
 		"semver-effect": "^0.2.1",
 		"shiki": "^4.3.0",
@@ -51,7 +51,7 @@
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "^2.0.15",
-		"@savvy-web/rspress-builder": "^0.12.0",
+		"@savvy-web/rspress-builder": "^1.0.1",
 		"@tsdown/css": "^0.22.2",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
