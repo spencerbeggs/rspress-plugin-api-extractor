@@ -1,6 +1,6 @@
 {
 	"name": "rspress-plugin-api-extractor",
-	"version": "0.3.3",
+	"version": "0.3.4",
 	"private": true,
 	"description": "RSPress plugin for generating API documentation from TypeScript API Extractor models",
 	"keywords": ["rspress", "plugin", "api-extractor", "documentation", "typescript"],
