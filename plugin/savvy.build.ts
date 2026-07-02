@@ -1,6 +1,6 @@
-import { definePlugin, runBuild } from "@savvy-web/rspress-builder";
+import { build } from "@savvy-web/rspress-builder";
 
-const config = definePlugin({
+await build({
 	runtime: true,
 	dtsBundledPackages: ["@rspress/core", "@type/mdast", "@type/unist"],
 	apiModel: {
@@ -14,23 +14,4 @@ const config = definePlugin({
 			],
 		},
 	},
-	transform({ pkg, targetGroup }) {
-		if (targetGroup.id === "github") {
-			(pkg as { name?: string }).name = "@spencerbeggs/rspress-plugin-api-extractor";
-		}
-		const p = pkg as Record<string, unknown>;
-		delete p.devDependencies;
-		delete p.bundleDependencies;
-		delete p.scripts;
-		delete p.publishConfig;
-		delete p.packageManager;
-		delete p.devEngines;
-		return pkg;
-	},
 });
-
-export default config;
-
-if (import.meta.main) {
-	await runBuild(config, { cwd: import.meta.dirname, argv: process.argv.slice(2) });
-}
