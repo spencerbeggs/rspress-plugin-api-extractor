@@ -60,8 +60,13 @@ jobs:
             @vitest-agent/*
             @microsoft/api-extractor-model
             @shikijs/twoslash
+            @microsoft/tsdoc
+            @rslib/core
+            @rspress/core
+            @types/hast
+            @types/mdast
+            @types/unist
             clsx
-            effect
             gray-matter
             hast-util-to-jsx-runtime
             image-size
@@ -71,15 +76,9 @@ jobs:
             react-markdown
             semver-effect
             shiki
-            type-registry-effect
-            @microsoft/tsdoc
-            @rslib/core
-            @rspress/core
-            @types/hast
-            @types/mdast
-            @types/unist
             mdast-util-mdx-jsx
             sass
+            type-registry-effect
             unified
             unist-util-visit
           peer-minor: |
