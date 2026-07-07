@@ -51,7 +51,7 @@
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "^2.0.16",
-		"@savvy-web/rspress-builder": "^1.0.8",
+		"@savvy-web/rspress-builder": "^1.0.9",
 		"@tsdown/css": "^0.22.3",
 		"@types/hast": "^3.0.4",
 		"@types/mdast": "^4.0.4",
