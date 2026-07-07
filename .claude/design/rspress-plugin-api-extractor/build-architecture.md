@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-06-15
-last-synced: 2026-06-15
+updated: 2026-07-06
+last-synced: 2026-07-06
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -114,6 +114,10 @@ plugin.ts (RSPress adapter)
 | `PathDerivationServiceLive` | `layers/PathDerivationServiceLive.ts` | (none) |
 | `buildEventBus` (EventBus layer) | `layers/ObservabilityLive.ts` | Synchronous fan-out event bus |
 | `makeSummaryLoggerLayer` | `layers/ObservabilityLive.ts` | Effect Logger gate for `Effect.log*` calls |
+
+### Effect peer dependency closure
+
+`plugin/package.json` declares `@effect/cluster`, `@effect/experimental`, `@effect/rpc` and `@effect/workflow` as direct dependencies even though the plugin never imports them. They exist solely to close the non-optional peer graph of `@effect/platform-node`, `@effect/sql` and `@effect/sql-sqlite-node`: because the per-file plugin build leaves `dependencies` external, unclosed peers escape to the consuming workspace, where pnpm `autoInstallPeers` can bind them to an incompatible `effect` version (issue #69). Do not remove these packages as "unused" — a dependency prune that drops them reintroduces the bug.
 
 ### Schema Validation
 
