@@ -76,6 +76,7 @@ docs for the full architecture.
 - `effect` — core Effect-TS runtime (services, layers, streams, metrics)
 - `@effect/platform` + `@effect/platform-node` — cross-platform file I/O
 - `@effect/sql` + `@effect/sql-sqlite-node` — typed SQLite with migrations
+- `@effect/cluster` + `@effect/experimental` + `@effect/rpc` + `@effect/workflow` — never imported; they close the non-optional peer graph of the platform/sql packages above so unclosed peers cannot escape to consumers (issue #69). Do NOT prune as "unused" — see the "Effect peer dependency closure" section in `build-architecture.md`.
 - `type-registry-effect` — npm package type definition loading
 - `api-extractor-llms` — shared pure renderer: model loading, TSDoc extraction, type-signature formatting, prose cross-linking (the plugin delegates these to it)
 - `@microsoft/api-extractor-model` — `.api.json` model parsing (direct dep; model loading now flows through `api-extractor-llms`'s `loadApiModel`)

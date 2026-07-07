@@ -4,8 +4,8 @@
 		{
 			"source": "CLAUDE.md",
 			"target": ".claude/design/rspress-plugin-api-extractor/build-architecture.md",
-			"hash": "27f655cd3ce469102625009b3a7395e7eed9f699b181724e3423d00c5c091f14",
-			"recordedAt": "2026-06-26"
+			"hash": "79f42b879eb28006bf20c647f28916500a66045ea115cac5dec29b23789d4daf",
+			"recordedAt": "2026-07-06"
 		},
 		{
 			"source": "CLAUDE.md",
@@ -94,8 +94,8 @@
 		{
 			"source": "plugin/CLAUDE.md",
 			"target": ".claude/design/rspress-plugin-api-extractor/build-architecture.md",
-			"hash": "27f655cd3ce469102625009b3a7395e7eed9f699b181724e3423d00c5c091f14",
-			"recordedAt": "2026-06-26"
+			"hash": "79f42b879eb28006bf20c647f28916500a66045ea115cac5dec29b23789d4daf",
+			"recordedAt": "2026-07-06"
 		},
 		{
 			"source": "plugin/CLAUDE.md",
