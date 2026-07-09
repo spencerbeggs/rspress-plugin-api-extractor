@@ -13,7 +13,7 @@
 		"@modules/kitchensink": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.16",
+		"@rspress/core": "^2.0.17",
 		"@types/node": "catalog:silk",
 		"@types/react": "catalog:silk",
 		"@types/react-dom": "catalog:silk",
