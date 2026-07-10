@@ -40,7 +40,6 @@ describe("generateApiDocs (Effect program)", () => {
 			apiConfigs: [apiConfig],
 			combinedVfs: new Map(),
 			highlighter,
-			tsEnvCache: new Map(),
 			resolvedCompilerOptions: {},
 			ogResolver: null,
 			shikiCrossLinker: new ShikiCrossLinker(),

@@ -563,8 +563,8 @@ interface VfsConfig {
 
 | Subject | Test file |
 | --- | --- |
-| MarkdownCrossLinker (routes, `addCrossLinks`, `addCrossLinksHtml`) | `src/markdown/cross-linker.test.ts` |
-| ShikiCrossLinker (three-phase HAST transform, scope isolation) | `src/shiki-transformer.test.ts` |
+| MarkdownCrossLinker (routes, `addCrossLinks`, `addCrossLinksHtml`) | `__test__/markdown/cross-linker.test.ts` |
+| ShikiCrossLinker (three-phase HAST transform, scope isolation) | `__test__/shiki-transformer.test.ts` |
 | VfsRegistry (scope registration, `getByFilePath`) | `__test__/vfs-registry.test.ts` |
 
 ---

@@ -237,7 +237,7 @@ pnpm --filter basic run preview            # Preview basic site production build
 ### Running a Specific Test
 
 ```bash
-pnpm vitest run plugin/src/index.test.ts
+pnpm vitest run plugin/__test__/build-stages.test.ts
 ```
 
 ## Code Quality and Hooks

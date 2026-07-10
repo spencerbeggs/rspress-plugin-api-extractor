@@ -17,7 +17,7 @@ dependencies: []
 
 ## Overview
 
-`SourceMapGenerator` (`src/source-map-generator.ts`) produces a JSON map linking lines in a generated `.d.ts` file back to the originating API Extractor item and source file. It is a standalone, unit-tested utility (`src/source-map-generator.test.ts`).
+`SourceMapGenerator` (`src/source-map-generator.ts`) produces a JSON map linking lines in a generated `.d.ts` file back to the originating API Extractor item and source file. It is a standalone, unit-tested utility (`__test__/source-map-generator.test.ts`).
 
 **It is not currently wired into the build pipeline.** Declaration generation now lives in `ApiExtractedPackage` (`src/api-extracted-package.ts`) and `generateVfs()` does not invoke `SourceMapGenerator` or emit `.d.ts.map` files. This document describes the utility's shape and its intended use; treat it as available-but-unused infrastructure, not part of the active VFS flow.
 

@@ -28,6 +28,8 @@ import { ApiModelLoader } from "../src/model-loader.js";
 import type { CategoryConfig } from "../src/schemas/index.js";
 import { DEFAULT_CATEGORIES } from "../src/schemas/index.js";
 
+const TEST_BUILD_ID = "test-build";
+
 describe("build-stages types", () => {
 	it("WorkItem has required fields", () => {
 		const item = {} as WorkItem;
@@ -194,6 +196,7 @@ describe("writeMetadata", () => {
 
 		await Effect.runPromise(
 			writeMetadata({
+				buildId: TEST_BUILD_ID,
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
@@ -278,6 +281,7 @@ describe("writeMetadata", () => {
 		const generatedFiles1 = new Set<string>();
 		await Effect.runPromise(
 			writeMetadata({
+				buildId: TEST_BUILD_ID,
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
@@ -306,6 +310,7 @@ describe("writeMetadata", () => {
 		const generatedFiles2 = new Set<string>();
 		await Effect.runPromise(
 			writeMetadata({
+				buildId: TEST_BUILD_ID,
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
@@ -371,6 +376,7 @@ describe("writeMetadata", () => {
 
 		await Effect.runPromise(
 			writeMetadata({
+				buildId: TEST_BUILD_ID,
 				fileResults: results,
 				categories,
 				resolvedOutputDir: tmpDir,
@@ -477,6 +483,7 @@ describe("cleanupAndCommit", () => {
 
 		await Effect.runPromise(
 			cleanupAndCommit({
+				buildId: TEST_BUILD_ID,
 				fileResults: results,
 				resolvedOutputDir: tmpDir,
 				generatedFiles: new Set(["class/foo.mdx", "class/bar.mdx"]),
@@ -507,6 +514,7 @@ describe("cleanupAndCommit", () => {
 
 		await Effect.runPromise(
 			cleanupAndCommit({
+				buildId: TEST_BUILD_ID,
 				fileResults: [],
 				resolvedOutputDir: tmpDir,
 				generatedFiles: new Set(),
@@ -537,6 +545,7 @@ describe("generateSinglePage", () => {
 		});
 
 		const ctx: GenerateSinglePageContext = {
+			buildId: TEST_BUILD_ID,
 			existingSnapshots: new Map(),
 			baseRoute: "/example-module",
 			packageName: "example-module",
@@ -569,6 +578,7 @@ describe("generateSinglePage", () => {
 		};
 
 		const ctx: GenerateSinglePageContext = {
+			buildId: TEST_BUILD_ID,
 			existingSnapshots: new Map(),
 			baseRoute: "/test",
 			packageName: "test",
@@ -599,6 +609,7 @@ describe("generateSinglePage", () => {
 
 		const buildTime = new Date().toISOString();
 		const ctx: GenerateSinglePageContext = {
+			buildId: TEST_BUILD_ID,
 			existingSnapshots: new Map(),
 			baseRoute: "/example-module",
 			packageName: "example-module",
@@ -663,6 +674,7 @@ describe("writeSingleFile", () => {
 		};
 
 		const ctx: WriteSingleFileContext = {
+			buildId: TEST_BUILD_ID,
 			resolvedOutputDir: tmpDir,
 			buildTime: new Date().toISOString(),
 		};
@@ -710,6 +722,7 @@ describe("writeSingleFile", () => {
 		};
 
 		const ctx: WriteSingleFileContext = {
+			buildId: TEST_BUILD_ID,
 			resolvedOutputDir: tmpDir,
 			buildTime: new Date().toISOString(),
 		};
@@ -743,6 +756,7 @@ describe("Stream pipeline (native)", () => {
 		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "native-stream-"));
 
 		const program = buildPipelineForApi({
+			buildId: TEST_BUILD_ID,
 			workItems,
 			baseRoute: "/example-module",
 			packageName: "example-module",
@@ -788,6 +802,7 @@ describe("Stream pipeline (native)", () => {
 		// First run: all new
 		const firstResults = await Effect.runPromise(
 			buildPipelineForApi({
+				buildId: TEST_BUILD_ID,
 				workItems,
 				baseRoute: "/example-module",
 				packageName: "example-module",
@@ -808,6 +823,7 @@ describe("Stream pipeline (native)", () => {
 		// Second run: all unchanged
 		const secondResults = await Effect.runPromise(
 			buildPipelineForApi({
+				buildId: TEST_BUILD_ID,
 				workItems,
 				baseRoute: "/example-module",
 				packageName: "example-module",

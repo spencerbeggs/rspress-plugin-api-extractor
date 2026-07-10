@@ -119,13 +119,14 @@ which the global biome rule would rewrite to `.js`.
 
 ## Testing
 
+All tests live in `__test__/`, mirroring the `src/` subtree — there are no colocated `*.test.ts` files under `src/`.
+
 ```bash
 pnpm vitest run plugin/            # Run all plugin tests
-pnpm vitest run plugin/__test__/   # Run only __test__/ directory tests
-pnpm vitest run plugin/src/        # Run colocated source tests
+pnpm vitest run plugin/__test__/   # Run only the canonical test directory
 ```
 
-Fixtures in `src/__fixtures__/`. Mock layers in `__test__/utils/layers.ts`.
+`__test__/**/*.ts` is in the plugin `tsconfig.json` `include`, so tests are typechecked by `pnpm typecheck`. Fixtures in `src/__fixtures__/`. Mock layers in `__test__/utils/layers.ts`.
 
 ## Interactive Frontend Debugging
 
