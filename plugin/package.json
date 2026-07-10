@@ -48,7 +48,7 @@
 		"react-markdown": "^10.1.0",
 		"semver-effect": "^0.3.1",
 		"shiki": "^4.3.1",
-		"type-registry-effect": "^1.0.2",
+		"type-registry-effect": "^1.1.0",
 		"typescript": "catalog:silk",
 		"unist-util-visit": "^5.1.0"
 	},
