@@ -1,5 +1,17 @@
 # rspress-plugin-api-extractor
 
+## 0.3.7
+
+### Bug Fixes
+
+* ### Fix Effect Closures
+
+  Bump `type-registry-effect` to a version that won't leak `effect` peerDependencies in a monorepo with Effect v4.
+
+### Patch Changes
+
+Thanks to [@spencerbeggs](https://github.com/spencerbeggs) for their contributions!
+
 ## 0.3.6
 
 ### Bug Fixes
