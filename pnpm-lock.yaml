@@ -89,8 +89,8 @@ importers:
         specifier: ^2.2.3
         version: 2.2.3(@changesets/cli@3.0.0-next.8)(@commitlint/cli@21.2.1(@types/node@26.1.1)(conventional-commits-parser@7.0.1)(typescript@6.0.3))(@commitlint/config-conventional@21.2.0)(@types/node@26.1.1)(@typescript/native-preview@7.0.0-dev.20260707.2)(commitizen@4.3.2(@types/node@26.1.1)(typescript@6.0.3))(husky@9.1.7)(lint-staged@17.0.8)(markdownlint-cli2-formatter-codequality@0.0.7(markdownlint-cli2@0.23.0))(markdownlint-cli2@0.23.0)(turbo@2.10.4)(typescript@6.0.3)
       '@vitest-agent/plugin':
-        specifier: ^1.1.7
-        version: 1.1.7(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(typescript@6.0.3)(vitest@4.1.10)
+        specifier: ^1.1.8
+        version: 1.1.8(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(typescript@6.0.3)(vitest@4.1.10)
 
   modules/effect-kit:
     dependencies:
@@ -1600,28 +1600,28 @@ packages:
     peerDependencies:
       react: '>=18.3.1'
 
-  '@vitest-agent/cli@1.0.6':
-    resolution: {integrity: sha512-orpdefnPRXIVaH2cZ4sqShEemxngmzrj08Ed2O1FUfaKrh5qVk+hOrMnbr0nOnaBCl5giQhibcUSt8DPBtc6cQ==}
+  '@vitest-agent/cli@1.0.7':
+    resolution: {integrity: sha512-ZkdGC113Gn+e1Rrr+Af6PStrGaSKtVxffcNJF9PluNCI9PaKuxUYn243F8UHsKJUiLtUpF7uIrmahdcnrqsFWg==}
     engines: {node: '>=24.11.0'}
     hasBin: true
 
-  '@vitest-agent/mcp@1.3.4':
-    resolution: {integrity: sha512-3gfTBiWSJiXGWiM6Tqeucu8lvRA2yDYt8qZ8bR5qUo3VTfIJYQVVGiyd+ZADXGXbh9YX8MEwrSrmPQ527xjHiQ==}
+  '@vitest-agent/mcp@1.3.5':
+    resolution: {integrity: sha512-iRhOn0gf7xDohA+smrEaGTBWDyGKLBYIWH6bb/XQKBs9gefeATLof6cRrLB1U9yCEUdhn3UJpzoAvYRkiCO6Kg==}
     engines: {node: '>=24.11.0'}
     hasBin: true
     peerDependencies:
       vitest: ^4.1.0
 
-  '@vitest-agent/plugin@1.1.7':
-    resolution: {integrity: sha512-dy6nza1Y0Zz8g749V2ezCNsr8mFm36AYksLCYBg0GHmKf+jSFRQgQyWSIYqvwemjBfo+Sq23dTsrx0oHSXPBNg==}
+  '@vitest-agent/plugin@1.1.8':
+    resolution: {integrity: sha512-oPpyQatgFlxOP+U/B0QmWuMDFmnshjz32Sa5/6Ox/ABYlrpVno4vp2i8LbQBuUC76pvqCU2ui9e02F+lHRARwQ==}
     engines: {node: '>=24.11.0'}
     peerDependencies:
       '@vitest/coverage-istanbul': ^4.1.0
       '@vitest/coverage-v8': ^4.1.0
       vitest: ^4.1.0
 
-  '@vitest-agent/reporter@1.0.6':
-    resolution: {integrity: sha512-E8QiUUUR2F/m0P3WNC7gCQUV+zRARVfbWyUrlX5gJP6AWk3vcqZa9AHzc4xGVsOAfZLk/cwdoKaOMJ0FUuckGA==}
+  '@vitest-agent/reporter@1.0.7':
+    resolution: {integrity: sha512-Ci5T0MDNiO6BVotjocTc4ifVYFmpOgo9oAw64kvpCBgLyMa3mL0pXQD3ZwE+BuxHI0t1E+v3Oi5sI+mbkFXIng==}
     engines: {node: '>=24.11.0'}
     peerDependencies:
       '@vitest/coverage-istanbul': ^4.1.0
@@ -1633,8 +1633,8 @@ packages:
       '@vitest/coverage-v8':
         optional: true
 
-  '@vitest-agent/sdk@1.3.2':
-    resolution: {integrity: sha512-rK/7dbwOTDSAIBInZz8h4cVL1Dbd+V3imXgBYpf2JgRTgsJIQVYNUWwzy9Fn/Al0h3+fsXYZPEQXK/E6SvzEcw==}
+  '@vitest-agent/sdk@1.3.3':
+    resolution: {integrity: sha512-2G8f27Mbkd7l9QZF6RJsprcC5/iw5IfC5UMFUyT7EysGWTk2iyWSarCojPPyGnbJ7Hdu+AtzhoD+2bViekhxLA==}
     engines: {node: '>=24.11.0'}
 
   '@vitest-agent/sidecar-darwin-arm64@1.0.2':
@@ -1665,8 +1665,8 @@ packages:
     resolution: {integrity: sha512-znkovZ5WnZ5RqM5cyU7tkClV04M+b1KV6eNllrrgvnRWg7feRB1ySc0/niGqJIAQWEpjOLuGyk4uy1mOetDb4A==}
     engines: {node: '>=24.11.0'}
 
-  '@vitest-agent/ui@1.1.0':
-    resolution: {integrity: sha512-fm/WotMvroMk3YgXzFFSX47xroTNOIF6J6tFL1GS9l+hr8ppU1YMdAm0guYiK5sClY6CM6XK0hUqkQjaDkCX+Q==}
+  '@vitest-agent/ui@1.1.1':
+    resolution: {integrity: sha512-uRQBA4/64raYgJ5MCv12fujDI5sKUfzqmo4Ru0M/ZFHwN0G6XYiSnaJVflzlMvd1zzG5f5Yq+I2oxyGLG8p5lQ==}
     engines: {node: '>=24.11.0'}
     peerDependencies:
       ink: ^7.1.0
@@ -6017,7 +6017,7 @@ snapshots:
       react: 19.2.7
       unhead: 2.1.15
 
-  '@vitest-agent/cli@1.0.6':
+  '@vitest-agent/cli@1.0.7':
     dependencies:
       '@effect/cli': 0.75.2(@effect/platform@0.96.2(effect@3.21.4))(@effect/printer-ansi@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(@effect/printer@0.49.0(@effect/typeclass@0.40.0(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
@@ -6031,7 +6031,7 @@ snapshots:
       '@effect/sql-sqlite-node': 0.52.0(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/typeclass': 0.40.0(effect@3.21.4)
       '@effect/workflow': 0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
-      '@vitest-agent/sdk': 1.3.2
+      '@vitest-agent/sdk': 1.3.3
       '@vitest-agent/sidecar': 1.0.2
       effect: 3.21.4
     transitivePeerDependencies:
@@ -6040,7 +6040,7 @@ snapshots:
       - lmdb
       - utf-8-validate
 
-  '@vitest-agent/mcp@1.3.4(typescript@6.0.3)(vitest@4.1.10)':
+  '@vitest-agent/mcp@1.3.5(typescript@6.0.3)(vitest@4.1.10)':
     dependencies:
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/experimental': 0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -6052,7 +6052,7 @@ snapshots:
       '@effect/workflow': 0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@trpc/server': 11.18.0(typescript@6.0.3)
-      '@vitest-agent/sdk': 1.3.2
+      '@vitest-agent/sdk': 1.3.3
       effect: 3.21.4
       vitest: 4.1.10(@types/node@26.1.1)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@26.1.1)(jiti@2.6.1)(yaml@2.9.0))
       zod: 4.4.3
@@ -6065,7 +6065,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@vitest-agent/plugin@1.1.7(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(typescript@6.0.3)(vitest@4.1.10)':
+  '@vitest-agent/plugin@1.1.8(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(typescript@6.0.3)(vitest@4.1.10)':
     dependencies:
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/experimental': 0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -6075,10 +6075,10 @@ snapshots:
       '@effect/sql': 0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@effect/sql-sqlite-node': 0.52.0(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/workflow': 0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
-      '@vitest-agent/cli': 1.0.6
-      '@vitest-agent/mcp': 1.3.4(typescript@6.0.3)(vitest@4.1.10)
-      '@vitest-agent/reporter': 1.0.6(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(vitest@4.1.10)
-      '@vitest-agent/sdk': 1.3.2
+      '@vitest-agent/cli': 1.0.7
+      '@vitest-agent/mcp': 1.3.5(typescript@6.0.3)(vitest@4.1.10)
+      '@vitest-agent/reporter': 1.0.7(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(vitest@4.1.10)
+      '@vitest-agent/sdk': 1.3.3
       '@vitest/coverage-istanbul': 4.1.10(vitest@4.1.10)
       '@vitest/coverage-v8': 4.1.10(vitest@4.1.10)
       effect: 3.21.4
@@ -6096,7 +6096,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@vitest-agent/reporter@1.0.6(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(vitest@4.1.10)':
+  '@vitest-agent/reporter@1.0.7(@types/react@19.2.17)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(vitest@4.1.10)':
     dependencies:
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/experimental': 0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -6106,8 +6106,8 @@ snapshots:
       '@effect/sql': 0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
       '@effect/sql-sqlite-node': 0.52.0(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/workflow': 0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
-      '@vitest-agent/sdk': 1.3.2
-      '@vitest-agent/ui': 1.1.0(ink@7.1.0(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@vitest-agent/sdk': 1.3.3
+      '@vitest-agent/ui': 1.1.1(ink@7.1.0(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       effect: 3.21.4
       ink: 7.1.0(@types/react@19.2.17)(react@19.2.7)
       react: 19.2.7
@@ -6123,7 +6123,7 @@ snapshots:
       - react-devtools-core
       - utf-8-validate
 
-  '@vitest-agent/sdk@1.3.2':
+  '@vitest-agent/sdk@1.3.3':
     dependencies:
       '@effect/cluster': 0.59.0(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(@effect/platform@0.96.2(effect@3.21.4))(@effect/rpc@0.75.1(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4))(effect@3.21.4))(effect@3.21.4)
       '@effect/experimental': 0.60.0(@effect/platform@0.96.2(effect@3.21.4))(effect@3.21.4)
@@ -6167,9 +6167,9 @@ snapshots:
       '@vitest-agent/sidecar-linux-x64': 1.0.2
       '@vitest-agent/sidecar-win32-x64': 1.0.2
 
-  '@vitest-agent/ui@1.1.0(ink@7.1.0(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+  '@vitest-agent/ui@1.1.1(ink@7.1.0(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@vitest-agent/sdk': 1.3.2
+      '@vitest-agent/sdk': 1.3.3
       effect: 3.21.4
       ink: 7.1.0(@types/react@19.2.17)(react@19.2.7)
       react: 19.2.7
