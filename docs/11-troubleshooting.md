@@ -41,6 +41,8 @@ Detection runs on the lowercased route, so two items differing only in case (`Co
 
 **Fix:** export the type from your package's entry point so it joins the public API. If the type is meant to stay internal, mark it `@internal` in its TSDoc so API Extractor drops it from the model rather than flag it. This comes down to your library's exports, so the fix lives in your source and your API Extractor configuration, not in the plugin.
 
+**Exception: compiler-generated base declarations.** A class that extends a call expression — Effect's `Schema.Class` and `Data.TaggedError`, or any mixin factory — makes TypeScript emit an unexported `declare const Foo_base` that the class extends. You cannot export these from your source and you do not need to. When the declaration is present in the model (`includeForgottenExports` in your API Extractor doc-model config), the plugin detects it, generates no standalone page or sidebar entry for it and renders the declaration inline in a "Base Class" section on the owning class page; the `Foo_base` reference in the class signature links straight to that section. The only remaining noise is the `ae-forgotten-export` warning itself, which you can suppress for `_base` names in your API Extractor configuration.
+
 ## Twoslash errors in code examples
 
 **Symptom:** the build logs `Twoslash error: ...` lines and a count of code-block errors in the summary, but the build still completes.

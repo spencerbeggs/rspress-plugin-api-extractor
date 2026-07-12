@@ -39,6 +39,7 @@ import { assertNoRouteCollisions } from "./route-collisions.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import type { FileSnapshot } from "./services/SnapshotService.js";
 import { SnapshotService } from "./services/SnapshotService.js";
+import { BASE_CLASS_ANCHOR, detectSyntheticBases } from "./synthetic-bases.js";
 
 export type { FileSnapshot } from "./services/SnapshotService.js";
 
@@ -70,6 +71,12 @@ export interface WorkItem {
 	readonly namespaceMember?: NamespaceMember;
 	/** Entry points this item is available from */
 	readonly availableFrom?: string[];
+	/**
+	 * Unexported base declaration referenced by this class's extends clause
+	 * (e.g. the `Foo_base` variable TypeScript emits for `Schema.Class`-style
+	 * patterns). Rendered inline on the class page instead of its own page.
+	 */
+	readonly syntheticBase?: ApiItem;
 }
 
 export interface GeneratedPageResult {
@@ -144,18 +151,28 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	// 0. Resolve entry points into deduplicated items
 	const resolvedItems = resolveEntryPoints(apiPackage);
 
+	// 0b. Detect synthetic base declarations (unexported items referenced by an
+	//     exported class's extends clause, e.g. `Foo_base` from Schema.Class
+	//     patterns). They get no page of their own — the owning class page
+	//     renders them inline — so they are excluded from categorization,
+	//     collision detection and work items below.
+	const syntheticBases = detectSyntheticBases(resolvedItems.map((r) => r.item));
+	const docItems = syntheticBases.bases.size
+		? resolvedItems.filter((r) => !syntheticBases.bases.has(r.item))
+		: resolvedItems;
+
 	// Build a lookup map from "displayName::kind" to ResolvedEntryItem
 	const resolvedLookup = new Map<string, ResolvedEntryItem>();
-	for (const resolved of resolvedItems) {
+	for (const resolved of docItems) {
 		const key = `${resolved.item.displayName}::${resolved.item.kind}`;
 		resolvedLookup.set(key, resolved);
 	}
 
 	// 1. Categorize API items by category key (pass resolved items)
-	const items = ApiParser.categorizeApiItems(resolvedItems, categories);
+	const items = ApiParser.categorizeApiItems(docItems, categories);
 
 	// 1b. Extract namespace members (needed for both candidates and routes below)
-	const namespaceMembers = ApiParser.extractNamespaceMembers(resolvedItems);
+	const namespaceMembers = ApiParser.extractNamespaceMembers(docItems);
 
 	// 1c. Detect genuine route collisions (same folder + baseName among distinct
 	//     items) and fail the build if any exist. Two distinct API items resolving
@@ -259,6 +276,20 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 		}
 	}
 
+	// 3b. Route synthetic base names to the inline "Base Class" section on the
+	//     owner class page, so the `extends Foo_base` reference in signatures
+	//     stays clickable. Bases whose owner has no route (uncategorized) or
+	//     whose name is already owned by a real page are left unlinked.
+	for (const [baseItem, syntheticBase] of syntheticBases.bases) {
+		const baseName = baseItem.displayName;
+		if (routes.has(baseName)) continue;
+		const owner = syntheticBase.ownerClasses[0];
+		const ownerRoute = owner ? routes.get(owner.displayName) : undefined;
+		if (!ownerRoute) continue;
+		routes.set(baseName, `${ownerRoute}#${BASE_CLASS_ANCHOR}`);
+		kinds.set(baseName, baseItem.kind);
+	}
+
 	// 4. Flatten all items into a single WorkItem[]
 	const workItems: WorkItem[] = [];
 
@@ -267,11 +298,13 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 		for (const item of categoryItems) {
 			const lookupKey = `${item.displayName}::${item.kind}`;
 			const resolved = resolvedLookup.get(lookupKey);
+			const syntheticBase = syntheticBases.baseByOwner.get(item);
 			workItems.push({
 				item,
 				categoryKey,
 				categoryConfig,
 				...(resolved?.availableFrom != null ? { availableFrom: resolved.availableFrom } : {}),
+				...(syntheticBase != null ? { syntheticBase } : {}),
 			});
 		}
 	}
@@ -375,6 +408,7 @@ export function generateSinglePage(
 						suppressExampleErrors,
 						llmsPlugin,
 						workItem.availableFrom,
+						workItem.syntheticBase,
 					),
 				);
 				page = {

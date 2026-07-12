@@ -23,7 +23,7 @@ The component paths in `plugin.ts` are a **zero-level** resolve to the published
 ### Effect Service Layer
 
 The plugin uses Effect-TS for all build orchestration. `plugin.ts` is a thin
-RSPress adapter (~380 lines) that wires an Effect `ManagedRuntime` with a
+RSPress adapter (~430 lines) that wires an Effect `ManagedRuntime` with a
 composed `Layer` stack:
 
 - `ConfigServiceLive` — resolves plugin options + RSPress config into build
@@ -92,11 +92,12 @@ which the global biome rule would rewrite to `.js`.
 ## Source Structure
 
 - `src/index.ts` — main plugin entry (re-exports plugin.ts, serve.ts)
-- `src/plugin.ts` — RSPress adapter (~380 lines), runtime management
+- `src/plugin.ts` — RSPress adapter (~430 lines), runtime management
 - `src/serve.ts` — public `serve(options?)` dev/preview RSPress server runner (exports `ServeOptions`/`ServeMode`/`ResolvedServeConfig`/`isServerReady`/`resolveServeConfig`); used by the sites' `lib/scripts/dev.mts` and `preview.mts`
 - `src/build-program.ts` — doc generation orchestration (5-stage pipeline)
-- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1220 lines)
+- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1330 lines)
 - `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection
+- `src/synthetic-bases.ts` — `detectSyntheticBases` + `BASE_CLASS_ANCHOR`: unexported `Foo_base` class heritage (Effect `Schema.Class`, mixins) gets no page; it is inlined on the owner class page's "Base Class" section
 - `src/content-hash.ts` — SHA-256 hashing (pure, standalone)
 - `src/observability/` — EventBus, PluginEvent taxonomy, sinks (console/trace/metrics), span helpers, stream tee
   - `events.ts` — `PluginEvent` taggedEnum, `EventLevel`, `EventContext`, `levelOf`

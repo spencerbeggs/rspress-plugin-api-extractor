@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-07-12
+last-synced: 2026-07-12
 completeness: 85
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -88,6 +88,8 @@ interface WorkItem {
   namespaceMember?: NamespaceMember;
   /** Entry points this item is available from */
   availableFrom?: string[];
+  /** Unexported base declaration to inline on this class page */
+  syntheticBase?: ApiItem;
 }
 
 interface GeneratedPageResult {
@@ -126,10 +128,11 @@ Runs before the Stream pipeline. Produces:
 1. **Multi-entry resolution** -- `resolveEntryPoints()` from
    `multi-entry-resolver.ts` deduplicates re-exports across entry
    points. Each item receives `availableFrom`.
-2. **Categorized items** -- API items grouped by category key via
+2. **Synthetic base detection** -- `detectSyntheticBases()` from `synthetic-bases.ts` finds unexported items (hoisted into the model via `includeForgottenExports`, `isExported === false` per `ApiExportedMixin`) that an exported class's extends clause references — the `Foo_base` declarations TypeScript emits for class-factory heritage (Effect `Schema.Class`, `Data.TaggedError`, mixins). Detected bases are **excluded** from categorization, collision detection and work items: they get no page and no sidebar entry. Instead the owning class's `WorkItem` carries `syntheticBase`, and the class page renders the declaration inline in a "Base Class" section (anchor `BASE_CLASS_ANCHOR` = `#base-class`). The base's cross-link route points at that anchor, so the `extends Foo_base` reference in signatures stays clickable. Unexported items NOT referenced by a class extends clause (genuine forgotten exports) keep the previous behavior, as do dangling extends references whose base is absent from the model.
+3. **Categorized items** -- API items grouped by category key via
    `ApiParser.categorizeApiItems()`, which accepts
    `ResolvedEntryItem[]` (multi-entry) or `ApiPackage` (legacy)
-3. **Route collision detection** -- `assertNoRouteCollisions()` from
+4. **Route collision detection** -- `assertNoRouteCollisions()` from
    `route-collisions.ts` builds `RouteCandidate` records for all
    top-level items and namespace members, then asserts that no two
    distinct items share the same lowercased `categoryFolder/name` path.
@@ -137,11 +140,10 @@ Runs before the Stream pipeline. Produces:
    naming both items, their kinds, canonical references, and the shared
    route, with guidance to rename the items or remap categories. There
    is no automatic suffix or silent disambiguation.
-4. **Cross-link routes** -- Map of type name to route path (always the
-   lowercased path, never suffixed)
-5. **Cross-link kinds** -- Map of type name to API item kind
-6. **Namespace member extraction** with collision detection
-7. **Flat WorkItem array** -- Each item carries `availableFrom`
+5. **Cross-link routes** -- Map of type name to route path (always the lowercased path, never suffixed); synthetic base names map to the owner class route plus `#base-class`
+6. **Cross-link kinds** -- Map of type name to API item kind
+7. **Namespace member extraction** with collision detection
+8. **Flat WorkItem array** -- Each item carries `availableFrom` (and `syntheticBase` on classes with a detected base)
 
 ### Stage 1: generateSinglePage (Effect)
 
@@ -235,10 +237,9 @@ class XxxPageGenerator {
 }
 ```
 
-The `availableFrom` parameter is passed from `WorkItem.availableFrom`.
-When the item is exported from multiple entry points, the generator
-calls `generateAvailableFrom()` to emit an "Available from" line
-listing all entry point import paths.
+The `availableFrom` parameter is passed from `WorkItem.availableFrom`. When the item is exported from multiple entry points, the generator calls `generateAvailableFrom()` to emit an "Available from" line listing all entry point import paths.
+
+`ClassPageGenerator.generate` takes one additional trailing parameter, `syntheticBase?: ApiItem` (from `WorkItem.syntheticBase`). When present it renders a `## Base Class` section after the signature — an explanatory note plus the base declaration's formatted signature as an `ApiSignature` block with hidden Twoslash imports prepended. The heading slugs to `BASE_CLASS_ANCHOR` (`synthetic-bases.ts`), which is where the base name's cross-link route points (see `cross-linking-architecture.md`).
 
 The generators are called via `Effect.promise()` in `generateSinglePage`
 since they use async operations (Shiki highlighting, Prettier formatting)

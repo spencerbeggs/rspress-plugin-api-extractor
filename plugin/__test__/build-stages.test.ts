@@ -133,6 +133,36 @@ describe("prepareWorkItems", () => {
 		}
 	});
 
+	it("inlines synthetic base declarations instead of paging them", () => {
+		const model = new ApiModel();
+		const pkg = model.loadPackage(
+			path.join(import.meta.dirname, "..", "src", "__fixtures__", "synthetic-base", "synthetic-base.api.json"),
+		);
+		const { workItems, crossLinkData } = prepareWorkItems({
+			apiPackage: pkg,
+			categories: DEFAULT_CATEGORIES,
+			baseRoute: "/api",
+			packageName: "example",
+		});
+
+		// No page/sidebar entry for the unexported base declaration
+		const baseWorkItem = workItems.find((wi) => wi.item.displayName === "Person_base");
+		expect(baseWorkItem).toBeUndefined();
+
+		// The owning class carries the base for inline rendering
+		const personWorkItem = workItems.find((wi) => wi.item.displayName === "Person");
+		expect(personWorkItem?.syntheticBase?.displayName).toBe("Person_base");
+
+		// The base name cross-links to the inline section anchor on the class page
+		expect(crossLinkData.routes.get("Person_base")).toBe("/api/class/person#base-class");
+		expect(crossLinkData.kinds.get("Person_base")).toBe("Variable");
+
+		// Regular inheritance is untouched
+		const catWorkItem = workItems.find((wi) => wi.item.displayName === "Cat");
+		expect(catWorkItem?.syntheticBase).toBeUndefined();
+		expect(crossLinkData.routes.get("Animal")).toBe("/api/class/animal");
+	});
+
 	it("prioritizes value kinds over type-only kinds for cross-link targets", () => {
 		expect(crossLinkKindPriority("Variable")).toBeLessThan(crossLinkKindPriority("TypeAlias"));
 		expect(crossLinkKindPriority("Class")).toBeLessThan(crossLinkKindPriority("Interface"));

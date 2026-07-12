@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-05-26
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-07-12
+last-synced: 2026-07-12
 completeness: 90
 related:
   - rspress-plugin-api-extractor/multi-entry-point-support.md
@@ -60,10 +60,11 @@ The companion `const`+`type` pattern routes to `/variable/<name>` and `/type/<na
 `prepareWorkItems` (`src/build-stages.ts`) drives the pipeline:
 
 1. Call `resolveEntryPoints` and build a lookup from `displayName::kind` to `ResolvedEntryItem`.
-2. Categorize items and extract namespace members via `ApiParser.categorizeApiItems` / `ApiParser.extractNamespaceMembers`, both of which accept `ApiPackage | ResolvedEntryItem[]` (resolved items for multi-entry, `entryPoints[0]` for legacy single-entry).
-3. Build `RouteCandidate[]` for all top-level items and namespace members and call `assertNoRouteCollisions`.
-4. Build the cross-link routes/kinds maps (lowercased paths, no suffix), with bare names owned by the highest-priority kind.
-5. Construct `WorkItem[]`, attaching `availableFrom` from the resolved data.
+2. Filter out synthetic base declarations detected by `detectSyntheticBases` (`src/synthetic-bases.ts`) — unexported `Foo_base` items referenced by an exported class's extends clause get no page, no sidebar entry and no route candidate; see `page-generation-system.md`.
+3. Categorize items and extract namespace members via `ApiParser.categorizeApiItems` / `ApiParser.extractNamespaceMembers`, both of which accept `ApiPackage | ResolvedEntryItem[]` (resolved items for multi-entry, `entryPoints[0]` for legacy single-entry).
+4. Build `RouteCandidate[]` for all top-level items and namespace members and call `assertNoRouteCollisions`.
+5. Build the cross-link routes/kinds maps (lowercased paths, no suffix), with bare names owned by the highest-priority kind.
+6. Construct `WorkItem[]`, attaching `availableFrom` from the resolved data (and `syntheticBase` on classes whose extends clause references a detected base).
 
 ```typescript
 interface WorkItem {
@@ -73,6 +74,8 @@ interface WorkItem {
   readonly namespaceMember?: NamespaceMember;
   /** Entry points this item is available from */
   readonly availableFrom?: string[];
+  /** Unexported base declaration to inline on this class page */
+  readonly syntheticBase?: ApiItem;
 }
 ```
 
@@ -80,7 +83,7 @@ There is no `entryPointSegment` and no per-item collision flag on `WorkItem`. Th
 
 ## "Available from" rendering
 
-Every page generator accepts an optional `availableFrom?: string[]` as the last argument of `generate()`. When it lists more than one entry point, `generateAvailableFrom()` (`src/markdown/helpers.ts`) renders a line:
+Every page generator accepts an optional `availableFrom?: string[]` as a trailing argument of `generate()` (`ClassPageGenerator` takes one further trailing `syntheticBase?: ApiItem` — see `page-generation-system.md`). When it lists more than one entry point, `generateAvailableFrom()` (`src/markdown/helpers.ts`) renders a line:
 
 ```text
 Available from: `package-name`, `package-name/testing`
@@ -98,6 +101,7 @@ resolveEntryPoints()
   → ResolvedEntryItem[] (availableFrom per item)
          |
 prepareWorkItems()
+  → filter out synthetic base declarations (detectSyntheticBases)
   → categorize items + namespace members
   → build RouteCandidate[] → assertNoRouteCollisions() (throws on collision)
   → build cross-link routes/kinds maps (lowercased, no suffix)

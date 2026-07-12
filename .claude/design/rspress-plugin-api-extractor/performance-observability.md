@@ -4,6 +4,13 @@ module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-17
 updated: 2026-06-24
+last-synced: 2026-06-24
+completeness: 90
+related:
+  - rspress-plugin-api-extractor/error-observability.md
+  - rspress-plugin-api-extractor/build-architecture.md
+  - rspress-plugin-api-extractor/snapshot-tracking-system.md
+dependencies: []
 ---
 
 # Performance Observability System Design
