@@ -1,5 +1,14 @@
 # rspress-plugin-api-extractor
 
+## 0.3.8
+
+### Dependencies
+
+* | Dependency    | Type           | Action  | From         | To                |                                                          |
+  | ------------- | -------------- | ------- | ------------ | ----------------- | -------------------------------------------------------- |
+  | typescript    | dependency     | updated | catalog:silk | ^6.0.3            |                                                          |
+  | @rspress/core | peerDependency | updated | ^2.0.0       | catalog:silkPeers | Thanks [@spencerbeggs](https://github.com/spencerbeggs)! |
+
 ## 0.3.7
 
 ### Bug Fixes
