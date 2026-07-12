@@ -7,17 +7,16 @@
 		"build": "rspress build",
 		"dev": "node lib/scripts/dev.mts",
 		"preview": "node lib/scripts/preview.mts",
-		"types:check": "tsgo --noEmit"
+		"types:check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@modules/effect-kit": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "^2.0.17",
+		"@rspress/core": "catalog:silk",
 		"@types/node": "catalog:silk",
 		"@types/react": "catalog:silk",
 		"@types/react-dom": "catalog:silk",
-		"@typescript/native-preview": "catalog:silk",
 		"react": "catalog:silk",
 		"react-dom": "catalog:silk",
 		"rspress-plugin-api-extractor": "workspace:*"

@@ -24,7 +24,7 @@
 	"scripts": {
 		"build:dev": "node savvy.build.ts --target dev",
 		"build:prod": "node savvy.build.ts --target prod",
-		"types:check": "tsgo --noEmit"
+		"types:check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"effect": "catalog:silk"
@@ -32,7 +32,6 @@
 	"devDependencies": {
 		"@savvy-web/bundler": "^1.1.11",
 		"@types/node": "catalog:silk",
-		"@typescript/native-preview": "catalog:silk",
 		"typescript": "catalog:silk"
 	},
 	"publishConfig": {
