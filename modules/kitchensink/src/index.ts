@@ -4,6 +4,7 @@
  * @packageDocumentation
  */
 
+export { AuditedRecord } from "./lib/audited-record.js";
 export { BatchProcessor } from "./lib/batch-processor.js";
 export { Codecs } from "./lib/codecs.js";
 export { DEFAULT_PIPELINE_OPTIONS, VERSION } from "./lib/constants.js";

@@ -49,6 +49,7 @@ The plugin reads your `.api.json` model and writes one MDX page per public API i
 - Generates API docs from `.api.json` models for classes, interfaces, functions, type aliases, enums, variables and namespaces.
 - Type-checks code examples and adds Twoslash hover tooltips that show inferred types.
 - Cross-links type references between pages, so a type named in a signature links to its own page.
+- Inlines compiler-generated base declarations (the `Foo_base` pattern from Effect `Schema.Class`, `Data.TaggedError` and mixin factories) in a "Base Class" section on the owning class page instead of documenting them as orphan variables.
 - Drives single-package sites, multi-package portals, RSPress multiVersion and i18n from one plugin.
 - Handles multi-entry-point packages: it deduplicates re-exports and notes which entry points each item is available from.
 - Writes per-package `llms*.txt` files and in-page actions for pointing an assistant at one package's docs.

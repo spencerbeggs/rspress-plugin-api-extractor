@@ -94,6 +94,7 @@ export class ClassPageGenerator {
 		suppressExampleErrors?: boolean,
 		llmsPlugin?: LlmsPlugin,
 		availableFrom?: string[],
+		syntheticBase?: ApiItem,
 	): Promise<{ routePath: string; content: string }> {
 		const shouldSuppressErrors = suppressExampleErrors ?? true;
 		const name = apiClass.displayName;
@@ -149,6 +150,10 @@ export class ClassPageGenerator {
 		content += `<ApiSignature code={${JSON.stringify(displayCode)}} source={${JSON.stringify(skeleton)}} apiScope={${JSON.stringify(apiScope)}} />\n\n`;
 
 		// Inheritance is now shown in the signature, no need for separate section
+
+		// Synthetic base (e.g. `Foo_base` from Schema.Class patterns): inline the
+		// unexported base declaration instead of linking to a standalone page.
+		content += this.generateBaseClassSection(apiClass, syntheticBase, packageName, apiScope);
 
 		// 1. Constructors
 		const constructors = apiClass.members.filter((m) => m.kind === "Constructor");
@@ -317,6 +322,43 @@ export class ClassPageGenerator {
 			routePath: `${baseRoute}/class/${name.toLowerCase()}`,
 			content,
 		};
+	}
+
+	/**
+	 * Render the inline "Base Class" section for a synthetic base declaration
+	 * (an unexported item referenced by the class's extends clause, e.g. the
+	 * `Foo_base` variable TypeScript emits for `Schema.Class`-style patterns).
+	 *
+	 * The `## Base Class` heading slugs to `BASE_CLASS_ANCHOR` from
+	 * `synthetic-bases.ts`, which is where the cross-link route for the base
+	 * name points.
+	 */
+	private generateBaseClassSection(
+		apiClass: ApiClass,
+		syntheticBase: ApiItem | undefined,
+		packageName: string,
+		apiScope: string,
+	): string {
+		const baseDecl = syntheticBase as ApiDeclaredItem | undefined;
+		if (!baseDecl?.excerpt?.text) {
+			return "";
+		}
+
+		let section = `## Base Class\n\n`;
+		section += `\`${apiClass.displayName}\` extends \`${baseDecl.displayName}\`, a compiler-generated declaration that is not exported from \`${packageName}\`.\n\n`;
+
+		const signature = this.typeFormatter.format(baseDecl.excerpt).trim();
+		let source = signature;
+		const apiPackage = apiClass.getAssociatedPackage?.();
+		if (apiPackage) {
+			const extractor = new TypeReferenceExtractor(apiPackage, packageName);
+			const imports = extractor.extractImportsForApiItem(baseDecl);
+			source = prependHiddenImports(signature, imports);
+		}
+		const displayCode = stripTwoslashDirectives(source);
+		section += `<ApiSignature code={${JSON.stringify(displayCode)}} source={${JSON.stringify(source)}} apiScope={${JSON.stringify(apiScope)}} />\n\n`;
+
+		return section;
 	}
 
 	/**

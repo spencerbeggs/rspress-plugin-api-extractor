@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: cross-linking
 created: 2026-01-17
-updated: 2026-06-01
-last-synced: 2026-06-01
+updated: 2026-07-12
+last-synced: 2026-07-12
 completeness: 90
 related:
   - rspress-plugin-api-extractor/page-generation-system.md
@@ -327,6 +327,16 @@ For items in different folders there is no ambiguity at the route level;
 see `multi-entry-resolution.md` for the collision-detection rules that
 govern items that *would* share a route.
 
+### Synthetic base declarations
+
+Unexported base declarations referenced by an exported class's extends clause (the `Foo_base` pattern from Effect `Schema.Class` / mixin factories — see `page-generation-system.md`) get no page of their own. Their name routes to the inline "Base Class" section on the owner class page:
+
+```text
+Person_base → /api/class/person#base-class
+```
+
+The anchor is `BASE_CLASS_ANCHOR` (`synthetic-bases.ts`), matching the slug of the `## Base Class` heading the class page generator emits. The route is registered only when the base name is not already owned by a real page and the owner class has a route. Because both cross-linkers consume the same routes map, the underlined `Foo_base` in signature code blocks jumps to the inline section.
+
 ### Namespace Members
 
 Namespace members use qualified names with the namespace prefix:
@@ -578,6 +588,7 @@ interface VfsConfig {
 | `src/vfs-registry.ts` | VfsRegistry connecting cross-linker to remark |
 | `src/build-program.ts` | Cross-linker initialization |
 | `src/build-stages.ts` | Route/kinds map construction in prepareWorkItems |
+| `src/synthetic-bases.ts` | `detectSyntheticBases` + `BASE_CLASS_ANCHOR` |
 | `src/markdown/helpers.ts` | `escapeMdxGenerics()` with backtick safety |
 | `src/remark-api-codeblocks.ts` | Generated code block cross-linking |
 | `src/remark-with-api.ts` | User-authored code block cross-linking |
