@@ -15,7 +15,7 @@
 function withAuditTrail(): new () => {
 	/** Timestamp recorded when the instance was created. */
 	readonly createdAt: Date;
-	/** Timestamp of the most recent {@link AuditedRecord.touch} call. */
+	/** Timestamp of the most recent update; initialized at creation and refreshed by {@link AuditedRecord.touch}. */
 	updatedAt: Date;
 } {
 	return class {

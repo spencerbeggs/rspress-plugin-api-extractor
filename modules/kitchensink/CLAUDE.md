@@ -38,7 +38,7 @@ pnpm vitest run modules/kitchensink/      # Run tests
 | `lib/data-source.ts` | `@typeParam`, `@virtual`, `@readonly`, `@throws`, `@remarks`, `@example`, `@see`, `@public` | Abstract class, static member, abstract methods, readonly property |
 | `lib/json-source.ts` | `@sealed`, `@override`, `@throws`, `@see`, `@remarks`, `@example`, `@public` | Sealed class, method override, class inheritance |
 | `lib/pipeline.ts` | `@typeParam`, `@readonly`, `@deprecated`, `@throws`, `@experimental`, `@privateRemarks`, `@remarks`, `@example`, `@param`, `@returns`, `@link`, `@public` | Class, static factory, getter, getter+setter, deprecated method, experimental method |
-| `lib/audited-record.ts` | `@internal`, `@remarks`, `@example`, `@param`, `@returns`, `@public` | Class extending a class-factory call (compiler-generated `AuditedRecord_base`, synthetic-base inlining) |
+| `lib/audited-record.ts` | `@internal`, `@remarks`, `@example`, `@param`, `@returns`, `@link`, `@public` | Class extending a class-factory call (compiler-generated `AuditedRecord_base`, synthetic-base inlining) |
 | `lib/batch-processor.ts` | `@typeParam`, `@decorator`, `@see`, `@remarks`, `@example`, `@param`, `@public` | Class with decorator reference |
 | `lib/codecs.ts` | `@alpha`, `@typeParam`, `@param`, `@returns`, `@throws`, `@public`, `@remarks` | Namespace, namespace function |
 | `lib/filters.ts` | `@beta`, `@typeParam`, `@param`, `@returns`, `@public`, `@remarks`, `@example` | Namespace, namespace function |
