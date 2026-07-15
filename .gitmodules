@@ -1,0 +1,16 @@
+[submodule ".repos/rspress"]
+	path = .repos/rspress
+	url = https://github.com/web-infra-dev/rspress
+	shallow = true
+[submodule ".repos/twoslash"]
+	path = .repos/twoslash
+	url = https://github.com/twoslashes/twoslash
+	shallow = true
+[submodule ".repos/shiki"]
+	path = .repos/shiki
+	url = https://github.com/shikijs/shiki
+	shallow = true
+[submodule ".repos/rsbuild"]
+	path = .repos/rsbuild
+	url = https://github.com/web-infra-dev/rsbuild
+	shallow = true

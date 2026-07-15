@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-17
-updated: 2026-06-24
-last-synced: 2026-06-24
+updated: 2026-07-14
+last-synced: 2026-07-14
 completeness: 90
 related:
   - rspress-plugin-api-extractor/error-observability.md
@@ -38,7 +38,7 @@ by three sinks: a console sink (human-readable or JSON, level-filtered), a
 full-fidelity JSONL trace sink (opt-in, captures every event), and a metrics
 sink (translates events to `BuildMetrics` counters and histograms).
 
-The entire observability module lives under `plugin/src/observability/`. The
+The entire observability module lives under `package/src/observability/`. The
 plugin creates the bus once during initialization and tears it down at the end
 of `afterBuild`.
 
@@ -46,7 +46,7 @@ of `afterBuild`.
 
 ## EventBus: Synchronous Fan-Out
 
-**Location:** `plugin/src/observability/EventBus.ts`
+**Location:** `package/src/observability/EventBus.ts`
 
 The `EventBus` is NOT an async PubSub. `emit` fans out to every registered
 sink inline — by the time the emitting fiber resumes, all sinks have finished.
@@ -77,7 +77,7 @@ observable side effects.
 
 ## PluginEvent Taxonomy
 
-**Location:** `plugin/src/observability/events.ts`
+**Location:** `package/src/observability/events.ts`
 
 `PluginEvent` is a `Data.TaggedEnum` with approximately 40 variants organized
 across seven subsystems:
@@ -144,7 +144,7 @@ admits events ranked 0–2 — lower rank means higher severity and always emitt
 
 ## Three Sinks
 
-All three implement `EventSink` (`plugin/src/observability/sinks/types.ts`):
+All three implement `EventSink` (`package/src/observability/sinks/types.ts`):
 
 ```typescript
 interface EventSink {
@@ -155,7 +155,7 @@ interface EventSink {
 
 ### Console Sink
 
-**Location:** `plugin/src/observability/sinks/console-sink.ts`
+**Location:** `package/src/observability/sinks/console-sink.ts`
 
 `makeConsoleSink(logLevel, opts)` produces an `EventSink` with `minLevel` set
 to the configured `logLevel`. When `logLevel === "none"` the threshold is `-1`
@@ -166,7 +166,7 @@ so no event passes.
 
 ### Trace Sink
 
-**Location:** `plugin/src/observability/sinks/trace-sink.ts`
+**Location:** `package/src/observability/sinks/trace-sink.ts`
 
 `makeTraceSink(filePath)` returns `EventSink & { flush: () => void }`.
 
@@ -180,7 +180,7 @@ file; the console shows only `info`-and-above messages.
 
 ### Metrics Sink
 
-**Location:** `plugin/src/observability/sinks/metrics-sink.ts`
+**Location:** `package/src/observability/sinks/metrics-sink.ts`
 
 `makeMetricsSink()` returns an `EventSink` with `minLevel: "trace"`. It
 translates events to `BuildMetrics` via `Effect.runSync`. The fan-out is
@@ -210,7 +210,7 @@ not a configured count — deriving it here would change the metric's semantics.
 
 ## Span Substrate
 
-**Location:** `plugin/src/observability/spans.ts`
+**Location:** `package/src/observability/spans.ts`
 
 Two helpers wrap Effects in `Effect.withSpan` and emit timing events:
 
@@ -240,7 +240,7 @@ plugin.** The spans are a dormant seam for future integration.
 
 ## Build Metrics
 
-**Location:** `plugin/src/layers/build-metrics.ts`
+**Location:** `package/src/layers/build-metrics.ts`
 
 `BuildMetrics` is extracted from `ObservabilityLive.ts` into its own module to
 avoid circular imports between the metrics sink and the layer that assembles
@@ -250,7 +250,7 @@ sinks. It provides Effect `Metric.counter` and `Metric.histogram` instances.
 
 ## Build Summary
 
-**Location:** `plugin/src/layers/ObservabilityLive.ts`
+**Location:** `package/src/layers/ObservabilityLive.ts`
 
 `logBuildSummary` is an Effect program that reads all metric snapshots and logs
 a human-readable summary. It is called once in `afterBuild` (skipped on HMR
@@ -276,7 +276,7 @@ function buildEventBus(obs: ResolvedObservability): BuiltSinks {
 
 ## Programmatic Stream Tee (Deferred)
 
-**Location:** `plugin/src/observability/stream.ts`
+**Location:** `package/src/observability/stream.ts`
 
 `makeStreamSink()` creates a bounded sliding `Queue<PluginEvent>` (capacity
 1024). The returned `EventSink` offers events into the queue; when full, the
@@ -290,7 +290,7 @@ from `makeStreamSink` and pass it to `makeEventBusLayer` at the call site.
 
 ## Sync-Island Bridge
 
-**Location:** `plugin/src/observability/EventBus.ts`
+**Location:** `package/src/observability/EventBus.ts`
 
 `makeRuntimeEmitter(runtime)` creates a synchronous bridge for callbacks that
 fire outside any Effect fiber:

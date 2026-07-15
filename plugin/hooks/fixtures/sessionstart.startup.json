@@ -1,0 +1,6 @@
+{
+	"session_id": "test-session-startup",
+	"cwd": "/Users/spencer/workspaces/spencerbeggs/rspress-plugin-api-extractor",
+	"hook_event_name": "SessionStart",
+	"source": "startup"
+}

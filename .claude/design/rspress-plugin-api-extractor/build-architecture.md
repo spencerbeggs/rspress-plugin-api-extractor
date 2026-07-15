@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-07-06
-last-synced: 2026-07-06
+updated: 2026-07-14
+last-synced: 2026-07-14
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -55,7 +55,7 @@ The runtime provides the React components that render API documentation: signatu
 
 ### Build tooling
 
-**Builder:** `@savvy-web/rspress-builder`'s `definePlugin()`, which is built on the tsdown-based `@savvy-web/bundler`. The plugin builds via a self-executing `plugin/savvy.build.ts` that calls `definePlugin(...)` and hands the config to `runBuild`. `definePlugin` produces the two-entry shape automatically — the Node plugin entry (`.`) and the bundleless React runtime (`./runtime`); the plugin half is not a single bundle but per-file JS. **Module system:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`. **CSS processing:** CSS modules (no Sass) for runtime components, compiled by RSPress alongside the transpiled JS.
+**Builder:** `@savvy-web/rspress-builder`'s `definePlugin()`, which is built on the tsdown-based `@savvy-web/bundler`. The plugin builds via a self-executing `package/savvy.build.ts` that calls `definePlugin(...)` and hands the config to `runBuild`. `definePlugin` produces the two-entry shape automatically — the Node plugin entry (`.`) and the bundleless React runtime (`./runtime`); the plugin half is not a single bundle but per-file JS. **Module system:** ESM with `"module": "esnext"` and `"moduleResolution": "bundler"`. **CSS processing:** CSS modules (no Sass) for runtime components, compiled by RSPress alongside the transpiled JS.
 
 ## Effect Service Layer
 
@@ -117,7 +117,7 @@ plugin.ts (RSPress adapter)
 
 ### Effect peer dependency closure
 
-`plugin/package.json` declares `@effect/cluster`, `@effect/experimental`, `@effect/rpc` and `@effect/workflow` as direct dependencies even though the plugin never imports them. They exist solely to close the non-optional peer graph of `@effect/platform-node`, `@effect/sql` and `@effect/sql-sqlite-node`: because the per-file plugin build leaves `dependencies` external, unclosed peers escape to the consuming workspace, where pnpm `autoInstallPeers` can bind them to an incompatible `effect` version (issue #69). Do not remove these packages as "unused" — a dependency prune that drops them reintroduces the bug.
+`package/package.json` declares `@effect/cluster`, `@effect/experimental`, `@effect/rpc` and `@effect/workflow` as direct dependencies even though the plugin never imports them. They exist solely to close the non-optional peer graph of `@effect/platform-node`, `@effect/sql` and `@effect/sql-sqlite-node`: because the per-file plugin build leaves `dependencies` external, unclosed peers escape to the consuming workspace, where pnpm `autoInstallPeers` can bind them to an incompatible `effect` version (issue #69). Do not remove these packages as "unused" — a dependency prune that drops them reintroduces the bug.
 
 ### Schema Validation
 
@@ -277,10 +277,10 @@ Key config types defined via Effect Schema:
 
 ### `savvy.build.ts` and `definePlugin`
 
-`plugin/savvy.build.ts` is a self-executing build script: it calls `definePlugin(...)` from `@savvy-web/rspress-builder`, exports the resulting config and, under `import.meta.main`, hands it to `runBuild`. `definePlugin` is deliberately small (RSPress plugins have a fixed shape) — the plugin passes `runtime: true`, `dtsBundledPackages: ["@rspress/core"]`, `apiModel.tsdoc.suppressWarnings` (the `ae-forgotten-export` rules) and a `transform`:
+`package/savvy.build.ts` is a self-executing build script: it calls `definePlugin(...)` from `@savvy-web/rspress-builder`, exports the resulting config and, under `import.meta.main`, hands it to `runBuild`. `definePlugin` is deliberately small (RSPress plugins have a fixed shape) — the plugin passes `runtime: true`, `dtsBundledPackages: ["@rspress/core"]`, `apiModel.tsdoc.suppressWarnings` (the `ae-forgotten-export` rules) and a `transform`:
 
 ```typescript
-// plugin/savvy.build.ts (abridged)
+// package/savvy.build.ts (abridged)
 const config = definePlugin({
   runtime: true,
   dtsBundledPackages: ["@rspress/core"],
@@ -298,7 +298,7 @@ if (import.meta.main) await runBuild(config, { cwd: import.meta.dirname, argv: p
 
 ### Build output layout and the local link
 
-The plugin emits the same per-file flat package shape into several roots. The dev build writes `dist/dev/pkg`, and the plugin's `publishConfig` (`directory: "dist/dev/pkg"`, `linkDirectory: true`) makes **that directory the workspace link target** — sites depending on `rspress-plugin-api-extractor` via `workspace:*` import the built per-file JS from `dist/dev/pkg`, not the `src/` sources. The production build emits one **published** root per registry under `dist/prod/<target>/pkg` (`npm`, `github`), selected by `transform`'s `targetGroup` and recorded in `dist/prod/targets.json`. The source `plugin/package.json` keeps `private: true` with `src/`-pointing `exports`; the build rewrites these to the compiled form (`private: false`, `index.js` / `runtime/index.js`, plus the `tsconfig/rspress.json` export). Every one of these `pkg` roots carries the identical per-file flat layout (the runtime sits next to `index.js`), which is what makes the runtime component paths layout-invariant — see [Per-file Plugin and Bundleless Runtime](#per-file-plugin-and-bundleless-runtime) and `ssg-compatible-components.md`.
+The plugin emits the same per-file flat package shape into several roots. The dev build writes `dist/dev/pkg`, and the plugin's `publishConfig` (`directory: "dist/dev/pkg"`, `linkDirectory: true`) makes **that directory the workspace link target** — sites depending on `rspress-plugin-api-extractor` via `workspace:*` import the built per-file JS from `dist/dev/pkg`, not the `src/` sources. The production build emits one **published** root per registry under `dist/prod/<target>/pkg` (`npm`, `github`), selected by `transform`'s `targetGroup` and recorded in `dist/prod/targets.json`. The source `package/package.json` keeps `private: true` with `src/`-pointing `exports`; the build rewrites these to the compiled form (`private: false`, `index.js` / `runtime/index.js`, plus the `tsconfig/rspress.json` export). Every one of these `pkg` roots carries the identical per-file flat layout (the runtime sits next to `index.js`), which is what makes the runtime component paths layout-invariant — see [Per-file Plugin and Bundleless Runtime](#per-file-plugin-and-bundleless-runtime) and `ssg-compatible-components.md`.
 
 ### TypeScript Configuration
 
@@ -308,7 +308,7 @@ The plugin uses a standalone `tsconfig.json` with
 - Root config uses `"module": "node20"` (incompatible with API Extractor)
 - API Extractor requires `"moduleResolution": "bundler"`
 
-The package also publishes a standalone **RSPress tsconfig** at `rspress-plugin-api-extractor/tsconfig/rspress.json` (source `plugin/public/tsconfig/rspress.json`), which the documentation sites extend from. It is a standard RSPress/React-JSX bundler-resolution config (`jsx: react-jsx`, `module: esnext`, `verbatimModuleSyntax`) and is exported as a third entry point alongside `.` and `./runtime`.
+The package also publishes a standalone **RSPress tsconfig** at `rspress-plugin-api-extractor/tsconfig/rspress.json` (source `package/public/tsconfig/rspress.json`), which the documentation sites extend from. It is a standard RSPress/React-JSX bundler-resolution config (`jsx: react-jsx`, `module: esnext`, `verbatimModuleSyntax`) and is exported as a third entry point alongside `.` and `./runtime`.
 
 ### Component Registration
 
@@ -332,7 +332,7 @@ pnpm dev                # Start basic site dev server
 ### Watch Mode
 
 ```bash
-cd plugin && pnpm dev   # Rebuilds on file changes
+cd package && pnpm dev   # Rebuilds on file changes
 ```
 
 ### Dev and preview servers (`serve`)

@@ -1,6 +1,6 @@
 # Contributing to rspress-plugin-api-extractor
 
-Thanks for your interest in contributing. This document covers local setup, the development commands and the contribution process. The publishable plugin lives in `plugin/`; the rest of the repo is private test fixtures (`modules/`) and example sites (`sites/`) that run the plugin against real configurations.
+Thanks for your interest in contributing. This document covers local setup, the development commands and the contribution process. The publishable plugin lives in `package/`; the rest of the repo is private test fixtures (`modules/`) and example sites (`sites/`) that run the plugin against real configurations.
 
 ## Prerequisites
 
@@ -28,10 +28,11 @@ pnpm run test
 
 ```text
 rspress-plugin-api-extractor/
-├── plugin/        # The published rspress-plugin-api-extractor package
+├── package/       # The published rspress-plugin-api-extractor package
 ├── modules/       # Private TypeScript fixture libraries that produce .api.json models
 ├── sites/         # Private RSPress example sites, one per supported configuration
 ├── docs/          # User-facing documentation for the plugin
+├── plugin/        # The api-docs Claude Code plugin (not a pnpm workspace)
 └── lib/           # Shared configuration files
 ```
 

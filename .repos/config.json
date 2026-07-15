@@ -1,0 +1,78 @@
+{
+	"repos": {
+		"rspress": {
+			"url": "https://github.com/web-infra-dev/rspress",
+			"ref": "v2.0.17",
+			"purpose": "RSPress 2.x authority: framework source (packages/core/src) and the official site docs (website/docs/en); pinned to the installed @rspress/core version",
+			"sparse": [
+				"packages/core/src",
+				"website/docs/en"
+			],
+			"orientation": {
+				"layout": "Sparse checkout of two trees. packages/core/src is the @rspress/core source: node/ (build pipeline, plugin driver, config), runtime/ and theme/ (client runtime and default theme), cli/, config/, shiki-transformers.ts. website/docs/en is the official docs site markdown: guide/, api/, plugin/ (plugin-authoring docs), ui/.",
+				"keyPaths": {
+					"packages/core/src/node": "build pipeline, plugin hook driver, user-config handling",
+					"packages/core/src/theme": "default theme components (what our runtime components sit alongside)",
+					"website/docs/en/plugin": "official plugin-authoring docs — hook semantics and plugin API",
+					"website/docs/en/api": "config and API reference for rspress.config.ts surface"
+				},
+				"startHere": "packages/core/src/index.ts"
+			}
+		},
+		"twoslash": {
+			"url": "https://github.com/twoslashes/twoslash",
+			"ref": "v0.3.9",
+			"purpose": "Twoslash authority: core engine source (packages/twoslash/src) and the twoslash notation/semantics docs (docs); pinned to the installed transitive twoslash version",
+			"sparse": [
+				"packages/twoslash/src",
+				"docs"
+			],
+			"orientation": {
+				"layout": "packages/twoslash/src is the core engine: core.ts (twoslasher pipeline), validation.ts, error.ts, fallback.ts, flag-keys.ts, defaults.ts, types/. docs/ is the notation/semantics site source: guide/ holds the authoritative notation reference (queries, directives, cut markers).",
+				"keyPaths": {
+					"packages/twoslash/src/core.ts": "the twoslasher pipeline — how notations are parsed and applied",
+					"packages/twoslash/src/flag-keys.ts": "every recognized // @flag directive",
+					"docs/guide": "notation semantics — ^?, ^^^, @errors, @noErrors, ---cut---"
+				},
+				"startHere": "packages/twoslash/src/index.ts"
+			}
+		},
+		"shiki": {
+			"url": "https://github.com/shikijs/shiki",
+			"ref": "v4.3.1",
+			"purpose": "Shiki authority: the @shikijs/twoslash integration package we consume directly (packages/twoslash) and the underlying shiki core (packages/shiki); pinned to the installed shiki version",
+			"sparse": [
+				"packages/twoslash",
+				"packages/shiki"
+			],
+			"orientation": {
+				"layout": "packages/twoslash is @shikijs/twoslash — the Shiki transformer we consume directly: src/ (transformerTwoslash, renderer-rich, renderer-classic, icons), style-rich.css / style-classic.css (the hover/popup CSS our _twoslash.css mirrors), test/. packages/shiki is the shiki core package (highlighter entry, bundles); its src re-exports @shikijs/core internals.",
+				"keyPaths": {
+					"packages/twoslash/src": "transformerTwoslash + rich renderer — the HAST our ShikiCrossLinker post-processes",
+					"packages/twoslash/style-rich.css": "upstream popup/hover CSS that plugin runtime styling aligns with",
+					"packages/shiki/src": "shiki core entry — highlighter creation, bundle composition"
+				},
+				"startHere": "packages/twoslash/src/index.ts"
+			}
+		},
+		"rsbuild": {
+			"url": "https://github.com/web-infra-dev/rsbuild",
+			"ref": "v2.1.5",
+			"purpose": "Rsbuild authority: @rsbuild/core source (packages/core/src) and the official site docs (website/docs/en) — the bundler layer under RSPress; pinned to the installed @rsbuild/core version",
+			"sparse": [
+				"packages/core/src",
+				"website/docs/en"
+			],
+			"orientation": {
+				"startHere": "packages/core/src/index.ts",
+				"layout": "packages/core/src is @rsbuild/core: createRsbuild.ts / createCompiler.ts (entry flow), hooks.ts and pluginManager.ts (plugin system), rspackConfig.ts + plugins/ (how user config becomes rspack config), server/ (dev server), configChain.ts / mergeConfig.ts. website/docs/en is the official docs: config/ (every rsbuild config option), api/ (JS API + plugin API), guide/, plugins/.",
+				"keyPaths": {
+					"packages/core/src/rspackConfig.ts": "how rsbuild config is lowered to rspack config — where builderConfig options land",
+					"packages/core/src/pluginManager.ts": "rsbuild plugin system — hook registration and ordering",
+					"website/docs/en/config": "authoritative reference for the builderConfig surface RSPress exposes",
+					"website/docs/en/api": "JS API and plugin API docs"
+				}
+			}
+		}
+	}
+}

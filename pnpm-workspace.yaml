@@ -1,6 +1,6 @@
 packages:
   - modules/*
-  - plugin
+  - package
   - sites/*
 autoInstallPeers: true
 configDependencies:
