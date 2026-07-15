@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-06-15
-last-synced: 2026-06-15
+updated: 2026-07-14
+last-synced: 2026-07-14
 completeness: 85
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -58,7 +58,7 @@ The mechanism lives in `@savvy-web/rspress-builder`'s `definePlugin` (built on `
 - `import.meta.env` is preserved by an identity `define` applied by `definePlugin`, so `import.meta.env.SSG_MD` stays a runtime expression.
 - A bundled `runtime/index.d.ts` (types only) is still emitted so the published `./runtime` export's `types` condition resolves.
 
-The published `exports["./runtime"]` is `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }`. (The source `plugin/package.json` keeps `"./runtime": "./src/runtime/index.tsx"` for the dev workspace link; the build rewrites it to the compiled form.) An earlier design shipped both a pre-compiled `./runtime` and a source `./runtime-source`; that split was collapsed, then an interim attempt shipped raw `.tsx` — both are superseded by this bundleless output.
+The published `exports["./runtime"]` is `{ "types": "./runtime/index.d.ts", "import": "./runtime/index.js" }`. (The source `package/package.json` keeps `"./runtime": "./src/runtime/index.tsx"` for the dev workspace link; the build rewrites it to the compiled form.) An earlier design shipped both a pre-compiled `./runtime` and a source `./runtime-source`; that split was collapsed, then an interim attempt shipped raw `.tsx` — both are superseded by this bundleless output.
 
 ### Layout-invariant component paths
 

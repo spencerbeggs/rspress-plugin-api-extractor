@@ -1,6 +1,6 @@
 # rspress-plugin-api-extractor
 
-This is the development repository for `rspress-plugin-api-extractor`, an [RSPress](https://rspress.dev/) 2.0 plugin that generates interactive API documentation from [Microsoft API Extractor](https://api-extractor.com/) models. It is a pnpm monorepo. The publishable plugin lives in `plugin/`; everything else is private test fixtures and example sites that run the plugin against real configurations.
+This is the development repository for `rspress-plugin-api-extractor`, an [RSPress](https://rspress.dev/) 2.0 plugin that generates interactive API documentation from [Microsoft API Extractor](https://api-extractor.com/) models. It is a pnpm monorepo. The publishable plugin lives in `package/`; everything else is private test fixtures and example sites that run the plugin against real configurations.
 
 To use the plugin in your own site, install [rspress-plugin-api-extractor](https://www.npmjs.com/package/rspress-plugin-api-extractor) and read the [documentation](./docs/). The rest of this README is for working on the plugin itself.
 
@@ -8,11 +8,13 @@ To use the plugin in your own site, install [rspress-plugin-api-extractor](https
 
 | Package | Purpose |
 | --- | --- |
-| [`plugin/`](./plugin) | The published `rspress-plugin-api-extractor` package. |
+| [`package/`](./package) | The published `rspress-plugin-api-extractor` package. |
 | [`modules/`](./modules) | Private TypeScript fixture libraries that produce `.api.json` models for the example sites. |
 | [`sites/`](./sites) | Private RSPress example sites, one per configuration the plugin supports. |
 
 The `modules/` workspaces build demo libraries whose API Extractor models feed the sites. The `sites/` workspaces run the plugin with different options — single API, multi-API portal, multiVersion, i18n and multi-entry-point packages — so every supported configuration has a working end-to-end build.
+
+The repository also ships a companion Claude Code plugin, `api-docs`, under [`plugin/`](./plugin). It bundles documentation-authoring skills, an agent and slash commands for building and maintaining RSPress API-documentation sites with this plugin. It is not a pnpm workspace; it ships through the [spencerbeggs/bot](https://github.com/spencerbeggs/bot) marketplace, versioned in lockstep with the npm package, and loads locally with `pnpm claude`.
 
 ## Install
 

@@ -3,7 +3,18 @@
 	"changelog": [
 		"@savvy-web/changelog",
 		{
-			"repo": "spencerbeggs/rspress-plugin-api-extractor"
+			"repo": "spencerbeggs/rspress-plugin-api-extractor",
+			"packages": {
+				"rspress-plugin-api-extractor": {
+					"additionalScopes": ["plugin/**"],
+					"versionFiles": [
+						{
+							"glob": "plugin/.claude-plugin/plugin.json",
+							"paths": ["$.version"]
+						}
+					]
+				}
+			}
 		}
 	],
 	"commit": false,

@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-15
-updated: 2026-06-24
-last-synced: 2026-06-24
+updated: 2026-07-14
+last-synced: 2026-07-14
 completeness: 90
 related:
   - rspress-plugin-api-extractor/performance-observability.md
@@ -42,7 +42,7 @@ renders without Twoslash enhancements.
 
 ## Error Event Variants
 
-Three variants in `PluginEvent` (`plugin/src/observability/events.ts`) cover
+Three variants in `PluginEvent` (`package/src/observability/events.ts`) cover
 code-block errors:
 
 | Variant | Level | Purpose |
@@ -58,7 +58,7 @@ counter by the metrics sink (hits the `default` branch).
 
 ## Twoslash Error Flow
 
-The Twoslash transformer (`plugin/src/twoslash-transformer.ts`) runs inside a
+The Twoslash transformer (`package/src/twoslash-transformer.ts`) runs inside a
 synchronous Shiki callback, outside any Effect fiber. It stores a module-level
 `emitEvent` variable (default: no-op) that `plugin.ts` wires via
 `setEventEmitter(emitSync)` right after creating the runtime emitter.
@@ -98,7 +98,7 @@ snapshot in `TwoslashCheckFailed`.
 
 ## Prettier Error Flow
 
-The Prettier formatter (`plugin/src/prettier-formatter.ts`) stores the same
+The Prettier formatter (`package/src/prettier-formatter.ts`) stores the same
 `emitEvent` module-level variable and emits a `PrettierError` from its
 `catch` block:
 
@@ -115,7 +115,7 @@ The console sink logs the error at `warn` level; the metrics sink increments
 
 ## Metrics Derived from Error Events
 
-The metrics sink (`plugin/src/observability/sinks/metrics-sink.ts`) derives
+The metrics sink (`package/src/observability/sinks/metrics-sink.ts`) derives
 error counters from events:
 
 | Event | Counter incremented |
@@ -135,7 +135,7 @@ level, i.e. only visible in debug or trace mode) and the JSONL trace.
 
 ## Build Summary Integration
 
-`logBuildSummary` (`plugin/src/layers/ObservabilityLive.ts`) reads error
+`logBuildSummary` (`package/src/layers/ObservabilityLive.ts`) reads error
 metric snapshots at the end of `afterBuild`:
 
 ```text

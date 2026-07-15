@@ -8,7 +8,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
-		"directory": "plugin"
+		"directory": "package"
 	},
 	"license": "MIT",
 	"author": "Spencer Beggs",

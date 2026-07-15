@@ -1,0 +1,13 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+	"name": "api-docs",
+	"version": "0.4.0",
+	"description": "Claude Code plugin for building and maintaining RSPress API-documentation sites with rspress-plugin-api-extractor: four documentation-craft skills, the rspress-docs agent, review/sync commands, and a SessionStart orientation hook.",
+	"author": {
+		"name": "C. Spencer Beggs",
+		"email": "spencer@beg.gs"
+	},
+	"homepage": "https://github.com/spencerbeggs/rspress-plugin-api-extractor#readme",
+	"repository": "https://github.com/spencerbeggs/rspress-plugin-api-extractor.git",
+	"license": "MIT"
+}
