@@ -229,7 +229,7 @@ export const VersionConfig = Schema.Struct({
 	compilerOptions: Schema.optional(Schema.Unknown),
 });
 /** @public */
-export type VersionConfig = typeof VersionConfig.Type;
+export type VersionConfig = typeof VersionConfig.Encoded;
 
 /** Union for the versions record value: can be a path/function OR a full VersionConfig */
 const VersionValue = Schema.Union([ModelInput, VersionConfig]);
@@ -274,7 +274,7 @@ export const SingleApiConfig = Schema.Struct({
 	compilerOptions: Schema.optional(Schema.Unknown),
 });
 /** @public */
-export type SingleApiConfig = typeof SingleApiConfig.Type;
+export type SingleApiConfig = typeof SingleApiConfig.Encoded;
 
 /**
  * Configuration for one package in a multi-API portal (each element of the `apis:` array).
@@ -314,7 +314,7 @@ export const MultiApiConfig = Schema.Struct({
 	compilerOptions: Schema.optional(Schema.Unknown),
 });
 /** @public */
-export type MultiApiConfig = typeof MultiApiConfig.Type;
+export type MultiApiConfig = typeof MultiApiConfig.Encoded;
 
 /**
  * Top-level options passed to {@link ApiExtractorPlugin}.
@@ -344,4 +344,4 @@ export const PluginOptions = Schema.Struct({
 	observability: Schema.optional(ObservabilityConfig),
 });
 /** @public */
-export type PluginOptions = typeof PluginOptions.Type;
+export type PluginOptions = typeof PluginOptions.Encoded;

@@ -166,25 +166,27 @@ export const TypeRegistryServiceLive = Layer.succeed(TypeRegistryService, {
 			Effect.catch(() => Effect.succeed([...packages])),
 		),
 
+	// The empty-input guard sits OUTSIDE the provided effect: Effect.provide
+	// acquires RegistryLayer before the generator runs, so guarding inside
+	// would still build (and possibly fail on) the XDG/sqlite/http stack for
+	// a call that has nothing to load.
 	loadPackages: (packages) =>
-		Effect.gen(function* () {
-			if (packages.length === 0) {
-				return { vfs: new Map<string, string>() };
-			}
-
-			const specs = packages.map((pkg) => new PackageSpec({ name: pkg.name, version: pkg.version }));
-			const registry = yield* TypeRegistry;
-			return { vfs: yield* registry.getVfs(specs, { autoFetch: true }) };
-		}).pipe(
-			Effect.provide(RegistryLayer),
-			Effect.catch((error) =>
-				Effect.fail(
-					new PluginTypeRegistryError({
-						packageName: packages.map((p) => p.name).join(", "),
-						version: packages.map((p) => p.version).join(", "),
-						reason: error instanceof Error ? (error.message ?? String(error)) : String(error),
-					}),
+		packages.length === 0
+			? Effect.succeed({ vfs: new Map<string, string>() })
+			: Effect.gen(function* () {
+					const specs = packages.map((pkg) => new PackageSpec({ name: pkg.name, version: pkg.version }));
+					const registry = yield* TypeRegistry;
+					return { vfs: yield* registry.getVfs(specs, { autoFetch: true }) };
+				}).pipe(
+					Effect.provide(RegistryLayer),
+					Effect.catch((error) =>
+						Effect.fail(
+							new PluginTypeRegistryError({
+								packageName: packages.map((p) => p.name).join(", "),
+								version: packages.map((p) => p.version).join(", "),
+								reason: error instanceof Error ? (error.message ?? String(error)) : String(error),
+							}),
+						),
+					),
 				),
-			),
-		),
 });
