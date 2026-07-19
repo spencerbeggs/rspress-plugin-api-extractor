@@ -1,30 +1,26 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 
-export const PerformanceThresholds = Schema.mutable(
-	Schema.Struct({
-		slowCodeBlock: Schema.optionalWith(Schema.Number, { default: () => 500 }),
-		slowPageGeneration: Schema.optionalWith(Schema.Number, { default: () => 500 }),
-		slowApiLoad: Schema.optionalWith(Schema.Number, { default: () => 1000 }),
-		slowFileOperation: Schema.optionalWith(Schema.Number, { default: () => 50 }),
-		slowHttpRequest: Schema.optionalWith(Schema.Number, { default: () => 2000 }),
-		slowDbOperation: Schema.optionalWith(Schema.Number, { default: () => 100 }),
-	}),
-);
+export const PerformanceThresholds = Schema.Struct({
+	slowCodeBlock: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(500))),
+	slowPageGeneration: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(500))),
+	slowApiLoad: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(1000))),
+	slowFileOperation: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(50))),
+	slowHttpRequest: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(2000))),
+	slowDbOperation: Schema.Number.pipe(Schema.withDecodingDefault(Effect.succeed(100))),
+});
 /**
  * Consumer-facing type uses Encoded (input shape with optional fields).
  * Schema.decode fills in defaults at runtime.
  */
-export type PerformanceThresholds = Schema.Schema.Encoded<typeof PerformanceThresholds>;
+export type PerformanceThresholds = typeof PerformanceThresholds.Encoded;
 
-export const PerformanceConfig = Schema.mutable(
-	Schema.Struct({
-		thresholds: Schema.optional(PerformanceThresholds),
-		showInsights: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-		trackDetailedMetrics: Schema.optionalWith(Schema.Boolean, { default: () => false }),
-	}),
-);
+export const PerformanceConfig = Schema.Struct({
+	thresholds: Schema.optional(PerformanceThresholds),
+	showInsights: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+	trackDetailedMetrics: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+});
 /**
  * Consumer-facing type uses Encoded (input shape with optional fields).
  * Schema.decode fills in defaults at runtime.
  */
-export type PerformanceConfig = Schema.Schema.Encoded<typeof PerformanceConfig>;
+export type PerformanceConfig = typeof PerformanceConfig.Encoded;

@@ -15,7 +15,6 @@ export interface CrossLinkerServiceShape {
 	readonly getCrossLinkData: Effect.Effect<CrossLinkData>;
 }
 
-export class CrossLinkerService extends Context.Tag("rspress-plugin-api-extractor/CrossLinkerService")<
-	CrossLinkerService,
-	CrossLinkerServiceShape
->() {}
+export class CrossLinkerService extends Context.Service<CrossLinkerService, CrossLinkerServiceShape>()(
+	"rspress-plugin-api-extractor/CrossLinkerService",
+) {}

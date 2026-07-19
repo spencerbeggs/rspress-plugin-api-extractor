@@ -18,23 +18,25 @@ dependencies: []
 
 ## Overview
 
-The RSPress API Extractor plugin integrates with `type-registry-effect` to
-load external package type definitions and generate virtual file systems
-(VFS) for TypeScript's Twoslash compiler. This enables rich hover tooltips
-and type-checked code examples in generated API documentation.
+The RSPress API Extractor plugin integrates with `type-registry-effect` (v2,
+the Effect v4 port) to load external package type definitions and generate
+virtual file systems (VFS) for TypeScript's Twoslash compiler. This enables
+rich hover tooltips and type-checked code examples in generated API
+documentation.
 
 ### Effect Service Architecture
 
 Type loading uses the Effect service pattern:
 
 - **`TypeRegistryService`** (`services/TypeRegistryService.ts`) --
-  Interface defining `loadPackages` and `createTypeScriptCache`
+  Interface defining `resolveVersions` and `loadPackages`
 - **`TypeRegistryServiceLive`** (`layers/TypeRegistryServiceLive.ts`) --
   Implementation using `type-registry-effect` Effect programs directly
 
-The `TypeRegistryServiceLive` delegates to the upstream
-`type-registry-effect` library's native Effect programs (not Promise
-wrappers), providing the `NodeLayer` for platform dependencies.
+Library v2 has no `/node` subpath and ships **no platform layer of its own** —
+it composes at the edge, so `TypeRegistryServiceLive` wires the whole stack
+itself. Library statics also became instance methods: the service yields the
+`TypeRegistry` tag and calls `registry.getVfs(...)` / `registry.resolveVersion(...)`.
 
 ## Architecture
 
@@ -42,55 +44,78 @@ wrappers), providing the `NodeLayer` for platform dependencies.
 
 ```typescript
 export interface TypeRegistryServiceShape {
+  /**
+   * Resolve each package's version spec (range / npm tag) to an exact
+   * published version, dropping any package that cannot be resolved.
+   * The CDN backing loadPackages requires exact versions.
+   */
+  readonly resolveVersions: (
+    packages: ReadonlyArray<ExternalPackageSpec>,
+  ) => Effect.Effect<ReadonlyArray<ExternalPackageSpec>>;
+
   readonly loadPackages: (
     packages: ReadonlyArray<ExternalPackageSpec>,
   ) => Effect.Effect<TypeRegistryResult, TypeRegistryError>;
-
-  readonly createTypeScriptCache: (
-    packages: ReadonlyArray<ExternalPackageSpec>,
-    compilerOptions: object,
-  ) => Effect.Effect<
-    Map<string, VirtualTypeScriptEnvironment>,
-    TypeRegistryError
-  >;
 }
 ```
 
-### TypeRegistryServiceLive Implementation
+There is no `createTypeScriptCache` method. (Earlier revisions of this document
+described one; it has never existed on this interface in the current codebase.)
+
+### Edge-composed registry stack
+
+`TypeRegistryServiceLive` builds the registry runtime from module-level layer
+consts — never rebuilt per call, per the v4 layer memoization discipline:
 
 ```typescript
-export const TypeRegistryServiceLive = Layer.succeed(
-  TypeRegistryService, {
-    loadPackages: (packages) =>
-      Effect.gen(function* () {
-        const specs = packages.map((pkg) =>
-          new PackageSpec({ name: pkg.name, version: pkg.version })
-        );
-        const vfs = yield* TypeRegistry.getVFS(specs, {
-          autoFetch: true
-        });
-        return { vfs };
-      }).pipe(Effect.provide(NodeLayer)),
+const PlatformLive = Layer.mergeAll(NodeFileSystem.layer, Path.layer);
 
-    createTypeScriptCache: (packages, compilerOptions) =>
-      Effect.tryPromise({
-        try: () => {
-          const specs = packages.map((pkg) =>
-            new PackageSpec({
-              name: pkg.name, version: pkg.version
-            })
-          );
-          return createTypeScriptCache(specs, compilerOptions);
-        },
-        catch: (error) => new PluginTypeRegistryError({ ... }),
-      }),
-  }
+/** XDG app dirs under the library's shared namespace. */
+const AppDirsLive = AppDirs.layer({ namespace: "type-registry-effect" }).pipe(
+  Layer.provide(Layer.mergeAll(Xdg.layer, PlatformLive)),
+);
+
+/** Metadata plane: sqlite-backed @effected/store Cache in the XDG cache dir. */
+const MetadataCacheLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const appDirs = yield* AppDirs;
+    const path = yield* Path.Path;
+    const cacheDir = yield* appDirs.ensureCache;
+    return Cache.layerSqlite({
+      filename: path.join(cacheDir, "metadata.sqlite"),
+    });
+  }),
+).pipe(Layer.provide(Layer.mergeAll(AppDirsLive, PlatformLive)));
+
+const RegistryLayer = TypeRegistry.layer.pipe(
+  Layer.provideMerge(Layer.mergeAll(TypeCache.layerXdg(), PackageFetcher.layer)),
+  Layer.provideMerge(RegistryObserverLayer),
+  Layer.provide(Layer.mergeAll(
+    MetadataCacheLive, AppDirsLive, PlatformLive, NodeHttpClient.layerUndici,
+  )),
 );
 ```
 
-The `NodeLayer` from `type-registry-effect` provides `CacheService`,
-`PackageFetcher`, and `TypeResolver` with Node.js platform
-implementations.
+Both service methods run their program with `Effect.provide(RegistryLayer)`.
+`resolveVersions` recovers from registry infrastructure failure (no HOME for
+XDG, unwritable cache DB) by passing the specs through unresolved, so the
+failure surfaces from `loadPackages` with a meaningful error rather than being
+silently swallowed.
+
+### Registry event observer
+
+The library emits no logs of its own — observers are the only diagnostic
+surface. `RegistryObserverLayer` (`Layer.succeed(RegistryObserver, ...)`)
+forwards the library's typed events onto the plugin's EventBus as
+`PluginEvent.TypeRegistryEvent`, so registry activity flows through the
+plugin's configured log level and format.
+
+In v2 the tag is `RegistryObserver` (was `TypeRegistryObserver`) and
+`RegistryEvent` is a **Schema union with no `$match`**, so the observer is a
+plain `switch` on `event._tag`. Levels: `BatchComplete` at `info`,
+`PackageLoadFailed` at `warn`, everything else (version resolution, cache
+hit/miss/stale, fetch start/failure, per-package load, batch start) at `debug`
+so a normal build stays quiet.
 
 ### Integration Flow
 
@@ -100,21 +125,28 @@ ConfigServiceLive.resolve()
     +-> Collect external packages from plugin options
     |   (explicit + auto-detected from package.json)
     |
-    +-> TypeRegistryService.loadPackages(packages)
-    |   -> TypeRegistry.getVFS(specs, { autoFetch: true })
+    +-> TypeRegistryService.resolveVersions(packages)
+    |   -> registry.resolveVersion(name, spec) per package
+    |   -> ranges/tags become exact versions; unresolvable specs dropped
+    |
+    +-> TypeRegistryService.loadPackages(resolvedPackages)
+    |   -> registry.getVfs(specs, { autoFetch: true })
     |   -> Returns VirtualFileSystem (Map<string, string>)
     |
     +-> Prepend import statements to VFS declaration files
     |   (TypeReferenceExtractor)
-    |
-    +-> TypeRegistryService.createTypeScriptCache(packages, options)
-    |   -> Creates VirtualTypeScriptEnvironment per package
     |
     +-> Combined VFS passed to TwoslashManager
     |   -> TypeScript language service resolves all references
     |
     +-> VFS config registered in VfsRegistry per API scope
 ```
+
+Both calls are wrapped by `Effect.result` in `ConfigServiceLive`, so a type
+load failure degrades the build (code blocks render without Twoslash
+enhancements) rather than aborting it. `VirtualTypeScriptEnvironment` is now
+imported from `@typescript/vfs` directly, since v2 dropped the `/node` subpath
+that used to re-export it.
 
 ### VFS in the Build Pipeline
 
@@ -172,19 +204,22 @@ apiExtractor({
 
 ## Error Handling
 
-Type loading errors are wrapped in `TypeRegistryError`:
+`loadPackages` catches any failure (`Effect.catch`) and wraps it in
+`TypeRegistryError`:
 
 ```typescript
 new PluginTypeRegistryError({
   packageName: packages.map((p) => p.name).join(", "),
   version: packages.map((p) => p.version).join(", "),
-  reason: error.message ?? String(error),
+  reason: error instanceof Error ? (error.message ?? String(error)) : String(error),
 })
 ```
 
-Errors propagate through the Effect pipeline and are caught in
-`ConfigServiceLive`. The build can continue without type information
-if loading fails (code blocks render without Twoslash enhancements).
+Errors propagate through the Effect pipeline and are inspected in
+`ConfigServiceLive` via `Effect.result` (the v4 replacement for
+`Effect.either`; a `Result` with `_tag: "Failure"` and `.failure`). The build
+continues without type information if loading fails — code blocks render
+without Twoslash enhancements.
 
 ## Related Documentation
 

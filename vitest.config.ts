@@ -18,6 +18,7 @@ export default async () => {
 			tags,
 			pool: "forks",
 			globalSetup: ["vitest.setup.ts"],
+			exclude: ["**/.repos/**"],
 			coverage: {
 				enabled: true,
 				provider: "v8",

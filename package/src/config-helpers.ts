@@ -121,21 +121,15 @@ export function fromDir(dir: string, overrides: FromDirOptions = {}): MultiApiCo
 	const { baseRoute, cwd, ...rest } = overrides;
 	const info = discoverDir(path.resolve(cwd ?? process.cwd(), dir));
 
+	const tsconfigPath = path.join(info.dir, "tsconfig.json");
 	const discovered: MultiApiConfig = {
 		packageName: info.packageName,
 		name: info.packageName,
 		model: info.modelPath,
 		packageJson: path.join(info.dir, "package.json"),
+		...(baseRoute !== undefined ? { baseRoute: resolveBaseRoute(baseRoute, info) } : {}),
+		...(fs.existsSync(tsconfigPath) ? { tsconfig: tsconfigPath } : {}),
 	};
-
-	if (baseRoute !== undefined) {
-		discovered.baseRoute = resolveBaseRoute(baseRoute, info);
-	}
-
-	const tsconfigPath = path.join(info.dir, "tsconfig.json");
-	if (fs.existsSync(tsconfigPath)) {
-		discovered.tsconfig = tsconfigPath;
-	}
 
 	// Caller-supplied fields win over discovery (shallow merge). `baseRoute`/`cwd`
 	// are consumed above and never passed through onto the config object.

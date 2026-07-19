@@ -41,6 +41,7 @@ api-docs-snapshot.db-*
 .claude/settings.local.json
 .claude/plans/
 .claude/plugins-debug.log
+.claude/cache/
 .playwright-mcp
 docs/superpowers
 .mcp.json

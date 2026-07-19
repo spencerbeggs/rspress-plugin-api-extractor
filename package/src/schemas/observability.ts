@@ -1,17 +1,15 @@
 import { Schema } from "effect";
 import { PerformanceThresholds } from "./performance.js";
 
-export const EventLevelSchema = Schema.Literal("none", "error", "warn", "info", "debug", "trace", "verbose");
-export type EventLevelInput = Schema.Schema.Type<typeof EventLevelSchema>;
+export const EventLevelSchema = Schema.Literals(["none", "error", "warn", "info", "debug", "trace", "verbose"]);
+export type EventLevelInput = typeof EventLevelSchema.Type;
 
-export const ObservabilityConfig = Schema.mutable(
-	Schema.Struct({
-		logLevel: Schema.optional(EventLevelSchema),
-		trace: Schema.optional(Schema.Union(Schema.Boolean, Schema.String)),
-		thresholds: Schema.optional(PerformanceThresholds),
-	}),
-);
-export type ObservabilityConfig = Schema.Schema.Encoded<typeof ObservabilityConfig>;
+export const ObservabilityConfig = Schema.Struct({
+	logLevel: Schema.optional(EventLevelSchema),
+	trace: Schema.optional(Schema.Union([Schema.Boolean, Schema.String])),
+	thresholds: Schema.optional(PerformanceThresholds),
+});
+export type ObservabilityConfig = typeof ObservabilityConfig.Encoded;
 
 export type EventLevel = "error" | "warn" | "info" | "debug" | "trace";
 

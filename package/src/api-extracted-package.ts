@@ -25,9 +25,6 @@ import type {
 import { ApiItemKind, ApiModel, ExcerptTokenKind } from "@microsoft/api-extractor-model";
 import { VirtualPackage } from "type-registry-effect";
 
-// The published package exports VirtualPackage as a namespace containing the class
-const VirtualPackageClass = VirtualPackage.VirtualPackage;
-
 /**
  * Reconstructs TypeScript declaration files from an API Extractor model.
  *
@@ -37,13 +34,12 @@ const VirtualPackageClass = VirtualPackage.VirtualPackage;
  *
  * Use the factory methods {@link fromApiModel} or {@link fromPackage} to create instances.
  */
-export class ApiExtractedPackage extends VirtualPackageClass {
-	private constructor(
-		readonly apiPackage: ApiPackage,
-		packageName: string,
-		entries: Map<string, string>,
-	) {
-		super(packageName, "1.0.0", entries);
+export class ApiExtractedPackage extends VirtualPackage {
+	readonly apiPackage: ApiPackage;
+
+	private constructor(apiPackage: ApiPackage, packageName: string, entries: Map<string, string>) {
+		super({ name: packageName, version: "1.0.0", entries });
+		this.apiPackage = apiPackage;
 	}
 
 	/**
@@ -59,17 +55,30 @@ export class ApiExtractedPackage extends VirtualPackageClass {
 	 * Create an ApiExtractedPackage from an existing ApiPackage instance.
 	 */
 	static fromPackage(apiPackage: ApiPackage, packageName: string): ApiExtractedPackage {
-		// Build entries map first, then pass to constructor.
-		// We use a temporary instance to access generateDeclarations/getEntryPointName,
-		// then create the real instance with the populated entries.
-		const tempEntries = new Map<string, string>();
-		const tempInstance = new ApiExtractedPackage(apiPackage, packageName, tempEntries);
+		// The declaration generators are instance methods (they read
+		// `this.apiPackage`), so build a scratch instance with a placeholder
+		// entry, generate the real entries with it, then construct the final
+		// instance. VirtualPackage is a Schema class in v2 — the entries map
+		// is validated at construction, so post-construction mutation of the
+		// map is not a supported channel.
+		const scratch = new ApiExtractedPackage(apiPackage, packageName, new Map([["index.d.ts", ""]]));
+		const entries = new Map<string, string>();
 		for (const ep of apiPackage.entryPoints) {
-			const entryName = tempInstance.getEntryPointName(ep);
+			const entryName = scratch.getEntryPointName(ep);
 			const fileName = entryName ? `${entryName}.d.ts` : "index.d.ts";
-			tempEntries.set(fileName, tempInstance.generateDeclarations(ep));
+			entries.set(fileName, scratch.generateDeclarations(ep));
 		}
-		return tempInstance;
+		return new ApiExtractedPackage(apiPackage, packageName, entries);
+	}
+
+	/**
+	 * Generate the VFS map for this package (`node_modules/<name>/...`).
+	 *
+	 * Delegates to the v2 {@link VirtualPackage.toVfs}; kept under the v1 name
+	 * because the config layer and tests consume it as `generateVfs()`.
+	 */
+	generateVfs(): Map<string, string> {
+		return this.toVfs();
 	}
 
 	/**

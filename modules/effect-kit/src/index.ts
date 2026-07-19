@@ -10,34 +10,34 @@ import { Schema } from "effect";
  * Severity of a remediation action.
  * @public
  */
-export const ActionSeverity = Schema.Literal("low", "medium", "high");
+export const ActionSeverity = Schema.Literals(["low", "medium", "high"]);
 /**
  * Severity of a remediation action.
  * @public
  */
-export type ActionSeverity = Schema.Schema.Type<typeof ActionSeverity>;
+export type ActionSeverity = typeof ActionSeverity.Type;
 
 /**
  * The kind of actor that produced an event.
  * @public
  */
-export const ActorType = Schema.Literal("agent", "human", "system");
+export const ActorType = Schema.Literals(["agent", "human", "system"]);
 /**
  * The kind of actor that produced an event.
  * @public
  */
-export type ActorType = Schema.Schema.Type<typeof ActorType>;
+export type ActorType = typeof ActorType.Type;
 
 /**
  * Lifecycle phase of a run.
  * @public
  */
-export const RunPhase = Schema.Literal("setup", "active", "teardown");
+export const RunPhase = Schema.Literals(["setup", "active", "teardown"]);
 /**
  * Lifecycle phase of a run.
  * @public
  */
-export type RunPhase = Schema.Schema.Type<typeof RunPhase>;
+export type RunPhase = typeof RunPhase.Type;
 
 /**
  * Acceptance metrics for a completed run.
@@ -54,7 +54,7 @@ export interface AcceptanceMetrics {
  * Error raised when an agent cannot be located.
  * @public
  */
-export class AgentNotFoundError extends Schema.TaggedError<AgentNotFoundError>()("AgentNotFoundError", {
+export class AgentNotFoundError extends Schema.TaggedErrorClass<AgentNotFoundError>()("AgentNotFoundError", {
 	agentId: Schema.String,
 }) {}
 

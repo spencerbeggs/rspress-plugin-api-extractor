@@ -1,6 +1,25 @@
 packages:
-- .
+- modules/*
+- package
+- sites/*
 autoInstallPeers: true
 configDependencies:
   '@savvy-web/pnpm-plugin-silk': 0.24.1+sha512-JlfQjiEYQAjdKDg2obndB29rmWVOYEo7A+gwUxprVVjbGsUvbvlNs+e7UGGRhTfkZmgTBHgBWYSXCQSeFMTNwg==
   '@effected/pnpm-plugin-effect': 0.1.1+sha512-TpmnUekTiRjpnHbFSEPqKeyhX+jQ3WXpUjOcp+F8rNqHBXb6KDL4mMKueHUjFeDbwi0EM0/gOA0bHzDsM5pVAQ==
+minimumReleaseAgeExclude:
+- '@yuku-parser/binding-darwin-arm64@0.6.12'
+- '@yuku-parser/binding-darwin-x64@0.6.12'
+- '@yuku-parser/binding-freebsd-x64@0.6.12'
+- '@yuku-parser/binding-linux-arm-gnu@0.6.12'
+- '@yuku-parser/binding-linux-arm-musl@0.6.12'
+- '@yuku-parser/binding-linux-arm64-gnu@0.6.12'
+- '@yuku-parser/binding-linux-arm64-musl@0.6.12'
+- '@yuku-parser/binding-linux-x64-gnu@0.6.12'
+- '@yuku-parser/binding-linux-x64-musl@0.6.12'
+- '@yuku-parser/binding-win32-arm64@0.6.12'
+- '@yuku-parser/binding-win32-x64@0.6.12'
+- '@yuku-toolchain/types@0.6.11'
+- yuku-ast@0.6.11
+- yuku-parser@0.6.12
+overrides:
+  yuku-parser: ^0.6.12

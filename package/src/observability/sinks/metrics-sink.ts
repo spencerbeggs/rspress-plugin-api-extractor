@@ -26,31 +26,31 @@ export function makeMetricsSink(): EventSink {
 		handle(event: PluginEvent): void {
 			switch (event._tag) {
 				case "FileDecision":
-					Effect.runSync(Metric.increment(BuildMetrics.filesTotal));
+					Effect.runSync(Metric.update(BuildMetrics.filesTotal, 1));
 					if (event.status === "new") {
-						Effect.runSync(Metric.increment(BuildMetrics.filesNew));
+						Effect.runSync(Metric.update(BuildMetrics.filesNew, 1));
 					} else if (event.status === "modified") {
-						Effect.runSync(Metric.increment(BuildMetrics.filesModified));
+						Effect.runSync(Metric.update(BuildMetrics.filesModified, 1));
 					} else {
-						Effect.runSync(Metric.increment(BuildMetrics.filesUnchanged));
+						Effect.runSync(Metric.update(BuildMetrics.filesUnchanged, 1));
 					}
 					break;
 
 				case "PageGenerated":
-					Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
+					Effect.runSync(Metric.update(BuildMetrics.pagesGenerated, 1));
 					break;
 
 				case "TwoslashDiagnostic":
-					Effect.runSync(Metric.increment(BuildMetrics.twoslashDiagnostics));
-					Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
+					Effect.runSync(Metric.update(BuildMetrics.twoslashDiagnostics, 1));
+					Effect.runSync(Metric.update(BuildMetrics.twoslashErrors, 1));
 					break;
 
 				case "PrettierError":
-					Effect.runSync(Metric.increment(BuildMetrics.prettierErrors));
+					Effect.runSync(Metric.update(BuildMetrics.prettierErrors, 1));
 					break;
 
 				case "CodeBlockProcessed":
-					Effect.runSync(Metric.increment(BuildMetrics.codeblockTotal));
+					Effect.runSync(Metric.update(BuildMetrics.codeblockTotal, 1));
 					Effect.runSync(Metric.update(BuildMetrics.codeblockDuration, event.totalMs));
 					// Guard the shiki histogram so a 0ms observation does not skew the
 					// lowest bucket (matches the prior inline `if (shikiTime > 0)` guard).
@@ -58,16 +58,16 @@ export function makeMetricsSink(): EventSink {
 						Effect.runSync(Metric.update(BuildMetrics.codeblockShikiDuration, event.shikiMs));
 					}
 					if (event.slow) {
-						Effect.runSync(Metric.increment(BuildMetrics.codeblockSlow));
+						Effect.runSync(Metric.update(BuildMetrics.codeblockSlow, 1));
 					}
 					break;
 
 				case "VfsGenerated":
-					Effect.runSync(Metric.increment(BuildMetrics.vfsFiles));
+					Effect.runSync(Metric.update(BuildMetrics.vfsFiles, 1));
 					break;
 
 				case "ImportsPrepended":
-					Effect.runSync(Metric.increment(BuildMetrics.importsPrepended));
+					Effect.runSync(Metric.update(BuildMetrics.importsPrepended, 1));
 					break;
 
 				case "PhaseCompleted":
@@ -75,7 +75,7 @@ export function makeMetricsSink(): EventSink {
 					break;
 
 				case "DefaultApplied":
-					Effect.runSync(Metric.increment(BuildMetrics.configDefaultsApplied));
+					Effect.runSync(Metric.update(BuildMetrics.configDefaultsApplied, 1));
 					break;
 
 				default:

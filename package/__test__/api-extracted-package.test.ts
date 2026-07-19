@@ -1,8 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { VirtualPackage as VirtualPackageNs } from "type-registry-effect";
-
-const VirtualPackageClass = VirtualPackageNs.VirtualPackage;
+import { VirtualPackage as VirtualPackageClass } from "type-registry-effect";
 
 import { describe, expect, it } from "vitest";
 import { ApiExtractedPackage } from "../src/api-extracted-package.js";

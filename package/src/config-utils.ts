@@ -4,9 +4,9 @@
  */
 
 import type { PathLike } from "node:fs";
+import { SemVer } from "@effected/semver";
 import type { ApiModel } from "@microsoft/api-extractor-model";
 import { Effect } from "effect";
-import { SemVer } from "semver-effect";
 import type { LoadedModel, PackageJson } from "./internal-types.js";
 import type { AutoDetectDependencies, ExternalPackageSpec, LlmsPlugin, VersionConfig } from "./schemas/index.js";
 
@@ -207,7 +207,7 @@ export function extractAutoDetectedPackages(
 
 /**
  * Deduplicate external packages by name, resolving to the highest version when conflicts exist.
- * Uses semver-effect to pick the highest version from duplicates.
+ * Uses @effected/semver to pick the highest version from duplicates.
  *
  * @param packages - Array of external package specs (may contain duplicates)
  * @returns Deduplicated array with highest versions
@@ -242,7 +242,7 @@ export function resolvePackageVersionConflicts(packages: ExternalPackageSpec[]):
 			continue;
 		}
 
-		// Use semver-effect to find the highest satisfying version
+		// Use @effected/semver to find the highest satisfying version
 		const highestVersion = findHighestVersion(versions);
 		resolved.push({ name, version: highestVersion });
 	}
@@ -280,7 +280,7 @@ export function resolveExternalPackageVersions<R>(
 		(pkg) =>
 			resolve(pkg).pipe(
 				Effect.map((version): ExternalPackageSpec | null => ({ name: pkg.name, version })),
-				Effect.catchAll(() => Effect.succeed<ExternalPackageSpec | null>(null)),
+				Effect.catch(() => Effect.succeed<ExternalPackageSpec | null>(null)),
 			),
 		{ concurrency: 5 },
 	).pipe(Effect.map((results) => results.filter((spec): spec is ExternalPackageSpec => spec !== null)));
@@ -294,7 +294,7 @@ function stripRangePrefix(version: string): string {
 }
 
 /**
- * Find the highest version from a list of version specifiers using semver-effect.
+ * Find the highest version from a list of version specifiers using @effected/semver.
  * Handles version ranges and exact versions.
  *
  * @param versions - Array of version strings (can be ranges or exact versions)
@@ -323,7 +323,7 @@ function findHighestVersion(versions: string[]): string {
 		return versions[versions.length - 1];
 	}
 
-	// Sort by version using semver-effect comparison (descending)
+	// Sort by version using @effected/semver comparison (descending)
 	parsedVersions.sort((a, b) => {
 		if (SemVer.gt(a.version, b.version)) return -1;
 		if (SemVer.lt(a.version, b.version)) return 1;

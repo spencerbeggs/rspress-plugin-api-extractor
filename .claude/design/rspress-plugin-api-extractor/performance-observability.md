@@ -54,17 +54,27 @@ This keeps metrics exact when `logBuildSummary` reads them in `afterBuild`.
 
 ```typescript
 interface EventBusShape {
-  emit: (event: PluginEvent) => Effect.Effect<void>;
-  wantsLevel: (level: EventLevel) => Effect.Effect<boolean>;
+  readonly emit: (event: PluginEvent) => Effect.Effect<void>;
+  readonly wantsLevel: (level: EventLevel) => Effect.Effect<boolean>;
 }
+
+export class EventBus extends Context.Service<EventBus, EventBusShape>()(
+  "rspress-plugin-api-extractor/EventBus"
+) {}
 ```
 
-`makeShape(sinks)` computes `maxAdmitted` as the highest-rank sink `minLevel`
-across all registered sinks. `wantsLevel(level)` returns `true` when
-`levelRank(level) <= maxAdmitted`. Because the metrics sink and trace sink both
-sit at `minLevel: "trace"` (rank 4), `wantsLevel` returns `true` for all levels
-in the live build — the guard is most useful when composing a custom bus without
-a trace-level sink.
+`makeShape(sinks)` computes `maxAdmitted` as the highest-rank `minLevel` among
+sinks that declare `capturesPayload: true` — sinks that actually serialize the
+event. The trace sink always sets it; the console sink sets it only in JSON
+mode (`capturesPayload: json`), since human-readable rendering does not
+consume a structured payload. Scalar-only sinks such as the metrics sink omit
+the flag, so callers are not forced to build an expensive string/JSON payload
+just to bump a counter. `wantsLevel(level)` returns `true` when
+`levelRank(level) <= maxAdmitted`, and `false` when no bus is in context.
+
+Fan-out itself is unaffected by the flag: `emit` still delivers to every sink
+whose `minLevel` admits the event's rank, so the metrics sink at
+`minLevel: "trace"` sees everything regardless of `wantsLevel`.
 
 The free `emit(event)` and `wantsLevel(level)` functions use
 `Effect.serviceOption(EventBus)` and are no-ops when no bus is in context,
@@ -148,8 +158,14 @@ All three implement `EventSink` (`package/src/observability/sinks/types.ts`):
 
 ```typescript
 interface EventSink {
-  minLevel: EventLevel;
-  handle: (event: PluginEvent) => void;
+  readonly minLevel: EventLevel;
+  readonly handle: (event: PluginEvent) => void;
+  /**
+   * When true, this sink serializes event payloads. Only payload-capturing
+   * sinks drive the `wantsLevel` hint (see makeShape above). Scalar-only
+   * sinks (metrics) omit the field.
+   */
+  readonly capturesPayload?: boolean;
 }
 ```
 
@@ -161,17 +177,22 @@ interface EventSink {
 to the configured `logLevel`. When `logLevel === "none"` the threshold is `-1`
 so no event passes.
 
-- **Human-readable mode** (all levels except `debug`): `[HH:MM:SS] rendered-message`. `render(event)` switches on `_tag` to produce a one-liner per variant; unknown tags fall back to the bare `_tag`.
-- **JSON mode** (when `logLevel === "debug"`): `console.log(JSON.stringify({ timestamp, ...event }))`.
+Mode is selected by the sink's `json` option, which `buildEventBus` passes through as `{ json: obs.json }`. `resolveObservability` derives that flag from the level (`json: level === "debug"`), so in practice `debug` activates JSON mode — but the sink itself is level-agnostic and can be constructed with either mode at any level:
+
+- **Human-readable mode** (default): `[HH:MM:SS] rendered-message`. `render(event)` switches on `_tag` to produce a one-liner per variant; unknown tags fall back to the bare `_tag`.
+- **JSON mode** (`json: true`): `console.log(JSON.stringify({ timestamp, ...event }))`. Also sets `capturesPayload: true`.
 
 ### Trace Sink
 
 **Location:** `package/src/observability/sinks/trace-sink.ts`
 
-`makeTraceSink(filePath)` returns `EventSink & { flush: () => void }`.
+`makeTraceSink(initialPath?)` returns
+`EventSink & { flush: () => void; setPath: (p: string) => void }`.
 
-- `minLevel: "trace"` — captures every event regardless of console level.
-- Truncates the file on construction; calls `appendFileSync` per event (synchronous, nothing buffered).
+- `minLevel: "trace"`, `capturesPayload: true` — captures every event regardless of console level.
+- **Eager mode** (`initialPath` supplied, i.e. an explicit `trace: "/some/path"` config): creates the parent directory and truncates the file at construction.
+- **Deferred mode** (`initialPath` omitted): events are silently dropped until `setPath(p)` is called, which opens and truncates the file. This exists because the plugin factory runs before RSPress's real `outDir` is known — when the trace path was derived from a *guessed* outDir, the sink is created deferred so no stray empty file is written to the wrong location, and `plugin.ts` calls `trace.setPath(realPath)` in the `config()` hook once `_config.outDir` is available.
+- Calls `appendFileSync` per event (synchronous, nothing buffered).
 - `flush()` is a no-op: sync appends mean nothing is held in memory.
 
 The trace sink and console level are **independent**. Running at
@@ -202,7 +223,7 @@ Unmapped tags (including `ShikiError`) hit the `default` branch and are
 silently ignored. See the inline-metrics note below.
 
 **Not event-derived:** `externalPackagesTotal` and `apiVersionsLoaded` remain
-inline `Metric.incrementBy` calls in `ConfigServiceLive`. The only candidate
+inline `Metric.update` calls in `ConfigServiceLive`. The only candidate
 event (`TypeRegistryEvent{BatchComplete}`) carries a `loaded` (succeeded) count,
 not a configured count — deriving it here would change the metric's semantics.
 
@@ -246,6 +267,30 @@ plugin.** The spans are a dormant seam for future integration.
 avoid circular imports between the metrics sink and the layer that assembles
 sinks. It provides Effect `Metric.counter` and `Metric.histogram` instances.
 
+Under Effect v4 the `MetricBoundaries` module is gone — histogram boundaries
+are passed inline as an options object:
+
+```typescript
+codeblockDuration: Metric.histogram("codeblock.duration", {
+  boundaries: [10, 25, 50, 100, 200, 500, 1000],
+}),
+```
+
+Updates use `Metric.update(metric, n)` (v3's `Metric.increment` /
+`Metric.incrementBy` are gone). The counter and histogram state shapes read by
+`logBuildSummary` via `Metric.value` are unchanged.
+
+### Summary logger layer
+
+`makeSummaryLoggerLayer(logLevel)` builds the slim Effect Logger that gates
+residual `Effect.log*` calls. In v4 this is
+`Layer.mergeAll(Logger.layer([pluginLogger]), Layer.succeed(References.MinimumLogLevel, effectLevel))`
+— `Logger.minimumLogLevel` is replaced by setting the `References.MinimumLogLevel`
+reference. v4's `LogLevel` is a plain string union (`"None" | "Error" | "Warn" |
+"Info" | "Debug" | ...`; note `"Warn"`, not v3's `"Warning"`), and the logger
+receives its `message` as an **args array**, which `pluginLogger` joins before
+formatting.
+
 ---
 
 ## Build Summary
@@ -258,19 +303,33 @@ rebuilds). The summary covers file counts (new/modified/unchanged), pages and
 external packages, phase timing, slow code blocks, and Twoslash/Prettier error
 totals.
 
-`buildEventBus(obs: ResolvedObservability)` composes sinks into a layer:
+`buildEventBus(obs, traceIsDefault?)` composes sinks into a layer:
 
 ```typescript
-function buildEventBus(obs: ResolvedObservability): BuiltSinks {
-  const sinks = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink()];
-  const trace = obs.tracePath ? makeTraceSink(obs.tracePath) : null;
+function buildEventBus(
+  obs: ResolvedObservability,
+  traceIsDefault = false,
+): BuiltSinks {
+  const sinks: EventSink[] = [
+    makeConsoleSink(obs.logLevel, { json: obs.json }),
+    makeMetricsSink(),
+  ];
+  const trace = obs.tracePath
+    ? makeTraceSink(traceIsDefault ? undefined : obs.tracePath)
+    : null;
   if (trace) sinks.push(trace);
   return { layer: makeEventBusLayer(sinks), trace };
 }
 ```
 
-`BuiltSinks.trace` is retained at the plugin level so `afterBuild` can call
-`trace.flush()` before disposing the runtime.
+`traceIsDefault` marks a trace path derived from the *guessed* outDir at
+factory time. In that case the trace sink is created in deferred mode (no
+`initialPath`) and `plugin.ts` binds the real path with `trace.setPath(...)`
+in the `config()` hook. An explicitly configured path opens eagerly.
+
+`BuiltSinks.trace` is retained at the plugin level so `config()` can call
+`setPath` and `afterBuild` can call `trace.flush()` before disposing the
+runtime.
 
 ---
 

@@ -72,13 +72,13 @@ private handleTwoslashError(error: unknown, _code: string, file: string): void {
   const tsCode = match ? Number(match[1]) : 0;
 
   emitEvent(PluginEvent.TwoslashDiagnostic({
-    ctx: { buildId: "", file },
+    ctx: { buildId: currentBuildId, file },
     level: "warn",
     file, line: 0, col: 0, code: tsCode, message, snippet: "",
   }));
 
   emitEvent(PluginEvent.TwoslashCheckFailed({
-    ctx: { buildId: "", file },
+    ctx: { buildId: currentBuildId, file },
     level: "trace",
     file, code: tsCode,
     fsMapKeys: this.vfsKeysSnapshot(),
@@ -104,7 +104,7 @@ The Prettier formatter (`package/src/prettier-formatter.ts`) stores the same
 
 ```typescript
 emitEvent(
-  PluginEvent.PrettierError({ ctx: { buildId: "" }, file: "unknown", reason: errorMsg, level: "warn" })
+  PE.PrettierError({ ctx: { buildId: currentBuildId }, file: "unknown", reason: errorMsg, level: "warn" })
 );
 ```
 

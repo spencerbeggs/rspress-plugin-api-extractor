@@ -8,7 +8,7 @@ export interface EventBusShape {
 	readonly wantsLevel: (level: EventLevel) => Effect.Effect<boolean>;
 }
 
-export class EventBus extends Context.Tag("rspress-plugin-api-extractor/EventBus")<EventBus, EventBusShape>() {}
+export class EventBus extends Context.Service<EventBus, EventBusShape>()("rspress-plugin-api-extractor/EventBus") {}
 
 function makeShape(sinks: readonly EventSink[]): EventBusShape {
 	// Only sinks that serialize payloads drive the wantsLevel hint. Scalar-only

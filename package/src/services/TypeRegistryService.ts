@@ -29,7 +29,6 @@ export interface TypeRegistryServiceShape {
 	) => Effect.Effect<TypeRegistryResult, TypeRegistryError>;
 }
 
-export class TypeRegistryService extends Context.Tag("rspress-plugin-api-extractor/TypeRegistryService")<
-	TypeRegistryService,
-	TypeRegistryServiceShape
->() {}
+export class TypeRegistryService extends Context.Service<TypeRegistryService, TypeRegistryServiceShape>()(
+	"rspress-plugin-api-extractor/TypeRegistryService",
+) {}

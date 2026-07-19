@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
 import { ApiModel } from "@microsoft/api-extractor-model";
-import { Effect, Layer, LogLevel, Logger } from "effect";
+import { Effect, Layer, References } from "effect";
 import { describe, expect, it } from "vitest";
 import type {
 	FileWriteResult,
@@ -619,7 +619,7 @@ describe("generateSinglePage", () => {
 
 		const result = await Effect.runPromise(
 			generateSinglePage(workItem, ctx).pipe(
-				Effect.provide(Layer.mergeAll(NodeFileSystem.layer, Logger.minimumLogLevel(LogLevel.None))),
+				Effect.provide(Layer.mergeAll(NodeFileSystem.layer, Layer.succeed(References.MinimumLogLevel, "None"))),
 			),
 		);
 		expect(result).toBeNull();

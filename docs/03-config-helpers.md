@@ -4,7 +4,7 @@ Writing out a full `model`, `packageJson`, `tsconfig` and `baseRoute` for every 
 
 ## When to use them
 
-The helpers expect the folder layout that [@savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder) produces for its `localPaths` option: a directory holding a `package.json`, a `*.api.json` model and, optionally, a `tsconfig.json`. Point a helper at such a folder and it reads the package name, version and model path for you.
+The helpers expect the folder layout that [@savvy-web/bundler](https://github.com/savvy-web/bundler) produces for its `meta.localPaths` option: a directory holding a `package.json`, a `*.api.json` model and, optionally, a `tsconfig.json`. Point a helper at such a folder and it reads the package name, version and model path for you.
 
 Both helpers produce `MultiApiConfig` objects. `api.fromDir` returns one, suitable for the `api:` option or as an element of the `apis:` array. `apis.fromDir` scans a parent directory and returns an array of them for the `apis:` option.
 

@@ -27,10 +27,10 @@
 		"types:check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"effect": "catalog:silk"
+		"effect": "catalog:effect"
 	},
 	"devDependencies": {
-		"@savvy-web/bundler": "^1.1.14",
+		"@savvy-web/bundler": "^2.0.3",
 		"@types/node": "catalog:silk",
 		"typescript": "catalog:silk"
 	},

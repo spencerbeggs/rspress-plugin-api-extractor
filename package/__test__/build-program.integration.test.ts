@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect, Layer, LogLevel, Logger } from "effect";
+import { Effect, Layer, References } from "effect";
 import { createHighlighter } from "shiki";
 import { describe, expect, it } from "vitest";
 import { generateApiDocs } from "../src/build-program.js";
@@ -66,7 +66,7 @@ describe("generateApiDocs (Effect program)", () => {
 		const testLayer = Layer.mergeAll(
 			NodeFileSystem.layer,
 			MockSnapshotServiceLayer,
-			Logger.minimumLogLevel(LogLevel.None),
+			Layer.succeed(References.MinimumLogLevel, "None"),
 		);
 		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
 
