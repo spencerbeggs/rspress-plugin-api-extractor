@@ -32,7 +32,6 @@ export interface PageGeneratorServiceShape {
 	}) => Stream.Stream<GeneratedPage, PageGenerationError>;
 }
 
-export class PageGeneratorService extends Context.Tag("rspress-plugin-api-extractor/PageGeneratorService")<
-	PageGeneratorService,
-	PageGeneratorServiceShape
->() {}
+export class PageGeneratorService extends Context.Service<PageGeneratorService, PageGeneratorServiceShape>()(
+	"rspress-plugin-api-extractor/PageGeneratorService",
+) {}

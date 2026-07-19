@@ -24,20 +24,28 @@ The component paths in `plugin.ts` are a **zero-level** resolve to the published
 
 ### Effect Service Layer
 
-The plugin uses Effect-TS for all build orchestration. `plugin.ts` is a thin
-RSPress adapter (~430 lines) that wires an Effect `ManagedRuntime` with a
-composed `Layer` stack:
+The plugin runs on **Effect v4** (`effect@4.0.0-beta.98`, pinned via
+`catalog:effect`). `plugin.ts` is a thin RSPress adapter (~430 lines) that
+wires an Effect `ManagedRuntime` with a composed `Layer` stack:
 
 - `ConfigServiceLive` — resolves plugin options + RSPress config into build
   context (model loading, type resolution, highlighter creation)
-- `SnapshotServiceLive` — SQLite via `@effect/sql-sqlite-node` with managed
-  migrations and WAL lifecycle
-- `TypeRegistryServiceLive` — external package type loading via
-  `type-registry-effect`
+- `SnapshotServiceLive` — SQLite via `@effect/sql-sqlite-node` over
+  `effect/unstable/sql`, with managed migrations and WAL lifecycle
+- `TypeRegistryServiceLive` — external package type loading; edge-composes the
+  `type-registry-effect@2` stack itself (the library ships no platform layer)
 - `PathDerivationServiceLive` — route and output path computation
 - `EventBus` layer (from `buildEventBus`) — synchronous fan-out event bus
   wiring console, metrics, and optional JSONL trace sinks
-- `NodeFileSystem.layer` — cross-platform file I/O from `@effect/platform`
+- `NodeFileSystem.layer` (`@effect/platform-node`) — Node implementation of the
+  core `effect` FileSystem service
+
+Write v4 idioms: declare service tags as
+`Context.Service<Self, Shape>()("id")`; use `Schema.Literals`/`Schema.Union`/
+`Schema.Record` with array args, `Schema.withDecodingDefault(Effect.succeed(v))`
+for defaults, `typeof X.Type`/`typeof X.Encoded` for extraction,
+`Metric.histogram(name, { boundaries })` + `Metric.update`, `Effect.result`
+(not `Effect.either`) and `Effect.catch` (not `Effect.catchAll`).
 
 Doc generation runs as a `Stream` pipeline in `build-stages.ts`:
 `Stream.fromIterable -> Stream.mapEffect(generateSinglePage) ->
@@ -75,11 +83,16 @@ docs for the full architecture.
 
 ## Key Dependencies
 
-- `effect` — core Effect-TS runtime (services, layers, streams, metrics)
-- `@effect/platform` + `@effect/platform-node` — cross-platform file I/O
-- `@effect/sql` + `@effect/sql-sqlite-node` — typed SQLite with migrations
-- `@effect/cluster` + `@effect/experimental` + `@effect/rpc` + `@effect/workflow` — never imported; they close the non-optional peer graph of the platform/sql packages above so unclosed peers cannot escape to consumers (issue #69). Do NOT prune as "unused" — see the "Effect peer dependency closure" section in `build-architecture.md`.
-- `type-registry-effect` — npm package type definition loading
+- `effect` (v4, `catalog:effect`) — core runtime plus the merged-in `FileSystem`
+  and `effect/unstable/sql` modules. `@effect/platform` and `@effect/sql` no
+  longer exist as separate packages; do not add them back.
+- `@effect/platform-node` — Node platform implementation (`NodeFileSystem`)
+- `@effect/sql-sqlite-node` — SQLite driver for `effect/unstable/sql`
+- `ioredis` + `@effected/semver`/`store`/`tsconfig-json`/`xdg` +
+  `@typescript/vfs` — peer-closure deps (some imported directly by
+  `layers/TypeRegistryServiceLive.ts`). Do NOT prune as "unused" — see the peer
+  dependency closure section in `build-architecture.md`.
+- `type-registry-effect` (v2) — npm package type definition loading
 - `api-extractor-llms` — shared pure renderer: model loading, TSDoc extraction, type-signature formatting, prose cross-linking (the plugin delegates these to it)
 - `@microsoft/api-extractor-model` — `.api.json` model parsing (direct dep; model loading now flows through `api-extractor-llms`'s `loadApiModel`)
 - `@shikijs/twoslash` — syntax highlighting with type information
@@ -108,7 +121,7 @@ which the global biome rule would rewrite to `.js`.
   - `spans.ts` — `withPhase`, `withOp`, `PHASE_THRESHOLD_KEY`
   - `stream.ts` — best-effort sliding-queue stream tee (exported, not wired to live plugin)
 - `src/schemas/` — Effect Schema definitions (config, opengraph, performance, observability)
-- `src/services/` — Effect service interfaces (Context.Tag)
+- `src/services/` — Effect service interfaces (`Context.Service`)
 - `src/layers/` — Effect Layer implementations
 - `src/migrations/` — SQLite schema migrations
 - `src/internal-types.ts` — internal type definitions

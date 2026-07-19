@@ -12,7 +12,7 @@ To use the plugin in your own site, install [rspress-plugin-api-extractor](https
 | [`modules/`](./modules) | Private TypeScript fixture libraries that produce `.api.json` models for the example sites. |
 | [`sites/`](./sites) | Private RSPress example sites, one per configuration the plugin supports. |
 
-The `modules/` workspaces build demo libraries whose API Extractor models feed the sites. The `sites/` workspaces run the plugin with different options — single API, multi-API portal, multiVersion, i18n and multi-entry-point packages — so every supported configuration has a working end-to-end build.
+The `modules/` workspaces build demo libraries whose API Extractor models feed the sites. The `sites/` workspaces run the plugin with different options — single API, multi-API portal, multiVersion, i18n, multi-entry-point packages and Effect-TS API patterns — so every supported configuration has a working end-to-end build.
 
 The repository also ships a companion Claude Code plugin, `api-docs`, under [`plugin/`](./plugin). It bundles documentation-authoring skills, an agent and slash commands for building and maintaining RSPress API-documentation sites with this plugin. It is not a pnpm workspace; it ships through the [spencerbeggs/bot](https://github.com/spencerbeggs/bot) marketplace, versioned in lockstep with the npm package, and loads locally with `pnpm claude`.
 
@@ -59,7 +59,10 @@ pnpm dev               # Start the basic example site with hot reload
 pnpm dev:versioned     # Start the multiVersion example site
 pnpm dev:i18n          # Start the i18n example site
 pnpm dev:multi         # Start the multi-API portal example site
+pnpm dev:effect        # Start the Effect-TS example site
 ```
+
+Each has a matching `preview:` script that serves the production build instead.
 
 Common workspace scripts:
 

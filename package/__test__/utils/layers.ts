@@ -18,7 +18,7 @@ export const MockSnapshotServiceLayer = Layer.effect(
 		return {
 			hashContent,
 			getSnapshot: (outputDir: string, filePath: string) =>
-				Ref.get(store).pipe(Effect.map((m) => Option.fromNullable(m.get(`${outputDir}::${filePath}`)))),
+				Ref.get(store).pipe(Effect.map((m) => Option.fromUndefinedOr(m.get(`${outputDir}::${filePath}`)))),
 			getAllForDirectory: (outputDir: string) =>
 				Ref.get(store).pipe(Effect.map((m) => [...m.values()].filter((s) => s.outputDir === outputDir))),
 			getFilePaths: (outputDir: string) =>

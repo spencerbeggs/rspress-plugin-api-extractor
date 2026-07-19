@@ -1,8 +1,6 @@
-import { NodeContext } from "@effect/platform-node";
-import { Migrator } from "@effect/sql";
-import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-node";
 import { Effect, Layer, Option } from "effect";
+import { Migrator, SqlClient } from "effect/unstable/sql";
 import { hashContent } from "../content-hash.js";
 import { SnapshotDbError } from "../errors.js";
 import migration001 from "../migrations/001_create_snapshots.js";
@@ -36,9 +34,9 @@ export const SnapshotServiceLive = (dbPath: string) => {
 		loader: Migrator.fromRecord({
 			"001_create_snapshots": migration001,
 		}),
-	}).pipe(Layer.provide(Layer.merge(SqlLive, NodeContext.layer)));
+	}).pipe(Layer.provide(SqlLive));
 
-	const ServiceImpl = Layer.scoped(
+	const ServiceImpl = Layer.effect(
 		SnapshotService,
 		Effect.gen(function* () {
 			const sql = yield* SqlClient.SqlClient;

@@ -45,8 +45,8 @@ git changes.
 - **Disk fallback** when snapshot database is missing (e.g., first clone)
 - **Stale file cleanup** to remove files no longer in the API model
 - **Orphan file cleanup** to remove untracked files from output directory
-- **Effect service architecture** with `@effect/sql-sqlite-node` and
-  managed migrations
+- **Effect service architecture** with `@effect/sql-sqlite-node` over
+  `effect/unstable/sql` and managed migrations
 - **Batch upserts** within transactions for write efficiency
 - **Pre-loaded snapshot map** for O(1) lookup during build
 
@@ -62,9 +62,10 @@ between interface and implementation:
 **Service interface** (`services/SnapshotService.ts`):
 
 ```typescript
-export class SnapshotService extends Context.Tag(
-  "rspress-plugin-api-extractor/SnapshotService"
-)<SnapshotService, SnapshotServiceShape>() {}
+export class SnapshotService extends Context.Service<
+  SnapshotService,
+  SnapshotServiceShape
+>()("rspress-plugin-api-extractor/SnapshotService") {}
 ```
 
 The `SnapshotServiceShape` defines methods:
@@ -80,8 +81,13 @@ The `SnapshotServiceShape` defines methods:
 
 **Live implementation** (`layers/SnapshotServiceLive.ts`):
 
-Uses `@effect/sql-sqlite-node` SqliteClient with managed lifecycle.
-WAL checkpoint registered as scope finalizer for clean shutdown.
+Uses `@effect/sql-sqlite-node` `SqliteClient` with managed lifecycle, over the
+`SqlClient` / `Migrator` modules imported from **`effect/unstable/sql`** (in
+Effect v4 the former `@effect/sql` package merged into the core; the member
+names are unchanged). The service is built with `Layer.effect` — v4's
+`Layer.effect` handles resource-owning layers, so the separate `Layer.scoped`
+constructor is no longer used. The WAL checkpoint is still registered as a
+scope finalizer for clean shutdown.
 
 ### Data Flow
 
@@ -117,8 +123,8 @@ Build execution (build-program.ts)
 
 | File | Purpose |
 | --- | --- |
-| `services/SnapshotService.ts` | Effect Context.Tag and interface |
-| `layers/SnapshotServiceLive.ts` | SQLite implementation via `@effect/sql` |
+| `services/SnapshotService.ts` | Effect `Context.Service` tag and interface |
+| `layers/SnapshotServiceLive.ts` | SQLite implementation via `effect/unstable/sql` |
 | `migrations/001_create_snapshots.ts` | Schema creation migration |
 | `content-hash.ts` | SHA-256 hashing functions (pure, standalone) |
 | `build-stages.ts` | Change detection in `generateSinglePage` |
@@ -149,15 +155,21 @@ CREATE INDEX IF NOT EXISTS idx_file_path
     ON file_snapshots(file_path);
 ```
 
-Migrations are managed by `@effect/sql` Migrator:
+Migrations are managed by the `effect/unstable/sql` `Migrator`:
 
 ```typescript
 const MigratorLive = SqliteMigrator.layer({
   loader: Migrator.fromRecord({
     "001_create_snapshots": migration001,
   }),
-});
+}).pipe(Layer.provide(SqlLive));
 ```
+
+In Effect v4 `SqliteMigrator.layer` requires only the `SqlClient`. The v3
+wiring merged `NodeContext.layer` alongside it; `NodeContext` no longer exists
+in v4 (its role is taken by `NodeServices`), and no such merge is needed here.
+The migration effect itself yields `SqlClient.SqlClient` from
+`effect/unstable/sql` and is otherwise unchanged.
 
 ### WAL Lifecycle
 
@@ -288,7 +300,7 @@ this circular dependency.
 
 When the snapshot database is missing (first clone, DB deleted, CI
 environment), the system falls back to comparing generated content against
-existing files on disk using `@effect/platform` FileSystem:
+existing files on disk using the core `effect` FileSystem service:
 
 ```typescript
 const fileExists = yield* fileSystem.exists(absolutePath)

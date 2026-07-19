@@ -67,9 +67,10 @@ return Stream.fromIterable(input.workItems).pipe(
     (result) => writeSingleFile(result, writeCtx),
     { concurrency: input.pageConcurrency },
   ),
-  // Fold: accumulate all results
+  // Fold: accumulate all results.
+  // Effect v4 takes the initial value as a lazy thunk.
   Stream.runFold(
-    [] as FileWriteResult[],
+    () => [] as FileWriteResult[],
     (acc, result) => [...acc, result],
   ),
 );

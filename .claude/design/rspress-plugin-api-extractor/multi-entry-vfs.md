@@ -25,14 +25,18 @@ For deduplication and route-collision handling in the documentation pipeline, se
 
 ## ApiExtractedPackage
 
-`ApiExtractedPackage` (`src/api-extracted-package.ts`) extends `VirtualPackage` from `type-registry-effect`. It overrides declaration generation to emit high-fidelity `.d.ts` output from an `ApiPackage` — enum values, full JSDoc, namespace members and all interface member kinds — while delegating the VFS map and `package.json` synthesis to the base class.
+`ApiExtractedPackage` (`src/api-extracted-package.ts`) extends `VirtualPackage` from `type-registry-effect` (v2). It overrides declaration generation to emit high-fidelity `.d.ts` output from an `ApiPackage` — enum values, full JSDoc, namespace members and all interface member kinds — while delegating the VFS map and `package.json` synthesis to the base class.
+
+In v2, `VirtualPackage` is a **Schema class exported directly** (there is no enclosing namespace, so it is imported as `import { VirtualPackage } from "type-registry-effect"`). Its constructor takes a single props object — `super({ name, version, entries })` — and validates at construction time, which means the entries map must be complete before `super` runs.
 
 Factory methods:
 
 - `ApiExtractedPackage.fromApiModel(modelPath)` — load an `.api.json` file and build the package.
 - `ApiExtractedPackage.fromPackage(apiPackage, packageName)` — build from an in-memory `ApiPackage`.
 
-`fromPackage` walks the package's entry points, derives each entry's file name (`index.d.ts` for the main entry, `<name>.d.ts` for named entries) and calls `generateDeclarations(entryPoint)` to populate the entries map passed to the `VirtualPackage` constructor.
+`fromPackage` walks the package's entry points, derives each entry's file name (`index.d.ts` for the main entry, `<name>.d.ts` for named entries) and calls `generateDeclarations(entryPoint)` for each. Because declaration generation is an instance method but the instance cannot be constructed without its entries, `fromPackage` uses a **scratch-instance pattern**: it constructs a throwaway `ApiExtractedPackage` with a placeholder entries map (`[["index.d.ts", ""]]`), uses that scratch instance's `getEntryPointName` / `generateDeclarations` to build the real entries map, then constructs the returned instance from it. This replaces the v1 trick of constructing with an empty map and mutating it afterwards, which the v2 Schema validation forbids.
+
+`generateVfs()` is retained as a thin wrapper over v2's `toVfs()`, because the config layer and tests consume it under the v1 name.
 
 ### Excerpt rendering and reference fidelity
 
@@ -45,7 +49,7 @@ Declaration excerpts are rendered through a private `renderExcerpt` (token-by-to
 
 ## VFS layout
 
-`generateVfs()` (inherited from `VirtualPackage`) returns a `Map<string, string>` prefixed with `node_modules/<package>/`:
+`generateVfs()` (the plugin's wrapper over `VirtualPackage.toVfs()`) returns a `Map<string, string>` prefixed with `node_modules/<package>/`:
 
 ```text
 Single entry point:
@@ -62,7 +66,7 @@ node_modules/my-package/
        "./testing": { "types": "./testing.d.ts" } } }
 ```
 
-The `types`-vs-`exports` decision lives in `VirtualPackage.generatePackageJson()` in `type-registry-effect`, driven by how many entries the package has. `ApiExtractedPackage` only supplies the entries map; it does not build `package.json` itself.
+The `types`-vs-`exports` decision lives in `VirtualPackage.toPackageJson()` in `type-registry-effect` v2 (v1 called it `generatePackageJson()`), driven by how many entries the package has, and is invoked from `toVfs()`. `ApiExtractedPackage` only supplies the entries map; it does not build `package.json` itself. v2 also throws on two structural errors the plugin must avoid: declaring `package.json` as an entry, and two entry file names that normalize to the same export key.
 
 ## Import prepending
 
@@ -70,7 +74,7 @@ The `types`-vs-`exports` decision lives in `VirtualPackage.generatePackageJson()
 
 ## Backward compatibility
 
-Single-entry packages are detected automatically (`entries.size <= 1`) and use the simple `types` field, so the VFS works with every TypeScript module resolution strategy. Multi-entry packages use `exports`, and cross-entry references (a `testing.d.ts` type referencing a `Plugin` declared in `index.d.ts`) resolve through TypeScript's own module resolution against the synthetic `package.json`.
+Single-entry packages are detected automatically (`entries.size === 1`) and use the simple `types` field, so the VFS works with every TypeScript module resolution strategy. Multi-entry packages use `exports`, and cross-entry references (a `testing.d.ts` type referencing a `Plugin` declared in `index.d.ts`) resolve through TypeScript's own module resolution against the synthetic `package.json`.
 
 ## Known limitations
 

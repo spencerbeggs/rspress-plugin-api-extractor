@@ -91,14 +91,19 @@ configurations. Each site depends on `rspress-plugin-api-extractor` via
 
 ## Effect-TS Architecture
 
-The plugin uses Effect-TS for all build orchestration. Key patterns:
+The plugin uses **Effect v4** (`effect@4.0.0-beta.98`, pinned through the
+`catalog:effect` catalog) for all build orchestration. Key patterns:
 
-- **Services** in the Layer stack: `ConfigService`, `SnapshotService`,
+- **Services** in the Layer stack, declared as
+  `Context.Service<Self, Shape>()("id")`: `ConfigService`, `SnapshotService`,
   `TypeRegistryService`, `PathDerivationService`
 - **Stream pipeline** for concurrent page generation (`build-stages.ts`)
 - **Effect Schema** for config validation (`src/schemas/`)
-- **`@effect/platform`** FileSystem for cross-platform I/O
-- **`@effect/sql-sqlite-node`** for snapshot tracking DB
+- **Core `effect` FileSystem** for cross-platform I/O, with
+  `@effect/platform-node` supplying the Node implementation (`@effect/platform`
+  merged into the core in v4)
+- **`@effect/sql-sqlite-node`** over `effect/unstable/sql` for snapshot
+  tracking DB (`@effect/sql` also merged into the core)
 
 See `package/CLAUDE.md` for detailed service layer documentation.
 

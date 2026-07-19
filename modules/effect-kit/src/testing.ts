@@ -13,12 +13,12 @@ export { ActionSeverity, AgentNotFoundError, summarize } from "./index.js";
  * Mock playback mode for the test harness.
  * @public
  */
-export const MockMode = Schema.Literal("record", "replay");
+export const MockMode = Schema.Literals(["record", "replay"]);
 /**
  * Mock playback mode for the test harness.
  * @public
  */
-export type MockMode = Schema.Schema.Type<typeof MockMode>;
+export type MockMode = typeof MockMode.Type;
 
 /**
  * A captured interaction used by the mock harness.

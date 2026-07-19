@@ -2,7 +2,7 @@
  * Effect program for post-processing LLMs text files in afterBuild.
  *
  * Wires the pure processing functions from llms-processing.ts into the
- * plugin lifecycle, handling file I/O via \@effect/platform FileSystem.
+ * plugin lifecycle, handling file I/O via the core `effect` FileSystem service.
  *
  * Responsibilities:
  * 1. Collect all API routes from build results
@@ -11,8 +11,7 @@
  * 4. Generate per-package files (llms.txt, llms-full.txt, llms-docs.txt, llms-api.txt)
  */
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import type { GenerateApiDocsResult } from "./build-program.js";
 import type { LlmsTxtEntry, PackagePointer, PackageScopeInfo } from "./llms-processing.js";
 import {
@@ -254,7 +253,7 @@ function collectApiPageContent(
  * 3. For each prefix, post-processes global llms.txt and llms-full.txt
  * 4. When scopes is enabled, generates per-package LLMs files
  *
- * Requires FileSystem from \@effect/platform.
+ * Requires the core `effect` FileSystem service.
  */
 export function processLlmsFiles(input: ProcessLlmsFilesInput): Effect.Effect<void, never, FileSystem.FileSystem> {
 	return Effect.gen(function* () {

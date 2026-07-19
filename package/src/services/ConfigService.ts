@@ -74,7 +74,6 @@ export interface ConfigServiceShape {
 	) => Effect.Effect<ResolvedBuildContext, ConfigValidationError | ApiModelLoadError | TypeRegistryError, Scope.Scope>;
 }
 
-export class ConfigService extends Context.Tag("rspress-plugin-api-extractor/ConfigService")<
-	ConfigService,
-	ConfigServiceShape
->() {}
+export class ConfigService extends Context.Service<ConfigService, ConfigServiceShape>()(
+	"rspress-plugin-api-extractor/ConfigService",
+) {}

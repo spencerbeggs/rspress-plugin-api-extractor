@@ -27,7 +27,6 @@ export interface PathDerivationServiceShape {
 	readonly normalizeBaseRoute: (route: string) => Effect.Effect<string, PathDerivationError>;
 }
 
-export class PathDerivationService extends Context.Tag("rspress-plugin-api-extractor/PathDerivationService")<
-	PathDerivationService,
-	PathDerivationServiceShape
->() {}
+export class PathDerivationService extends Context.Service<PathDerivationService, PathDerivationServiceShape>()(
+	"rspress-plugin-api-extractor/PathDerivationService",
+) {}

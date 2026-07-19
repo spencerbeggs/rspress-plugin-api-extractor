@@ -20,7 +20,9 @@ import type { ResolvedObservability } from "../../src/schemas/observability.js";
 let isolationSeq = 0;
 function isolate<A, E, R>(program: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> {
 	isolationSeq += 1;
-	return program.pipe(Effect.tagMetrics("ObservabilityLiveTest", `case-${isolationSeq}`));
+	return Effect.provideService(program, Metric.CurrentMetricAttributes, {
+		ObservabilityLiveTest: `case-${isolationSeq}`,
+	});
 }
 
 function captureConsole(): { output: string[]; restore: () => void } {
@@ -51,9 +53,9 @@ function makeObs(overrides: Partial<ResolvedObservability> = {}): ResolvedObserv
 describe("BuildMetrics", () => {
 	it("counters can be incremented", async () => {
 		const program = Effect.gen(function* () {
-			yield* Metric.increment(BuildMetrics.filesNew);
-			yield* Metric.increment(BuildMetrics.filesNew);
-			yield* Metric.increment(BuildMetrics.filesModified);
+			yield* Metric.update(BuildMetrics.filesNew, 1);
+			yield* Metric.update(BuildMetrics.filesNew, 1);
+			yield* Metric.update(BuildMetrics.filesModified, 1);
 		});
 
 		await Effect.runPromise(program);
@@ -70,8 +72,8 @@ describe("BuildMetrics", () => {
 
 	it("Effect.runSync works for metric increments (bridge pattern)", () => {
 		// This verifies the pattern used in non-Effect code (plugin.ts)
-		Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
-		Effect.runSync(Metric.increment(BuildMetrics.pagesGenerated));
+		Effect.runSync(Metric.update(BuildMetrics.pagesGenerated, 1));
+		Effect.runSync(Metric.update(BuildMetrics.pagesGenerated, 1));
 		// No error = success (metrics use global default registry)
 	});
 });
@@ -84,10 +86,10 @@ describe("logBuildSummary", () => {
 		});
 
 		const program = Effect.gen(function* () {
-			yield* Metric.incrementBy(BuildMetrics.filesTotal, 10);
-			yield* Metric.incrementBy(BuildMetrics.filesNew, 3);
-			yield* Metric.incrementBy(BuildMetrics.filesModified, 2);
-			yield* Metric.incrementBy(BuildMetrics.filesUnchanged, 5);
+			yield* Metric.update(BuildMetrics.filesTotal, 10);
+			yield* Metric.update(BuildMetrics.filesNew, 3);
+			yield* Metric.update(BuildMetrics.filesModified, 2);
+			yield* Metric.update(BuildMetrics.filesUnchanged, 5);
 			yield* logBuildSummary(100);
 		});
 
@@ -108,7 +110,7 @@ describe("logBuildSummary", () => {
 		});
 
 		const program = Effect.gen(function* () {
-			yield* Metric.incrementBy(BuildMetrics.twoslashErrors, 3);
+			yield* Metric.update(BuildMetrics.twoslashErrors, 3);
 			yield* logBuildSummary(100);
 		});
 
@@ -129,8 +131,8 @@ describe("logBuildSummary", () => {
 
 		const program = Effect.gen(function* () {
 			// Prime to ensure the count>0 guard fires; registry is process-wide so assert loosely
-			yield* Metric.incrementBy(BuildMetrics.pagesGenerated, 5);
-			yield* Metric.incrementBy(BuildMetrics.externalPackagesTotal, 2);
+			yield* Metric.update(BuildMetrics.pagesGenerated, 5);
+			yield* Metric.update(BuildMetrics.externalPackagesTotal, 2);
 			yield* logBuildSummary(100);
 		});
 
@@ -173,8 +175,8 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.filesTotal, 5);
-					yield* Metric.incrementBy(BuildMetrics.filesUnchanged, 5);
+					yield* Metric.update(BuildMetrics.filesTotal, 5);
+					yield* Metric.update(BuildMetrics.filesUnchanged, 5);
 					yield* logBuildSummary(100);
 				}),
 			),
@@ -193,10 +195,10 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.filesTotal, 10);
-					yield* Metric.incrementBy(BuildMetrics.filesNew, 3);
-					yield* Metric.incrementBy(BuildMetrics.filesModified, 2);
-					yield* Metric.incrementBy(BuildMetrics.filesUnchanged, 5);
+					yield* Metric.update(BuildMetrics.filesTotal, 10);
+					yield* Metric.update(BuildMetrics.filesNew, 3);
+					yield* Metric.update(BuildMetrics.filesModified, 2);
+					yield* Metric.update(BuildMetrics.filesUnchanged, 5);
 					yield* logBuildSummary(100);
 				}),
 			),
@@ -217,8 +219,8 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.filesTotal, 4);
-					yield* Metric.incrementBy(BuildMetrics.filesNew, 4);
+					yield* Metric.update(BuildMetrics.filesTotal, 4);
+					yield* Metric.update(BuildMetrics.filesNew, 4);
 					yield* logBuildSummary(100);
 				}),
 			),
@@ -239,8 +241,8 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.filesTotal, 6);
-					yield* Metric.incrementBy(BuildMetrics.filesModified, 6);
+					yield* Metric.update(BuildMetrics.filesTotal, 6);
+					yield* Metric.update(BuildMetrics.filesModified, 6);
 					yield* logBuildSummary(100);
 				}),
 			),
@@ -281,8 +283,8 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.codeblockTotal, 10);
-					yield* Metric.incrementBy(BuildMetrics.codeblockSlow, 3);
+					yield* Metric.update(BuildMetrics.codeblockTotal, 10);
+					yield* Metric.update(BuildMetrics.codeblockSlow, 3);
 					yield* logBuildSummary(250);
 				}),
 			),
@@ -302,7 +304,7 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.prettierErrors, 2);
+					yield* Metric.update(BuildMetrics.prettierErrors, 2);
 					yield* logBuildSummary(100);
 				}),
 			),
@@ -322,8 +324,8 @@ describe("logBuildSummary", () => {
 		await Effect.runPromise(
 			isolate(
 				Effect.gen(function* () {
-					yield* Metric.incrementBy(BuildMetrics.twoslashErrors, 1);
-					yield* Metric.incrementBy(BuildMetrics.prettierErrors, 2);
+					yield* Metric.update(BuildMetrics.twoslashErrors, 1);
+					yield* Metric.update(BuildMetrics.prettierErrors, 2);
 					yield* logBuildSummary(100);
 				}),
 			),

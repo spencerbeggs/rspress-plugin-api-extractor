@@ -26,7 +26,7 @@ The package also ships a base RSPress tsconfig you can extend in your site's `ts
 
 ## What you need first
 
-The plugin reads a Microsoft [API Extractor](https://api-extractor.com/) model — a `.api.json` file that describes your package's public API. You produce this file when you build your library. If you build with [@savvy-web/rslib-builder](https://github.com/savvy-web/rslib-builder), set `apiModel: true` and the model lands next to your `dist/` output. Otherwise run API Extractor yourself with `"docModel": { "enabled": true }` in `api-extractor.json`.
+The plugin reads a Microsoft [API Extractor](https://api-extractor.com/) model — a `.api.json` file that describes your package's public API. You produce this file when you build your library. If you build with [@savvy-web/bundler](https://github.com/savvy-web/bundler), a production build emits the model into `dist/prod/<group>/meta/` with no extra configuration. Otherwise run API Extractor yourself with `"docModel": { "enabled": true }` in `api-extractor.json`.
 
 You point the plugin at three things per API:
 

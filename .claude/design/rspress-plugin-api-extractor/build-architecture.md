@@ -61,7 +61,7 @@ The runtime provides the React components that render API documentation: signatu
 
 ### Service Architecture
 
-The plugin uses Effect's Context/Layer/Tag pattern for dependency injection:
+The plugin uses Effect's Context/Layer/Service pattern for dependency injection. Every service tag is declared in the v4 form, `class X extends Context.Service<X, XShape>()("rspress-plugin-api-extractor/X")`:
 
 ```text
 plugin.ts (RSPress adapter)
@@ -74,10 +74,12 @@ plugin.ts (RSPress adapter)
   |     |
   |     +-> SnapshotServiceLive
   |     |     SQLite via @effect/sql-sqlite-node
+  |     |     Migrator/SqlClient from effect/unstable/sql
   |     |     Managed migrations, WAL lifecycle
   |     |
   |     +-> TypeRegistryServiceLive
   |     |     External package type loading
+  |     |     Edge-composed type-registry-effect v2 stack
   |     |
   |     +-> PathDerivationServiceLive
   |     |     Route and output path computation
@@ -89,7 +91,7 @@ plugin.ts (RSPress adapter)
   |     |     Slim Effect Logger gating residual Effect.log* calls
   |     |
   |     +-> NodeFileSystem.layer
-  |           @effect/platform cross-platform file I/O
+  |           Node implementation of the core `effect` FileSystem service
   |
   +-> ManagedRuntime.make(EffectAppLayer)
         Single runtime instance, shared across hooks
@@ -109,15 +111,40 @@ plugin.ts (RSPress adapter)
 | Layer | Location | Key Dependencies |
 | --- | --- | --- |
 | `ConfigServiceLive` | `layers/ConfigServiceLive.ts` | PathDerivation, TypeRegistry |
-| `SnapshotServiceLive` | `layers/SnapshotServiceLive.ts` | `@effect/sql-sqlite-node` |
-| `TypeRegistryServiceLive` | `layers/TypeRegistryServiceLive.ts` | `type-registry-effect` |
+| `SnapshotServiceLive` | `layers/SnapshotServiceLive.ts` | `@effect/sql-sqlite-node`, `effect/unstable/sql` |
+| `TypeRegistryServiceLive` | `layers/TypeRegistryServiceLive.ts` | `type-registry-effect@2`, `@effected/store`, `@effected/xdg`, `@effect/platform-node` |
 | `PathDerivationServiceLive` | `layers/PathDerivationServiceLive.ts` | (none) |
 | `buildEventBus` (EventBus layer) | `layers/ObservabilityLive.ts` | Synchronous fan-out event bus |
 | `makeSummaryLoggerLayer` | `layers/ObservabilityLive.ts` | Effect Logger gate for `Effect.log*` calls |
 
-### Effect peer dependency closure
+### Effect v4 and the peer dependency closure
 
-`package/package.json` declares `@effect/cluster`, `@effect/experimental`, `@effect/rpc` and `@effect/workflow` as direct dependencies even though the plugin never imports them. They exist solely to close the non-optional peer graph of `@effect/platform-node`, `@effect/sql` and `@effect/sql-sqlite-node`: because the per-file plugin build leaves `dependencies` external, unclosed peers escape to the consuming workspace, where pnpm `autoInstallPeers` can bind them to an incompatible `effect` version (issue #69). Do not remove these packages as "unused" — a dependency prune that drops them reintroduces the bug.
+The plugin runs on **Effect v4** (`effect@4.0.0-beta.98`, pinned through the `catalog:effect` catalog supplied by `@effected/pnpm-plugin-effect`). Two v3 packages are gone because their contents merged into the `effect` core: `@effect/platform` (FileSystem is now the top-level `effect` `FileSystem` module) and `@effect/sql` (now `effect/unstable/sql`). `@effect/platform-node` and `@effect/sql-sqlite-node` remain as separate node-platform packages.
+
+The v3 peer-closure block (`@effect/cluster`, `@effect/experimental`, `@effect/rpc`, `@effect/workflow`) has been **removed**: the v4 peer graph is small enough that issue #69's escaping-peer problem no longer applies in that form. The closure principle still holds, though — because the per-file plugin build leaves `dependencies` external, any unclosed non-optional peer escapes to the consuming workspace where pnpm `autoInstallPeers` can bind it unpredictably. The current closure declares:
+
+- `ioredis` — non-optional peer of the `@effect/platform-node` v4 beta.
+- `@effected/semver`, `@effected/store`, `@effected/tsconfig-json`, `@effected/xdg`, `@typescript/vfs` — peers of `type-registry-effect@2`.
+
+Do not prune these as "unused"; the plugin imports some of them directly (see `layers/TypeRegistryServiceLive.ts`) and the rest exist to keep the peer graph closed.
+
+`pnpm-workspace.yaml` also carries an override pinning `yuku-parser: ^0.6.12` — 0.6.7 is a broken publish that crashes `rolldown-plugin-dts` during the declaration build.
+
+### v4 idiom notes
+
+The migration changed several call-site idioms that recur throughout the plugin source:
+
+| Concern | v4 form |
+| --- | --- |
+| Service tags | `Context.Service<Self, Shape>()("id")` (replaces `Context.Tag("id")<Self, Shape>()`) |
+| Schema literals / unions / records | `Schema.Literals([...])`, `Schema.Union([a, b])`, `Schema.Record(key, value)` |
+| Schema defaults | `X.pipe(Schema.withDecodingDefault(Effect.succeed(v)))` (replaces `Schema.optionalWith(X, { default })`) |
+| Schema type extraction | `typeof X.Type` / `typeof X.Encoded` (replaces `Schema.Schema.Type<typeof X>`) |
+| Metrics | `Metric.histogram(name, { boundaries: [...] })`; `Metric.update(m, n)` (replaces `Metric.increment/incrementBy`; the `MetricBoundaries` module is gone) |
+| Error channel inspection | `Effect.result` yielding a `Result` (`_tag: "Failure"`, `.failure`), replacing `Effect.either` |
+| Error recovery | `Effect.catch` (replaces `Effect.catchAll`) |
+
+`Schema.mutable` is restricted to array schemas in v4, so struct-level `mutable` wrappers were dropped. `Data.TaggedError` and `Data.TaggedEnum`/`taggedEnum` survive unchanged, so `errors.ts` and `observability/events.ts` needed no migration.
 
 ### Schema Validation
 
@@ -166,7 +193,7 @@ The plugin depends on the published **`api-extractor-llms`** package and delegat
 | `ApiParser` TSDoc statics (`loader.ts`) | `lib*`-aliased helpers (`getSummary`, `getReleaseTag`, `getParams`, `getReturns`, `getExamples`, `getDeprecation`, `hasModifierTag`, prose `extractPlainText`) | non-TSDoc statics with no library equivalent: `categorizeApiItems`, `extractNamespaceMembers`, `getInheritance`, `getSeeReferences`, `getSourceLink` |
 | `MarkdownCrossLinker.addCrossLinks` (`markdown/cross-linker.ts`) | the library's immutable `CrossLinker` (see `cross-linking-architecture.md`) | class shape (`setRoutes`/`addRoutes`/`clear`/`sanitizeId`) and test-only `addCrossLinksHtml` (library has no HTML variant) |
 
-**Not delegated — looks similar, is not.** `ApiExtractedPackage` (`api-extracted-package.ts`) keeps its OWN private `extractPlainText`. Despite the shared name with the library helper, it is a different algorithm for declaration reconstruction: it PRESERVES `{@link X.Y}` TSDoc syntax and reconstructs fenced code blocks for `.d.ts`/JSDoc output, whereas the library's `extractPlainText` flattens `{@link}` to display text and drops code fences. The two are not interchangeable. `CrossLinkerService` (`Context.Tag`, no Live layer) is also unchanged.
+**Not delegated — looks similar, is not.** `ApiExtractedPackage` (`api-extracted-package.ts`) keeps its OWN private `extractPlainText`. Despite the shared name with the library helper, it is a different algorithm for declaration reconstruction: it PRESERVES `{@link X.Y}` TSDoc syntax and reconstructs fenced code blocks for `.d.ts`/JSDoc output, whereas the library's `extractPlainText` flattens `{@link}` to display text and drops code fences. The two are not interchangeable. `CrossLinkerService` (a bare `Context.Service` tag, no Live layer) is also unchanged.
 
 ### Stage 2 output convergence (deferred)
 

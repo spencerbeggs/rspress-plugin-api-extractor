@@ -37,7 +37,6 @@ export interface SnapshotServiceShape {
 	) => Effect.Effect<ReadonlyArray<string>, SnapshotDbError>;
 }
 
-export class SnapshotService extends Context.Tag("rspress-plugin-api-extractor/SnapshotService")<
-	SnapshotService,
-	SnapshotServiceShape
->() {}
+export class SnapshotService extends Context.Service<SnapshotService, SnapshotServiceShape>()(
+	"rspress-plugin-api-extractor/SnapshotService",
+) {}

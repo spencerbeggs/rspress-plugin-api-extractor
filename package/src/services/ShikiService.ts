@@ -15,7 +15,6 @@ export interface ShikiServiceShape {
 	readonly getCrossLinkerTransformer: Effect.Effect<ShikiTransformer>;
 }
 
-export class ShikiService extends Context.Tag("rspress-plugin-api-extractor/ShikiService")<
-	ShikiService,
-	ShikiServiceShape
->() {}
+export class ShikiService extends Context.Service<ShikiService, ShikiServiceShape>()(
+	"rspress-plugin-api-extractor/ShikiService",
+) {}

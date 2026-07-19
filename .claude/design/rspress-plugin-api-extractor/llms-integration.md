@@ -94,7 +94,7 @@ afterBuild (plugin.ts)
        |         ├─ llms-docs.txt (guide-only content)
        |         └─ llms-api.txt  (API-only content, when apiTxt enabled)
        |
-       +→ Files written via @effect/platform FileSystem
+       +→ Files written via the core `effect` FileSystem service
 
 config() hook (plugin.ts)
   → Injects scope metadata into themeConfig.apiExtractorScopes
@@ -411,20 +411,26 @@ interface ApiScope {
 Defined in `schemas/config.ts` as an Effect Schema:
 
 ```typescript
-LlmsPlugin = Schema.Struct({
-  enabled: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  scopes: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  apiTxt: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  showCopyButton: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  showViewOptions: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  copyButtonText: Schema.optionalWith(Schema.String, {
-    default: () => "Copy Markdown",
-  }),
-  viewOptions: Schema.optionalWith(
-    Schema.Array(Schema.Literal("markdownLink", "chatgpt", "claude")),
-    { default: () => ["markdownLink", "chatgpt", "claude"] },
+export const LlmsPlugin = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  scopes: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  apiTxt: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  showCopyButton: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  showViewOptions: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  copyButtonText: Schema.String.pipe(
+    Schema.withDecodingDefault(Effect.succeed("Copy Markdown")),
   ),
-})
+  viewOptions: Schema.mutable(
+    Schema.Array(Schema.Literals(["markdownLink", "chatgpt", "claude"])),
+  ).pipe(
+    Schema.withDecodingDefault(
+      Effect.succeed(["markdownLink", "chatgpt", "claude"]),
+    ),
+  ),
+});
+
+/** Consumer-facing type uses Encoded (input shape with optional fields). */
+export type LlmsPlugin = typeof LlmsPlugin.Encoded;
 ```
 
 | Field | Type | Default | Purpose |

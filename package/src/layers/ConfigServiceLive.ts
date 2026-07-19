@@ -318,7 +318,7 @@ export function ConfigServiceLive(
 
 								// Track external packages
 								if (externalPackages && externalPackages.length > 0) {
-									Effect.runSync(Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length));
+									Effect.runSync(Metric.update(BuildMetrics.externalPackagesTotal, externalPackages.length));
 								}
 
 								// Generate virtual file system from API model for Twoslash
@@ -417,7 +417,7 @@ export function ConfigServiceLive(
 															ogImage: versionOgImage,
 														} = await ApiModelLoader.loadVersionModel(versionConfig);
 
-														Effect.runSync(Metric.increment(BuildMetrics.apiVersionsLoaded));
+														Effect.runSync(Metric.update(BuildMetrics.apiVersionsLoaded, 1));
 														const resolvedCategories = categoryResolver.resolveCategoryConfig(
 															pluginDefaults,
 															api.categories,
@@ -447,7 +447,7 @@ export function ConfigServiceLive(
 
 														if (externalPackages && externalPackages.length > 0) {
 															Effect.runSync(
-																Metric.incrementBy(BuildMetrics.externalPackagesTotal, externalPackages.length),
+																Metric.update(BuildMetrics.externalPackagesTotal, externalPackages.length),
 															);
 														}
 
@@ -737,7 +737,7 @@ export function ConfigServiceLive(
 						const documentedPackageNames = new Set(apiConfigs.map((config) => config.packageName));
 						const externalPackagesToLoad = allExternalPackages.filter((pkg) => !documentedPackageNames.has(pkg.name));
 
-						const typeLoadResult = yield* Effect.either(
+						const typeLoadResult = yield* Effect.result(
 							Effect.gen(function* () {
 								if (externalPackagesToLoad.length > 0) {
 									// Resolve version specs (ranges / npm tags) to exact published
@@ -777,14 +777,14 @@ export function ConfigServiceLive(
 							}),
 						);
 
-						if (typeLoadResult._tag === "Left") {
+						if (typeLoadResult._tag === "Failure") {
 							yield* emit(
 								PluginEvent.ConfigCascadeWarning({
 									ctx: { buildId: "" },
 									level: "warn",
 									field: "externalTypes",
 									chosen: "empty VFS",
-									ignored: [typeLoadResult.left.message ?? String(typeLoadResult.left)],
+									ignored: [typeLoadResult.failure.message ?? String(typeLoadResult.failure)],
 								}),
 							);
 						}

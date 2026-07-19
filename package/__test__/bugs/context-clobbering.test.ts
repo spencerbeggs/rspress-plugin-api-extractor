@@ -8,7 +8,7 @@ describe("Bug: Twoslash error context clobbering (plugin.ts:575)", () => {
 
 	it("twoslash errors are tracked via Effect Metric counter", () => {
 		// Increment the counter as the onTwoslashError callback now does
-		Effect.runSync(Metric.increment(BuildMetrics.twoslashErrors));
+		Effect.runSync(Metric.update(BuildMetrics.twoslashErrors, 1));
 
 		const state = Effect.runSync(Metric.value(BuildMetrics.twoslashErrors));
 		expect(state.count).toBeGreaterThanOrEqual(1);

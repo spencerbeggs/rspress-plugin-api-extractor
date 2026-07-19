@@ -1,5 +1,4 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
 import type {
 	ApiClass,
 	ApiEnum,
@@ -12,7 +11,7 @@ import type {
 	ApiVariable,
 } from "@microsoft/api-extractor-model";
 import { ApiItemKind } from "@microsoft/api-extractor-model";
-import { Effect, Metric, Stream } from "effect";
+import { Effect, FileSystem, Metric, Stream } from "effect";
 import matter from "gray-matter";
 import { hashContent, hashFrontmatter } from "./content-hash.js";
 import { BuildMetrics } from "./layers/ObservabilityLive.js";
@@ -1005,11 +1004,11 @@ export function writeMetadata(
 			const indexDirPath = path.dirname(indexAbsolutePath);
 			yield* fileSystem.makeDirectory(indexDirPath, { recursive: true }).pipe(Effect.orDie);
 			yield* fileSystem.writeFileString(indexAbsolutePath, mainIndex.content).pipe(Effect.orDie);
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesNew);
+			yield* Metric.update(BuildMetrics.filesTotal, 1);
+			yield* Metric.update(BuildMetrics.filesNew, 1);
 		} else {
-			yield* Metric.increment(BuildMetrics.filesTotal);
-			yield* Metric.increment(BuildMetrics.filesUnchanged);
+			yield* Metric.update(BuildMetrics.filesTotal, 1);
+			yield* Metric.update(BuildMetrics.filesUnchanged, 1);
 		}
 
 		generatedFiles.add("index.mdx");
@@ -1320,6 +1319,9 @@ export function buildPipelineForApi(
 			concurrency: input.pageConcurrency,
 		}),
 		// Fold: accumulate ALL results (unchanged + written)
-		Stream.runFold([] as FileWriteResult[], (acc, result) => [...acc, result]),
+		Stream.runFold(
+			() => [] as FileWriteResult[],
+			(acc, result) => [...acc, result],
+		),
 	);
 }

@@ -1,6 +1,5 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import type { CrossLinkData } from "./build-stages.js";
 import { buildPipelineForApi, cleanupAndCommit, prepareWorkItems, writeMetadata } from "./build-stages.js";
 import { markdownCrossLinker } from "./markdown/index.js";

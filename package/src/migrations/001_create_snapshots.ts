@@ -1,5 +1,5 @@
-import * as SqlClient from "@effect/sql/SqlClient";
 import { Effect } from "effect";
+import { SqlClient } from "effect/unstable/sql";
 
 const migration = Effect.gen(function* () {
 	const sql = yield* SqlClient.SqlClient;
