@@ -48,14 +48,15 @@ jobs:
           upgrade-runtime-node: "^26.0.0"
           config-dependencies: |
             @savvy-web/pnpm-plugin-silk
+            @effected/pnpm-plugin-effect
           dependencies: |
+            @effected/*
             @savvy-web/*
             @vitest-agent/*
             @microsoft/api-extractor-model
             @shikijs/twoslash
             @microsoft/tsdoc
             @rslib/core
-            @rspress/core
             @types/hast
             @types/mdast
             @types/unist
@@ -67,7 +68,6 @@ jobs:
             mdast-util-to-hast    
             prettier
             react-markdown
-            semver-effect
             shiki
             mdast-util-mdx-jsx
             sass
