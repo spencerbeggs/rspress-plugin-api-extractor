@@ -559,6 +559,80 @@ describe("cleanupAndCommit", () => {
 
 		await fs.promises.rm(tmpDir, { recursive: true });
 	});
+
+	it("removes directories emptied by stale-file cleanup, including emptied ancestors", async () => {
+		const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "stale-dir-test-"));
+		const dbPath = path.join(tmpDir, "test.db");
+		const snapshotLayer = SnapshotServiceLive(dbPath);
+		const testLayer = Layer.mergeAll(NodeFileSystem.layer, snapshotLayer);
+
+		// Nested layout whose only page goes stale: deleting it empties both levels
+		const staleRel = "compileroptions.type/nested/type.mdx";
+		await fs.promises.mkdir(path.join(tmpDir, "compileroptions.type/nested"), { recursive: true });
+		await fs.promises.writeFile(path.join(tmpDir, staleRel), "old content");
+
+		const buildTime = new Date().toISOString();
+		const seed: FileWriteResult[] = [
+			{
+				relativePathWithExt: staleRel,
+				absolutePath: path.join(tmpDir, staleRel),
+				status: "new",
+				snapshot: {
+					outputDir: tmpDir,
+					filePath: staleRel,
+					publishedTime: buildTime,
+					modifiedTime: buildTime,
+					contentHash: "abc",
+					frontmatterHash: "def",
+					buildTime,
+				},
+				categoryKey: "types",
+				label: "CompilerOptions.Type",
+				routePath: "/api/compileroptions.type/nested/type",
+			},
+		];
+
+		// First build tracks the file in the snapshot DB
+		await Effect.runPromise(
+			cleanupAndCommit({
+				buildId: TEST_BUILD_ID,
+				fileResults: seed,
+				resolvedOutputDir: tmpDir,
+				generatedFiles: new Set([staleRel]),
+			}).pipe(Effect.provide(testLayer)),
+		);
+
+		// Next build no longer generates it: stale cleanup deletes the file
+		// before the orphan scan runs, so only the stale path knows the dir
+		await Effect.runPromise(
+			cleanupAndCommit({
+				buildId: TEST_BUILD_ID,
+				fileResults: [],
+				resolvedOutputDir: tmpDir,
+				generatedFiles: new Set(),
+			}).pipe(Effect.provide(testLayer)),
+		);
+
+		const nestedExists = await fs.promises
+			.access(path.join(tmpDir, "compileroptions.type/nested"))
+			.then(() => true)
+			.catch(() => false);
+		const parentExists = await fs.promises
+			.access(path.join(tmpDir, "compileroptions.type"))
+			.then(() => true)
+			.catch(() => false);
+		expect(nestedExists).toBe(false);
+		expect(parentExists).toBe(false);
+
+		// The output root itself must survive the sweep
+		const rootExists = await fs.promises
+			.access(tmpDir)
+			.then(() => true)
+			.catch(() => false);
+		expect(rootExists).toBe(true);
+
+		await fs.promises.rm(tmpDir, { recursive: true });
+	});
 });
 
 describe("generateSinglePage", () => {
@@ -674,6 +748,49 @@ describe("generateSinglePage", () => {
 		if (!second) throw new Error("Expected second result to be non-null");
 		expect(second.isUnchanged).toBe(true);
 		expect(second.publishedTime).toBe("2025-01-01T00:00:00.000Z");
+	});
+
+	it("routes qualified namespace members whose simple name matches the category folder", async () => {
+		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/qualified-alias/qualified-alias.api.json");
+		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
+		const resolver = new CategoryResolver();
+		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
+		const { workItems, crossLinkData } = prepareWorkItems({
+			apiPackage,
+			categories,
+			baseRoute: "/tsconfig-json/api",
+			packageName: "qualified-alias",
+		});
+
+		const typeItem = workItems.find((w) => w.namespaceMember?.qualifiedName === "CompilerOptions.Type");
+		const encodedItem = workItems.find((w) => w.namespaceMember?.qualifiedName === "CompilerOptions.Encoded");
+		if (!typeItem || !encodedItem) throw new Error("Expected CompilerOptions.Type and .Encoded work items");
+
+		const ctx: GenerateSinglePageContext = {
+			buildId: TEST_BUILD_ID,
+			existingSnapshots: new Map(),
+			baseRoute: "/tsconfig-json/api",
+			packageName: "qualified-alias",
+			apiScope: "qualified-alias",
+			buildTime: new Date().toISOString(),
+			resolvedOutputDir: "/tmp/nonexistent-dir",
+		};
+
+		const typeResult = await Effect.runPromise(
+			generateSinglePage(typeItem, ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
+		if (!typeResult) throw new Error("Expected page result for CompilerOptions.Type");
+		expect(typeResult.routePath).toBe("/tsconfig-json/api/type/compileroptions.type");
+		expect(typeResult.relativePathWithExt).toBe("type/compileroptions.type.mdx");
+		// The generated page must land on the same route prepareWorkItems registered for cross-links
+		expect(crossLinkData.routes.get("CompilerOptions.Type")).toBe(typeResult.routePath);
+
+		const encodedResult = await Effect.runPromise(
+			generateSinglePage(encodedItem, ctx).pipe(Effect.provide(NodeFileSystem.layer)),
+		);
+		if (!encodedResult) throw new Error("Expected page result for CompilerOptions.Encoded");
+		expect(encodedResult.routePath).toBe("/tsconfig-json/api/type/compileroptions.encoded");
+		expect(encodedResult.relativePathWithExt).toBe("type/compileroptions.encoded.mdx");
 	});
 });
 

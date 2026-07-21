@@ -29,7 +29,7 @@ Workspace globs (`pnpm-workspace.yaml`): `package`, `modules/*`, `sites/*`.
 | --------- | ------------ | ------- | ------- |
 | `package/` | `rspress-plugin-api-extractor` | Publishable | The main RSPress plugin |
 | `modules/kitchensink/` | `@modules/kitchensink` | Yes | Full API Extractor feature coverage |
-| `modules/effect-kit/` | `@modules/effect-kit` | Yes | Effect-TS API patterns (Schema.Class, synthetic bases) |
+| `modules/effect-kit/` | `@modules/effect-kit` | Yes | Effect-TS API patterns (Schema.Class, synthetic bases, companion namespaces) |
 | `modules/versioned-v1/` | `@modules/versioned-v1` | Yes | Version testing — v1 baseline |
 | `modules/versioned-v2/` | `@modules/versioned-v2` | Yes | Version testing — v2 breaking changes |
 | `sites/basic/` | `@sites/basic` | Yes | Single API, no versioning, no i18n |

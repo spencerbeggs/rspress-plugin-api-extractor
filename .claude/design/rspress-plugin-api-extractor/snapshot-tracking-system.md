@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-07-21
+last-synced: 2026-07-21
 completeness: 90
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -380,6 +380,10 @@ for (const entry of allFiles) {
   }
 }
 ```
+
+### Empty-Directory Sweep
+
+After stale and orphan deletion, `cleanupAndCommit` (`build-stages.ts`) sweeps directories left empty. The sweep feeds on BOTH deletion lists — stale files are deleted before the orphan scan reads the tree, so a sweep seeded only from orphan parents would never see directories emptied by stale deletion (a former bug). For each removed file the full ancestor chain is collected (removing a child directory can empty its parent), the output root itself is never touched, and candidates are processed deepest-first. Each candidate is verified empty via `readDirectory` before removal, and removal uses `FileSystem.remove` with `{ recursive: true }` — a plain `remove` fails on directories even when empty, and the earlier `Effect.ignore`-swallowed failure meant nothing was ever actually deleted. Each removal emits an `EmptyDirRemoved` event at `trace` level.
 
 ### Batch Upsert
 

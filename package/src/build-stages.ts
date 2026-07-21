@@ -566,12 +566,16 @@ export function generateSinglePage(
 			return null;
 		}
 
-		// For namespace members, transform the route path to use qualified name
+		// For namespace members, replace the final route segment (the member's
+		// simple name) with the qualified name. Only the last segment may be
+		// touched: a member named after its category folder (e.g. a type alias
+		// `Type` in the `type` folder) would otherwise corrupt the category
+		// segment and collide with it.
 		if (namespaceMember) {
-			const simpleName = item.displayName.toLowerCase();
 			const qualifiedNameLower = namespaceMember.qualifiedName.toLowerCase();
+			const lastSlash = page.routePath.lastIndexOf("/");
 			page = {
-				routePath: page.routePath.replace(`/${simpleName}`, `/${qualifiedNameLower}`),
+				routePath: `${page.routePath.slice(0, lastSlash + 1)}${qualifiedNameLower}`,
 				content: page.content,
 			};
 		}
@@ -1222,13 +1226,20 @@ export function cleanupAndCommit(
 			{ concurrency: "unbounded" },
 		);
 
-		// 4. Remove empty subdirectories after file deletion (deepest-first)
-		if (orphanedFiles.length > 0) {
+		// 4. Remove empty subdirectories after file deletion (deepest-first).
+		// Stale files are deleted before the orphan scan reads the tree, so
+		// their directories never appear as orphan parents — both deletion
+		// lists feed the sweep. Each ancestor chain is included because
+		// removing a child directory can empty its parent; the output root
+		// itself (".") is never swept.
+		const removedFiles = [...staleFiles, ...orphanedFiles];
+		if (removedFiles.length > 0) {
 			const dirs = new Set<string>();
-			for (const orphan of orphanedFiles) {
-				const dir = path.dirname(orphan);
-				if (dir !== ".") {
+			for (const removed of removedFiles) {
+				let dir = path.dirname(removed.replace(/\\/g, "/"));
+				while (dir !== "." && dir !== "/" && !dirs.has(dir)) {
 					dirs.add(dir);
+					dir = path.dirname(dir);
 				}
 			}
 			// Sort deepest-first so child dirs are removed before parents
@@ -1239,7 +1250,9 @@ export function cleanupAndCommit(
 					.readDirectory(fullDir)
 					.pipe(Effect.orElseSucceed(() => ["placeholder"] as string[]));
 				if (entries.length === 0) {
-					yield* fileSystem.remove(fullDir).pipe(Effect.ignore);
+					// remove() without recursive fails on directories even when empty;
+					// emptiness was just verified so recursive cannot over-delete
+					yield* fileSystem.remove(fullDir, { recursive: true }).pipe(Effect.ignore);
 					yield* emit(PluginEvent.EmptyDirRemoved({ ctx: { buildId }, dir, level: "trace" }));
 				}
 			}

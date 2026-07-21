@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-07-12
-last-synced: 2026-07-12
+updated: 2026-07-21
+last-synced: 2026-07-21
 completeness: 85
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -153,13 +153,14 @@ Runs before the Stream pipeline. Produces:
 For each WorkItem:
 
 1. Dispatch to the appropriate page generator based on `item.kind`
-2. Parse generated content with `gray-matter`
-3. Normalize markdown spacing
-4. Hash content and frontmatter via `content-hash.ts`
-5. Compare hashes against pre-loaded snapshot map
-6. If no snapshot exists, fall back to disk comparison
-7. Determine timestamps (new/modified/unchanged)
-8. Return `GeneratedPageResult`
+2. For namespace members, rewrite the route by replacing ONLY the final segment with the lowercased qualified name (e.g. `.../type/type` → `.../type/compileroptions.type`). Only the last segment may be touched: a member whose lowercased simple name equals its category folder (a type alias named `Type` in the `type` folder — the Effect Schema companion-namespace pattern) would otherwise have the category segment corrupted by a first-occurrence replace, producing colliding `_meta.json` entries that break RSPress auto-nav-sidebar. The resulting file path is identical to the cross-link route built in `prepareWorkItems` by construction (asserted by a regression test against the `qualified-alias` fixture)
+3. Parse generated content with `gray-matter`
+4. Normalize markdown spacing
+5. Hash content and frontmatter via `content-hash.ts`
+6. Compare hashes against pre-loaded snapshot map
+7. If no snapshot exists, fall back to disk comparison
+8. Determine timestamps (new/modified/unchanged)
+9. Return `GeneratedPageResult`
 
 ### Stage 2: writeSingleFile (Effect)
 

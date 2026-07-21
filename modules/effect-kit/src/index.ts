@@ -81,3 +81,37 @@ export enum OutputChannel {
 	Json = 1,
 	Silent = 2,
 }
+
+/**
+ * Manifest describing a dispatched run.
+ *
+ * @remarks
+ * Exercises the merged class + companion-namespace pattern where the
+ * namespace exposes qualified `Type` / `Encoded` aliases — the member
+ * names must not collide with the plugin's category folders.
+ *
+ * @public
+ */
+export class RunManifest extends Schema.Class<RunManifest>("RunManifest")({
+	/** Unique identifier of the run. */
+	id: Schema.String,
+	/** Lifecycle phase of the run. */
+	phase: RunPhase,
+}) {}
+
+/**
+ * Companion namespace exposing the manifest schema's derived shapes.
+ * @public
+ */
+export namespace RunManifest {
+	/**
+	 * Decoded shape of `RunManifest`.
+	 * @public
+	 */
+	export type Type = InstanceType<typeof RunManifest>;
+	/**
+	 * Encoded wire shape of `RunManifest`.
+	 * @public
+	 */
+	export type Encoded = typeof RunManifest.Encoded;
+}

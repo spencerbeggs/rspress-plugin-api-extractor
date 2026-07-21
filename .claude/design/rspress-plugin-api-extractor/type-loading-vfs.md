@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-05-26
-last-synced: 2026-05-26
+updated: 2026-07-21
+last-synced: 2026-07-21
 completeness: 85
 related:
   - rspress-plugin-api-extractor/import-generation-system.md
@@ -157,6 +157,10 @@ The VFS is consumed in two places:
 
 2. **VfsRegistry** -- Makes VFS config available to remark plugins
    (`remarkWithApi`, `remarkApiCodeblocks`) for user-authored code blocks
+
+### Single global tsconfig in multi-API mode
+
+Twoslash runs one shared TypeScript environment over the combined VFS for the whole build, so per-API `tsconfig` / `compilerOptions` in `MultiApiConfig` are not honored: the first API in the `apis` array that provides one wins (deterministic) and a `ConfigCascadeWarning` is emitted when the others differ. The constraint is documented in `@remarks` TSDoc on `MultiApiConfig.tsconfig` in `src/schemas/config.ts`; users should ensure the configured tsconfigs are equivalent or set the intended one on the first API only.
 
 ## Virtual File System (VFS)
 

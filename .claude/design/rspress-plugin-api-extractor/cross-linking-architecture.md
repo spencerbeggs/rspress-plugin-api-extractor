@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: cross-linking
 created: 2026-01-17
-updated: 2026-07-12
-last-synced: 2026-07-12
+updated: 2026-07-21
+last-synced: 2026-07-21
 completeness: 90
 related:
   - rspress-plugin-api-extractor/page-generation-system.md
@@ -346,8 +346,9 @@ Namespace members use qualified names with the namespace prefix:
 /api/interfaces/formatters.formatoptions
 ```
 
-PascalCase members also get an unqualified route if no collision
-exists with a top-level item of the same name.
+PascalCase members also get an unqualified route if no collision exists with a top-level item of the same name.
+
+The generated file path matches this route by construction: `generateSinglePage` (`build-stages.ts`) rewrites a namespace member's route by replacing ONLY the final segment with the lowercased qualified name. A first-occurrence replace of the simple name would corrupt the category segment whenever a member's lowercased name equals its folder — e.g. a type alias `Type` in the `type` folder (the Effect Schema companion-namespace pattern, `CompilerOptions.Type`) previously landed at `<ns>.type/type` with colliding `_meta.json` entries. See `page-generation-system.md` (Stage 1) and the `qualified-alias` fixture regression test.
 
 ### Route Construction Code
 

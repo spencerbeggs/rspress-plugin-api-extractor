@@ -74,6 +74,8 @@ ApiExtractorPlugin({
 
 Each entry in `apis` has the same shape as the single-API config, with two differences. `model` is required, because multi-API mode has no `versions` field, and each entry defaults to its own `/{packageName}/api` route so the packages do not collide — set `baseRoute` per entry only to override that default. See the [multi-package recipe](./05-multi-package.md).
 
+One constraint applies to `tsconfig` and `compilerOptions` in multi-API mode: Twoslash type-checks all code examples in a single shared TypeScript environment for the whole build, so per-entry values are not honored. The first entry in the array that provides one wins, and the plugin logs a warning when the others differ. Make the configured tsconfigs equivalent across entries, or set the intended one on the first entry only.
+
 ```ts
 ApiExtractorPlugin({
   apis: [
