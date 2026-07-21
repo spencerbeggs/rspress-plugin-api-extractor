@@ -45,3 +45,5 @@ api-docs-snapshot.db-*
 .playwright-mcp
 docs/superpowers
 .mcp.json
+# dogfood mailbox (silk dogfood loops)
+.claude/dogfood/

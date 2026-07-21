@@ -27,7 +27,11 @@ function render(event: PluginEvent): string {
 		case "SlowOperation":
 			return `slow ${event.operation}: ${event.durationMs}ms (>${event.threshold}ms)`;
 		case "ConfigCascadeWarning":
-			return `${event.field}: using '${event.chosen}', ignoring ${event.ignored.join(", ")}`;
+			// Long lists (e.g. one tsconfig per API model) collapse to a count so
+			// the warning stays a single scannable line.
+			return event.ignored.length > 2
+				? `${event.field}: using '${event.chosen}', ignoring ${event.ignored.length} alternatives (first configured value wins)`
+				: `${event.field}: using '${event.chosen}', ignoring ${event.ignored.join(", ")}`;
 		case "ConfigValidationWarning":
 			return `${event.field}: rejected '${event.value}'${event.reason ? ` — ${event.reason}` : ""}`;
 		case "DeprecatedConfigUsed":

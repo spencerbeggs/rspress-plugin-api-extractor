@@ -308,9 +308,19 @@ export const MultiApiConfig = Schema.Struct({
 	ogImage: Schema.optional(OpenGraphImageConfig),
 	/** LLMs integration options. */
 	llmsPlugin: Schema.optional(LlmsPlugin),
-	/** Path to a `tsconfig.json` for Twoslash. */
+	/**
+	 * Path to a `tsconfig.json` for Twoslash.
+	 *
+	 * @remarks
+	 * Twoslash runs against a single shared TypeScript environment for the
+	 * whole build, so per-API tsconfigs are not honored in multi-API mode:
+	 * the first API that provides one wins and the rest are ignored (a
+	 * `ConfigCascadeWarning` is emitted when they differ). Ensure the
+	 * configured tsconfigs are equivalent, or set the intended one on the
+	 * first API only.
+	 */
 	tsconfig: Schema.optional(ModelInput),
-	/** TypeScript compiler options for Twoslash. */
+	/** TypeScript compiler options for Twoslash. First API wins, as with `tsconfig`. */
 	compilerOptions: Schema.optional(Schema.Unknown),
 });
 /** @public */

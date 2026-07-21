@@ -128,7 +128,7 @@ The v3 peer-closure block (`@effect/cluster`, `@effect/experimental`, `@effect/r
 
 Do not prune these as "unused"; the plugin imports some of them directly (see `layers/TypeRegistryServiceLive.ts`) and the rest exist to keep the peer graph closed.
 
-`pnpm-workspace.yaml` also carries an override pinning `yuku-parser: ^0.6.12` — 0.6.7 is a broken publish that crashes `rolldown-plugin-dts` during the declaration build.
+A former `pnpm-workspace.yaml` override pinned `yuku-parser: ^0.6.12` to dodge a broken 0.6.7 publish that crashed `rolldown-plugin-dts` during the declaration build; the ecosystem now resolves a healthy version and the override (plus its `minimumReleaseAgeExclude` entries) has been removed.
 
 ### v4 idiom notes
 

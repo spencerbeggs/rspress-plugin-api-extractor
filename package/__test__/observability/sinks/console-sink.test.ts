@@ -147,6 +147,24 @@ describe("makeConsoleSink", () => {
 			).toContain("route: using '/x', ignoring /y, /z");
 		});
 
+		it("ConfigCascadeWarning summarizes long ignored lists on a single line", () => {
+			const ignored = Array.from({ length: 20 }, (_, i) => `/models/pkg-${i}/tsconfig.json`);
+			const line = renderLine(
+				PluginEvent.ConfigCascadeWarning({
+					ctx,
+					level: "warn",
+					field: "tsconfig",
+					chosen: "/models/app/tsconfig.json",
+					ignored,
+				}),
+			);
+			expect(line).toContain(
+				"tsconfig: using '/models/app/tsconfig.json', ignoring 20 alternatives (first configured value wins)",
+			);
+			expect(line).not.toContain("pkg-3");
+			expect(line).not.toContain("\n");
+		});
+
 		it("ConfigValidationWarning with reason", () => {
 			expect(
 				renderLine(
