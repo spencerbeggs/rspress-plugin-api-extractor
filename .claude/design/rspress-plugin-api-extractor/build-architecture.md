@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-07-14
-last-synced: 2026-07-14
+updated: 2026-07-22
+last-synced: 2026-07-22
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -13,6 +13,7 @@ related:
   - rspress-plugin-api-extractor/page-generation-system.md
   - rspress-plugin-api-extractor/performance-observability.md
   - rspress-plugin-api-extractor/type-loading-vfs.md
+  - rspress-plugin-api-extractor/build-progress-and-issues.md
 dependencies: []
 ---
 
@@ -209,21 +210,30 @@ A "Stage 2" that would emit the MDX pages on top of the library's `renderItem` b
    - Create ShikiCrossLinker instance
    - Build Layer stack and ManagedRuntime
 
-2. config(rspressConfig)  -- BEFORE route scanning
+2. config(config, utils, isProd)  -- BEFORE route scanning
    - Pre-create output directories
    - Run Effect program:
      - ConfigService.resolve() loads models, creates highlighter,
        resolves types
      - generateApiDocs() for each API config (concurrent)
+     - Progress heartbeat forked when isProd (see build-progress-and-issues.md)
    - Register remark plugins (remarkWithApi, remarkApiCodeblocks)
+   - On failure: best-effort issues.json write (isProd only), then rethrow
 
 3. beforeBuild()  -- intentionally empty
    (doc generation happens in config() to fix cold-start issues)
 
 4. afterBuild(config, isProd)
    - Log build summary (first build only, skip HMR)
+   - Write .api-docs/build/issues.json (isProd only, first build only)
    - Dispose runtime in production (preserves it for dev HMR)
 ```
+
+RSPress invokes `config` as `config(config, utils, isProd)`; the plugin now
+consumes the real `isProd` flag (previously ignored) to gate the heartbeat
+fork and the `issues.json` write — see
+[Build Progress Heartbeat and Issues Artifact](build-progress-and-issues.md)
+for both.
 
 ### Doc Generation Pipeline
 
@@ -264,6 +274,10 @@ across all hooks:
   scope finalizers (SQLite WAL checkpoint, resource cleanup)
 - **Dev mode:** Runtime stays alive for HMR rebuilds. Disposing would
   destroy the DB connection and break subsequent builds.
+
+### Artifact directories
+
+All of the plugin's on-disk artifacts live under `<cwd>/.api-docs/`, split into two lifecycle subfolders. The snapshot SQLite DB (`SnapshotServiceLive(dbPath)`) is `<cwd>/.api-docs/snapshot/api-docs.db` — the one artifact a production consumer site may choose to commit, for build idempotency between CI and local (see `snapshot-tracking-system.md`). Everything else the plugin writes for observability purposes — the JSONL trace and, on production builds, `issues.json` — lives under `<cwd>/.api-docs/build/` instead, since those are ephemeral per-build artifacts regenerated every run, never state to persist. This repo's fixture sites gitignore the whole `.api-docs/` directory in one line; a production site wanting DB idempotency instead gitignores only `.api-docs/build/` plus the snapshot dir's WAL sidecars and commits `.api-docs/snapshot/`. See `build-progress-and-issues.md` for both subfolders and the full gitignore story.
 
 ## Configuration System
 
@@ -398,3 +412,5 @@ The plugin exports a `serve(options?: ServeOptions): Promise<void>` runner (`src
   `llms-integration.md`
 - **Type Loading & VFS:**
   `type-loading-vfs.md`
+- **Build Progress & Issues Artifact:**
+  `build-progress-and-issues.md`

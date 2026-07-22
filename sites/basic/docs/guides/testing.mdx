@@ -14,11 +14,12 @@ external connections and resolves immediately.
 ```typescript with-api
 import { MockSource } from "@modules/kitchensink/testing";
 
-const source = new MockSource("users", [
+const rows = [
  { id: 1, name: "Alice" },
  { id: 2, name: "Bob" },
-]);
-//  ^?
+];
+const source = new MockSource("users", rows);
+//    ^?
 
 await source.connect();
 const records = await source.fetch();

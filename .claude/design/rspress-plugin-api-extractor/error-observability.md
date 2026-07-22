@@ -3,11 +3,12 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-15
-updated: 2026-07-14
-last-synced: 2026-07-14
+updated: 2026-07-22
+last-synced: 2026-07-22
 completeness: 90
 related:
   - rspress-plugin-api-extractor/performance-observability.md
+  - rspress-plugin-api-extractor/build-progress-and-issues.md
   - rspress-plugin-api-extractor/build-architecture.md
 dependencies: []
 ---
@@ -146,6 +147,12 @@ No error line is printed when both counters are zero.
 
 ---
 
+## Persisted to `issues.json`
+
+Every event in this document is also collected by the fourth EventBus sink, the issues collector (`makeIssuesSink`, `src/observability/sinks/issues-sink.ts`), and written to `<cwd>/.api-docs/build/issues.json` on production builds. The same sync-island pattern used here for Twoslash/Prettier (a module-level `emitEvent`, wired via a `set*EventEmitter` call in `plugin.ts`) was extended to two more previously-unemitted events, `RouteCollisionDetected` and `ModelLoadFailed`, so route collisions and model-load failures also land in the artifact as `errors` rather than only `warnings`. Full schema, the event-to-bucket mapping and the monitor that reads the artifact are documented in `build-progress-and-issues.md`.
+
+---
+
 ## File Locations
 
 | File | Purpose |
@@ -164,4 +171,5 @@ No error line is printed when both counters are zero.
 ## Related Documentation
 
 - **Performance Observability:** `performance-observability.md` — full EventBus and sink architecture
+- **Build Progress & Issues Artifact:** `build-progress-and-issues.md` — the `.api-docs/build/issues.json` artifact these events feed, plus the two new emit sites for `RouteCollisionDetected`/`ModelLoadFailed`
 - **Build Architecture:** `build-architecture.md` — plugin structure and service layer

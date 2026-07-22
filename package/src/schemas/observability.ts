@@ -7,6 +7,7 @@ export type EventLevelInput = typeof EventLevelSchema.Type;
 export const ObservabilityConfig = Schema.Struct({
 	logLevel: Schema.optional(EventLevelSchema),
 	trace: Schema.optional(Schema.Union([Schema.Boolean, Schema.String])),
+	progressInterval: Schema.optional(Schema.Union([Schema.Number, Schema.Boolean])),
 	thresholds: Schema.optional(PerformanceThresholds),
 });
 export type ObservabilityConfig = typeof ObservabilityConfig.Encoded;
@@ -17,6 +18,7 @@ export interface ResolvedObservability {
 	readonly logLevel: EventLevel | "none";
 	readonly json: boolean;
 	readonly tracePath: string | null;
+	readonly progressIntervalMs: number | null;
 	readonly thresholds: {
 		slowCodeBlock: number;
 		slowPageGeneration: number;
@@ -47,7 +49,7 @@ export interface ResolveObservabilityInput {
 	readonly logLevel?: string;
 	readonly performance?: { thresholds?: Partial<ResolvedObservability["thresholds"]> };
 	readonly envLogLevel?: string;
-	readonly outDir: string;
+	readonly cwd: string;
 	readonly buildId: string;
 }
 
@@ -71,7 +73,7 @@ export function resolveObservability(input: ResolveObservabilityInput): {
 		typeof traceOpt === "string"
 			? traceOpt
 			: traceOpt === true
-				? `${input.outDir}/.api-extractor/trace-${input.buildId}.jsonl`
+				? `${input.cwd}/.api-docs/build/trace-${input.buildId}.jsonl`
 				: null;
 
 	const merged = {
@@ -89,8 +91,11 @@ export function resolveObservability(input: ResolveObservabilityInput): {
 		slowDbOperation: merged.slowDbOperation ?? DEFAULT_THRESHOLDS.slowDbOperation,
 	};
 
+	const pi = input.observability?.progressInterval;
+	const progressIntervalMs = pi === false || pi === 0 ? null : typeof pi === "number" ? pi * 1000 : 10_000;
+
 	return {
-		resolved: { logLevel: level, json: level === "debug", tracePath, thresholds },
+		resolved: { logLevel: level, json: level === "debug", tracePath, progressIntervalMs, thresholds },
 		deprecations,
 	};
 }

@@ -5,11 +5,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeFileSystem } from "@effect/platform-node";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
-import { Effect, Layer, ManagedRuntime, Schema } from "effect";
+import { Effect, Layer, ManagedRuntime, Metric, Ref, Schema } from "effect";
 import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
+import { setBuildStagesEventEmitter } from "./build-stages.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
+import { BuildMetrics } from "./layers/build-metrics.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { buildEventBus, logBuildSummary, makeSummaryLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
@@ -18,8 +20,12 @@ import { TypeRegistryServiceLive } from "./layers/TypeRegistryServiceLive.js";
 import { setLoaderEventEmitter } from "./loader.js";
 import type { ShikiThemeConfig } from "./markdown/shiki-utils.js";
 import { DEFAULT_SHIKI_THEMES, setShikiUtilsEventEmitter } from "./markdown/shiki-utils.js";
+import { setModelLoaderEventEmitter } from "./model-loader.js";
 import { emit, makeRuntimeEmitter } from "./observability/EventBus.js";
 import { PluginEvent } from "./observability/events.js";
+import type { ProgressPhase } from "./observability/heartbeat.js";
+import { runHeartbeat } from "./observability/heartbeat.js";
+import { writeIssuesJson } from "./observability/sinks/issues-sink.js";
 import { setOgResolverEventEmitter } from "./og-resolver.js";
 import { deriveOutputPaths, normalizeBaseRoute, unscopedName } from "./path-derivation.js";
 import { setPrettierEventEmitter } from "./prettier-formatter.js";
@@ -31,6 +37,24 @@ import { ConfigService } from "./services/ConfigService.js";
 import { ShikiCrossLinker } from "./shiki-transformer.js";
 import { TwoslashManager, setEventEmitter } from "./twoslash-transformer.js";
 import { VfsRegistry } from "./vfs-registry.js";
+
+/**
+ * Best-effort read of the consuming site's `package.json` `name`, used to tag
+ * the `.api-docs/build/issues.json` artifact. Falls back to "unknown" when the file
+ * is missing or unreadable — never throws.
+ */
+function readSitePackageName(): string {
+	try {
+		const pkgJsonPath = path.resolve(process.cwd(), "package.json");
+		const parsed: unknown = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+		if (parsed && typeof parsed === "object" && "name" in parsed && typeof parsed.name === "string") {
+			return parsed.name;
+		}
+		return "unknown";
+	} catch {
+		return "unknown";
+	}
+}
 
 /**
  * Normalize theme configuration from user input to a consistent format.
@@ -62,7 +86,6 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	// Resolve unified observability config (logLevel, trace, thresholds).
 	const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
 	const buildId = `${process.pid}-${performance.now().toString(36)}`;
-	const rspressOutDirGuess = path.resolve(process.cwd(), "dist");
 	const { resolved: obs, deprecations } = resolveObservability({
 		...(options.observability ? { observability: options.observability } : {}),
 		...(options.logLevel ? { logLevel: options.logLevel } : {}),
@@ -74,16 +97,15 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				}
 			: {}),
 		...(envLogLevel ? { envLogLevel } : {}),
-		outDir: rspressOutDirGuess,
+		cwd: process.cwd(),
 		buildId,
 	});
-	// Detect whether trace path was auto-derived from the guessed outDir (boolean true)
-	// vs an explicit string path supplied by the caller. When it's the former we defer
-	// file binding until config() where the real RSPress outDir is available.
-	const traceIsDefault = options.observability?.trace === true;
-	const { layer: eventBusLayer, trace: traceSink } = buildEventBus(obs, traceIsDefault);
+	const { layer: eventBusLayer, trace: traceSink, issues: issuesSink } = buildEventBus(obs);
 
-	const dbPath = path.resolve(process.cwd(), "api-docs-snapshot.db");
+	const dbPath = path.resolve(process.cwd(), ".api-docs", "snapshot", "api-docs.db");
+	// SQLite opens the file eagerly at layer construction, so the snapshot
+	// directory must exist first (cwd always does; `.api-docs/snapshot` may not).
+	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
 		eventBusLayer,
@@ -105,6 +127,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	setOgResolverEventEmitter(emitSync, buildId);
 	setRemarkWithApiEventEmitter(emitSync, buildId, obs.thresholds.slowCodeBlock);
 	setRemarkApiCodeblocksEventEmitter(emitSync, buildId);
+	setBuildStagesEventEmitter(emitSync, buildId);
+	setModelLoaderEventEmitter(emitSync, buildId);
 
 	// File context map (shared across hooks)
 	const fileContextMap = new Map<string, { api?: string; version?: string; file: string }>();
@@ -137,6 +161,17 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				// Log build summary via Effect metrics
 				await effectRuntime.runPromise(logBuildSummary(obs.thresholds.slowCodeBlock));
 
+				// Write .api-docs/build/issues.json (bundler-compatible schema) on prod builds only
+				if (isProd) {
+					await effectRuntime.runPromise(
+						writeIssuesJson(issuesSink.snapshot(), {
+							cwd: process.cwd(),
+							packageName: readSitePackageName(),
+							generatedAt: new Date().toISOString(),
+						}),
+					);
+				}
+
 				// Post-process LLMs files when RSPress llms plugin and our llmsPlugin are both enabled
 				if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled) {
 					const { processLlmsFiles } = await import("./llms-program.js");
@@ -168,7 +203,7 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 		// config() hook: runs BEFORE route scanning.
 		// We generate API docs here so files exist when RSPress builds its route table.
-		async config(_config: UserConfig): Promise<UserConfig> {
+		async config(_config: UserConfig, _utils: unknown, isProd: boolean): Promise<UserConfig> {
 			const buildStartTime = performance.now();
 
 			// Capture docs root for OG image auto-detection (resolve to absolute path)
@@ -185,15 +220,6 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// Capture RSPress LLMs config for afterBuild processing
 			rspressLlmsEnabled = Boolean((_config as { llms?: boolean | object }).llms);
 			rspressOutDir = _config.outDir ?? "dist";
-
-			// Bind deferred trace sink to the real outDir now that it is known.
-			// When trace was set to boolean true, the path was computed from the
-			// guessed outDir at factory time; we re-derive it here with the real
-			// outDir and call setPath() so no stray file was written earlier.
-			if (traceIsDefault && traceSink) {
-				const realTracePath = path.resolve(process.cwd(), rspressOutDir, ".api-extractor", `trace-${buildId}.jsonl`);
-				traceSink.setPath(realTracePath);
-			}
 
 			// Pre-create output directories so RSPress's auto-nav-sidebar doesn't fail
 			if (options.api) {
@@ -261,11 +287,27 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 					Effect.gen(function* () {
 						const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
 						yield* emit(PluginEvent.BuildStarted({ ctx: { buildId }, level: "info", mode: "prod", apiCount }));
+
+						const phaseRef = yield* Ref.make<ProgressPhase>("resolve");
+						if (isProd && obs.progressIntervalMs !== null) {
+							yield* Effect.forkScoped(
+								runHeartbeat({
+									phaseRef,
+									intervalMs: obs.progressIntervalMs,
+									startTime: buildStartTime,
+									apisTotal: apiCount,
+									buildId,
+								}),
+							);
+						}
+
 						const configSvc = yield* ConfigService;
 						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
 
 						// Clear previous build results (for HMR rebuilds)
 						buildResults.length = 0;
+
+						yield* Ref.set(phaseRef, "generate");
 
 						yield* Effect.forEach(
 							buildContext.apiConfigs,
@@ -277,11 +319,13 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 								).pipe(
 									Effect.tap((result) => {
 										buildResults.push(result);
-										return Effect.void;
+										return Metric.update(BuildMetrics.apisCompleted, 1);
 									}),
 								),
 							{ concurrency: 2 },
 						);
+
+						yield* Ref.set(phaseRef, "done");
 
 						const totalMs = performance.now() - buildStartTime;
 						yield* emit(
@@ -293,6 +337,26 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				const message = error instanceof Error ? error.message : String(error);
 				emitSync(PluginEvent.BuildFailed({ ctx: { buildId }, level: "error", phase: "generate", error: message }));
 				if (traceSink) traceSink.flush();
+
+				// Best-effort: write .api-docs/build/issues.json on the fatal path too, since
+				// afterBuild (where this normally happens) never runs when config()
+				// throws. Collision/model-load errors emitted above (RouteCollisionDetected,
+				// ModelLoadFailed) would otherwise never reach disk. Never mask the
+				// original build failure with a write failure.
+				if (isProd) {
+					try {
+						await effectRuntime.runPromise(
+							writeIssuesJson(issuesSink.snapshot(), {
+								cwd: process.cwd(),
+								packageName: readSitePackageName(),
+								generatedAt: new Date().toISOString(),
+							}),
+						);
+					} catch {
+						// ignore — never mask the build failure
+					}
+				}
+
 				throw error;
 			}
 

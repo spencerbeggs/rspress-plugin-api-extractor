@@ -1,0 +1,7 @@
+[
+	{
+		"name": "doc-build-issues",
+		"command": "node \"${CLAUDE_PLUGIN_ROOT}/monitors/watch-issues.mjs\"",
+		"description": "Surfaces Twoslash/doc-build issues from .api-docs/build/issues.json as builds change them"
+	}
+]
