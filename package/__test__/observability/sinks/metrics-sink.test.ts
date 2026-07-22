@@ -98,6 +98,17 @@ describe("makeMetricsSink", () => {
 		expect(after.count).toBeGreaterThanOrEqual(before.count + 1);
 	});
 
+	it("increments apisCompleted when ApiDocsCompleted is handled", async () => {
+		const sink = makeMetricsSink();
+
+		const before = await Effect.runPromise(Metric.value(BuildMetrics.apisCompleted));
+
+		sink.handle(PluginEvent.ApiDocsCompleted({ ctx, level: "debug", packageName: "@modules/kitchensink" }));
+
+		const after = await Effect.runPromise(Metric.value(BuildMetrics.apisCompleted));
+		expect(after.count).toBeGreaterThanOrEqual(before.count + 1);
+	});
+
 	it("increments twoslashDiagnostics and twoslashErrors when TwoslashDiagnostic is handled", async () => {
 		const sink = makeMetricsSink();
 

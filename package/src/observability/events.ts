@@ -49,6 +49,7 @@ export type PluginEvent = Data.TaggedEnum<{
 		readonly codeBlocks: number;
 		readonly delta: number;
 	};
+	ApiDocsCompleted: Base & { readonly packageName: string };
 	BuildFailed: Base & { readonly phase: string; readonly error: string };
 	SlowOperation: Base & { readonly operation: string; readonly durationMs: number; readonly threshold: number };
 

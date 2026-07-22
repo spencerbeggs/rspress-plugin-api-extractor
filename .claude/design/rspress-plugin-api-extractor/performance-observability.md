@@ -100,7 +100,7 @@ across seven subsystems:
 
 | Subsystem | Representative events |
 | --------- | --------------------- |
-| Lifecycle | `BuildStarted`, `BuildCompleted`, `BuildProgress`, `PhaseStarted`, `PhaseCompleted`, `SlowOperation` |
+| Lifecycle | `BuildStarted`, `BuildCompleted`, `BuildProgress`, `ApiDocsCompleted`, `PhaseStarted`, `PhaseCompleted`, `SlowOperation` |
 | Config parse / merge | `OptionsDecoded`, `DefaultApplied`, `DeprecatedConfigUsed`, `ConfigResolved` |
 | Model loading | `ModelLoaded`, `ModelLoadFailed` |
 | Type loading / VFS | `VfsGenerated`, `ImportsPrepended`, `TypeRegistryEvent` |
@@ -231,6 +231,7 @@ synchronous, so metric counts are exact when `logBuildSummary` reads them.
 | ----- | ----------------- |
 | `FileDecision` | `filesTotal`, `filesNew` / `filesModified` / `filesUnchanged` |
 | `PageGenerated` | `pagesGenerated` |
+| `ApiDocsCompleted` | `apisCompleted` |
 | `TwoslashDiagnostic` | `twoslashDiagnostics`, `twoslashErrors` |
 | `PrettierError` | `prettierErrors` |
 | `CodeBlockProcessed` | `codeblockTotal`, `codeblockDuration`, `codeblockShikiDuration` (if `shikiMs > 0`), `codeblockSlow` |
@@ -246,11 +247,11 @@ silently ignored. See the inline-metrics note below.
 inline `Metric.update` calls in `ConfigServiceLive`. The only candidate
 event (`TypeRegistryEvent{BatchComplete}`) carries a `loaded` (succeeded) count,
 not a configured count — deriving it here would change the metric's semantics.
-`apisCompleted` is likewise inline: `plugin.ts` updates it via `Effect.tap` on
-each `generateApiDocs` result inside the `Effect.forEach` over `apiConfigs`,
-rather than through a metrics-sink mapping, because no completion event exists
-for a single API finishing (only for the whole build). The heartbeat reads it
-to report the generate-phase denominator — see `build-progress-and-issues.md`.
+`apisCompleted`, by contrast, IS event-derived: `plugin.ts` emits an
+`ApiDocsCompleted` event via `Effect.tap` on each `generateApiDocs` result
+inside the `Effect.forEach` over `apiConfigs`, and the metrics sink maps it to
+`apisCompleted`. The heartbeat reads that counter for the generate-phase
+denominator — see `build-progress-and-issues.md`.
 
 ---
 

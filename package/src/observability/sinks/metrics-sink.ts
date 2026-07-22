@@ -40,6 +40,10 @@ export function makeMetricsSink(): EventSink {
 					Effect.runSync(Metric.update(BuildMetrics.pagesGenerated, 1));
 					break;
 
+				case "ApiDocsCompleted":
+					Effect.runSync(Metric.update(BuildMetrics.apisCompleted, 1));
+					break;
+
 				case "TwoslashDiagnostic":
 					Effect.runSync(Metric.update(BuildMetrics.twoslashDiagnostics, 1));
 					Effect.runSync(Metric.update(BuildMetrics.twoslashErrors, 1));

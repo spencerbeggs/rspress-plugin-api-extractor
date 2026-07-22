@@ -5,13 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeFileSystem } from "@effect/platform-node";
 import type { RspressPlugin, UserConfig } from "@rspress/core";
-import { Effect, Layer, ManagedRuntime, Metric, Ref, Schema } from "effect";
+import { Effect, FileSystem, Layer, ManagedRuntime, Ref, Schema } from "effect";
 import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
 import { setBuildStagesEventEmitter } from "./build-stages.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
 import { mergeLlmsPluginConfig } from "./config-utils.js";
-import { BuildMetrics } from "./layers/build-metrics.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { buildEventBus, logBuildSummary, makeSummaryLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
@@ -41,20 +40,22 @@ import { VfsRegistry } from "./vfs-registry.js";
 /**
  * Best-effort read of the consuming site's `package.json` `name`, used to tag
  * the `.api-docs/build/issues.json` artifact. Falls back to "unknown" when the file
- * is missing or unreadable — never throws.
+ * is missing or unreadable — never fails.
  */
-function readSitePackageName(): string {
+const readSitePackageName: Effect.Effect<string, never, FileSystem.FileSystem> = Effect.gen(function* () {
+	const fileSystem = yield* FileSystem.FileSystem;
+	const pkgJsonPath = path.resolve(process.cwd(), "package.json");
+	const content = yield* fileSystem.readFileString(pkgJsonPath).pipe(Effect.orElseSucceed(() => ""));
 	try {
-		const pkgJsonPath = path.resolve(process.cwd(), "package.json");
-		const parsed: unknown = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+		const parsed: unknown = JSON.parse(content);
 		if (parsed && typeof parsed === "object" && "name" in parsed && typeof parsed.name === "string") {
 			return parsed.name;
 		}
-		return "unknown";
 	} catch {
-		return "unknown";
+		// malformed JSON — fall through to "unknown"
 	}
-}
+	return "unknown";
+});
 
 /**
  * Normalize theme configuration from user input to a consistent format.
@@ -164,10 +165,13 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				// Write .api-docs/build/issues.json (bundler-compatible schema) on prod builds only
 				if (isProd) {
 					await effectRuntime.runPromise(
-						writeIssuesJson(issuesSink.snapshot(), {
-							cwd: process.cwd(),
-							packageName: readSitePackageName(),
-							generatedAt: new Date().toISOString(),
+						Effect.gen(function* () {
+							const packageName = yield* readSitePackageName;
+							yield* writeIssuesJson(issuesSink.snapshot(), {
+								cwd: process.cwd(),
+								packageName,
+								generatedAt: new Date().toISOString(),
+							});
 						}),
 					);
 				}
@@ -322,7 +326,13 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 								).pipe(
 									Effect.tap((result) => {
 										buildResults.push(result);
-										return Metric.update(BuildMetrics.apisCompleted, 1);
+										return emit(
+											PluginEvent.ApiDocsCompleted({
+												ctx: { buildId },
+												level: "debug",
+												packageName: result.packageName,
+											}),
+										);
 									}),
 								),
 							{ concurrency: 2 },
@@ -349,10 +359,13 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				if (isProd) {
 					try {
 						await effectRuntime.runPromise(
-							writeIssuesJson(issuesSink.snapshot(), {
-								cwd: process.cwd(),
-								packageName: readSitePackageName(),
-								generatedAt: new Date().toISOString(),
+							Effect.gen(function* () {
+								const packageName = yield* readSitePackageName;
+								yield* writeIssuesJson(issuesSink.snapshot(), {
+									cwd: process.cwd(),
+									packageName,
+									generatedAt: new Date().toISOString(),
+								});
 							}),
 						);
 					} catch {
