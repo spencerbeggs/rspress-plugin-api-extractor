@@ -232,14 +232,20 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 	// collision in .api-docs/build/issues.json (see plugin.ts's config() catch).
 	const collisions = detectRouteCollisions(candidates);
 	if (collisions.length > 0) {
-		for (const collision of collisions) {
-			emitEvent(
-				PluginEvent.RouteCollisionDetected({
-					ctx: { buildId: currentBuildId, route: collision.route },
-					level: "error",
-					items: collision.items.map((item) => `${item.displayName} (${item.kind}) [${item.canonicalRef}]`),
-				}),
-			);
+		// Guard the emit so a throwing event sink cannot replace the collision
+		// error — the fatal route-collision contract must survive here.
+		try {
+			for (const collision of collisions) {
+				emitEvent(
+					PluginEvent.RouteCollisionDetected({
+						ctx: { buildId: currentBuildId, route: collision.route },
+						level: "error",
+						items: collision.items.map((item) => `${item.displayName} (${item.kind}) [${item.canonicalRef}]`),
+					}),
+				);
+			}
+		} catch {
+			// event-delivery failure must not mask the route-collision error
 		}
 		throw new Error(formatRouteCollisionError(collisions, baseRoute));
 	}

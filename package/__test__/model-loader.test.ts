@@ -133,6 +133,21 @@ describe("ApiModelLoader", () => {
 			await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow(`API model file not found: ${mockPath}`);
 		});
 
+		it("preserves the original load error when the ModelLoadFailed emitter throws", async () => {
+			const mockPath = "/path/to/missing.api.json";
+			vi.mocked(path.resolve).mockReturnValue(mockPath);
+			vi.mocked(fs.existsSync).mockReturnValue(false);
+			setModelLoaderEventEmitter(() => {
+				throw new Error("emitter boom");
+			}, "b");
+			try {
+				// The guarded emit must not let the sink's failure replace the real error.
+				await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow(`API model file not found: ${mockPath}`);
+			} finally {
+				setModelLoaderEventEmitter(() => {});
+			}
+		});
+
 		it("should load API model from async function returning ApiModel", async () => {
 			const mockPackage = { name: "test-package" } as ApiPackage;
 			const mockApiModel = {

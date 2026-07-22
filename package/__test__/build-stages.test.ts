@@ -180,6 +180,33 @@ describe("prepareWorkItems", () => {
 		).toBe(true);
 	});
 
+	it("preserves the route-collision error when the emitter throws", () => {
+		const model = new ApiModel();
+		const pkg = model.loadPackage(
+			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
+		);
+		const collidingCategories: Record<string, CategoryConfig> = {
+			...DEFAULT_CATEGORIES,
+			variables: { ...DEFAULT_CATEGORIES.variables, folderName: "type" },
+		};
+		setBuildStagesEventEmitter(() => {
+			throw new Error("emitter boom");
+		}, "test-build-id");
+		try {
+			// The guarded emit loop must not let the sink's failure replace the collision error.
+			expect(() =>
+				prepareWorkItems({
+					apiPackage: pkg,
+					categories: collidingCategories,
+					baseRoute: "/api",
+					packageName: "effect-kit",
+				}),
+			).toThrow(/Route collision/);
+		} finally {
+			setBuildStagesEventEmitter(() => {});
+		}
+	});
+
 	it("inlines synthetic base declarations instead of paging them", () => {
 		const model = new ApiModel();
 		const pkg = model.loadPackage(

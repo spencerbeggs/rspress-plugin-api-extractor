@@ -66,15 +66,20 @@ export class ApiModelLoader {
 		} catch (error) {
 			// Emit a typed ModelLoadFailed event via the sync-island seam, then
 			// rethrow unchanged — this is the load boundary, so the not-found and
-			// parse-failure contracts must never be swallowed here.
-			emitEvent(
-				PluginEvent.ModelLoadFailed({
-					ctx: { buildId: currentBuildId },
-					level: "error",
-					modelPath: resolvedPath,
-					reason: error instanceof Error ? error.message : String(error),
-				}),
-			);
+			// parse-failure contracts must never be swallowed here. The emit is
+			// guarded so a throwing event sink cannot replace the real load error.
+			try {
+				emitEvent(
+					PluginEvent.ModelLoadFailed({
+						ctx: { buildId: currentBuildId },
+						level: "error",
+						modelPath: resolvedPath,
+						reason: error instanceof Error ? error.message : String(error),
+					}),
+				);
+			} catch {
+				// event-delivery failure must not mask the original load error
+			}
 			throw error;
 		}
 	}
