@@ -72,6 +72,19 @@ describe("makeIssuesSink", () => {
 		expect(snap.suppressed).toHaveLength(0);
 		expect(snap.warnings[0]?.source).toBe("prettier");
 	});
+
+	it("reset() clears all buckets", () => {
+		const sink = makeIssuesSink();
+		sink.handle(PluginEvent.PrettierError({ ctx: { buildId: "b" }, level: "warn", file: "x.mdx", reason: "bad" }));
+		sink.handle(
+			PluginEvent.ModelLoadFailed({ ctx: { buildId: "b" }, level: "error", modelPath: "m.json", reason: "nope" }),
+		);
+		sink.reset();
+		const snap = sink.snapshot();
+		expect(snap.warnings).toHaveLength(0);
+		expect(snap.errors).toHaveLength(0);
+		expect(snap.suppressed).toHaveLength(0);
+	});
 });
 
 describe("writeIssuesJson", () => {

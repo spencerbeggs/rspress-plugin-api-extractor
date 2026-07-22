@@ -156,7 +156,7 @@ export function eventToIssue(event: PluginEvent): { bucket: "warnings" | "errors
  * Collector sink: accumulates issue events into in-memory buckets. Always-on
  * (collection is cheap); the write is gated by `isProd` in `afterBuild`.
  */
-export function makeIssuesSink(): EventSink & { snapshot: () => IssuesSnapshot } {
+export function makeIssuesSink(): EventSink & { snapshot: () => IssuesSnapshot; reset: () => void } {
 	const warnings: Issue[] = [];
 	const errors: Issue[] = [];
 	const suppressed: Issue[] = [];
@@ -169,6 +169,14 @@ export function makeIssuesSink(): EventSink & { snapshot: () => IssuesSnapshot }
 			else errors.push(mapped.issue);
 		},
 		snapshot: () => ({ warnings: [...warnings], errors: [...errors], suppressed: [...suppressed] }),
+		// Clear the in-memory buckets. Called once per build so a long-lived dev
+		// runtime (kept alive across HMR rebuilds) does not accumulate diagnostics
+		// unbounded — the prod artifact is unaffected, but the process is not.
+		reset: () => {
+			warnings.length = 0;
+			errors.length = 0;
+			suppressed.length = 0;
+		},
 	};
 }
 

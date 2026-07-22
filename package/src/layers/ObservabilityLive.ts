@@ -52,7 +52,7 @@ export function makeSummaryLoggerLayer(logLevel: EventLevel | "none"): Layer.Lay
 export interface BuiltSinks {
 	readonly layer: ReturnType<typeof makeEventBusLayer>;
 	readonly trace: (EventSink & { flush: () => void; setPath: (p: string) => void }) | null;
-	readonly issues: EventSink & { snapshot: () => IssuesSnapshot };
+	readonly issues: EventSink & { snapshot: () => IssuesSnapshot; reset: () => void };
 }
 
 /**

@@ -263,6 +263,9 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			// are on disk when RSPress builds its route table.
 			VfsRegistry.clear();
 			fileContextMap.clear();
+			// Reset the issues sink's buckets each build so a dev runtime kept alive
+			// across HMR rebuilds does not accumulate diagnostics without bound.
+			issuesSink.reset();
 
 			for (const dep of deprecations) {
 				emitSync(
