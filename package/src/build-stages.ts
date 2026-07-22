@@ -34,7 +34,7 @@ import { emit } from "./observability/EventBus.js";
 import { PluginEvent } from "./observability/events.js";
 import { OpenGraphResolver } from "./og-resolver.js";
 import type { RouteCandidate } from "./route-collisions.js";
-import { assertNoRouteCollisions } from "./route-collisions.js";
+import { detectRouteCollisions, formatRouteCollisionError } from "./route-collisions.js";
 import type { CategoryConfig, LlmsPlugin, SourceConfig } from "./schemas/index.js";
 import type { FileSnapshot } from "./services/SnapshotService.js";
 import { SnapshotService } from "./services/SnapshotService.js";
@@ -61,6 +61,26 @@ const CROSS_LINK_KIND_PRIORITY: Record<string, number> = {
 /** Lower number = higher priority for which page a bare cross-link name resolves to. */
 export function crossLinkKindPriority(kind: string): number {
 	return CROSS_LINK_KIND_PRIORITY[kind] ?? 100;
+}
+
+/**
+ * Module-level emitter seam. `prepareWorkItems` runs synchronously outside any
+ * Effect fiber, so a route collision cannot `yield* emit(...)` — it mirrors the
+ * sync-island pattern used by `twoslash-transformer.ts` (`setEventEmitter`) and
+ * `loader.ts` (`setLoaderEventEmitter`). Default is a no-op; wired in plugin.ts
+ * via `setBuildStagesEventEmitter(emitSync, buildId)` right after the runtime
+ * emitter is created.
+ */
+let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
+
+/**
+ * Inject the runtime-bound emitter into the build-stages module.
+ * Call this right after `makeRuntimeEmitter` in plugin.ts.
+ */
+export function setBuildStagesEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+	emitEvent = fn;
+	currentBuildId = buildId;
 }
 
 export interface WorkItem {
@@ -207,7 +227,28 @@ export function prepareWorkItems(input: PrepareWorkItemsInput): PrepareWorkItems
 		});
 	}
 	// Fail fast: two distinct items must never resolve to the same output route.
-	assertNoRouteCollisions(candidates, baseRoute);
+	// Emit a typed RouteCollisionDetected event per collision (via the sync-island
+	// seam above) before throwing, so the fatal build path still surfaces the
+	// collision in .api-docs/build/issues.json (see plugin.ts's config() catch).
+	const collisions = detectRouteCollisions(candidates);
+	if (collisions.length > 0) {
+		// Guard the emit so a throwing event sink cannot replace the collision
+		// error — the fatal route-collision contract must survive here.
+		try {
+			for (const collision of collisions) {
+				emitEvent(
+					PluginEvent.RouteCollisionDetected({
+						ctx: { buildId: currentBuildId, route: collision.route },
+						level: "error",
+						items: collision.items.map((item) => `${item.displayName} (${item.kind}) [${item.canonicalRef}]`),
+					}),
+				);
+			}
+		} catch {
+			// event-delivery failure must not mask the route-collision error
+		}
+		throw new Error(formatRouteCollisionError(collisions, baseRoute));
+	}
 
 	// 2. Build cross-link routes and kinds maps directly
 	//    (mirrors MarkdownCrossLinker.initialize() logic)

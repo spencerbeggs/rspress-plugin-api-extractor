@@ -38,6 +38,7 @@ function makeObs(overrides: Partial<ResolvedObservability> = {}): ResolvedObserv
 		logLevel: "info",
 		json: false,
 		tracePath: null,
+		progressIntervalMs: null,
 		thresholds: {
 			slowCodeBlock: 500,
 			slowPageGeneration: 500,
@@ -432,22 +433,10 @@ describe("buildEventBus", () => {
 	it("creates an eager trace sink and opens the file for an explicit path", () => {
 		const tracePath = path.join(os.tmpdir(), `obs-eager-${Date.now()}-${Math.random().toString(36).slice(2)}.jsonl`);
 		try {
-			const { trace } = buildEventBus(makeObs({ tracePath }), false);
+			const { trace } = buildEventBus(makeObs({ tracePath }));
 
 			expect(trace).not.toBeNull();
 			expect(fs.existsSync(tracePath)).toBe(true);
-		} finally {
-			fs.rmSync(tracePath, { force: true });
-		}
-	});
-
-	it("creates a deferred trace sink without opening the file when traceIsDefault is true", () => {
-		const tracePath = path.join(os.tmpdir(), `obs-deferred-${Date.now()}-${Math.random().toString(36).slice(2)}.jsonl`);
-		try {
-			const { trace } = buildEventBus(makeObs({ tracePath }), true);
-
-			expect(trace).not.toBeNull();
-			expect(fs.existsSync(tracePath)).toBe(false);
 		} finally {
 			fs.rmSync(tracePath, { force: true });
 		}

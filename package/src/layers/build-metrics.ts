@@ -27,6 +27,7 @@ export const BuildMetrics = {
 	twoslashErrors: Metric.counter("twoslash.errors"),
 	prettierErrors: Metric.counter("prettier.errors"),
 	pagesGenerated: Metric.counter("pages.generated"),
+	apisCompleted: Metric.counter("apis.completed"),
 	apiVersionsLoaded: Metric.counter("api.versions.loaded"),
 	externalPackagesTotal: Metric.counter("external.packages.total"),
 	phaseDuration: Metric.histogram("phase.duration", {

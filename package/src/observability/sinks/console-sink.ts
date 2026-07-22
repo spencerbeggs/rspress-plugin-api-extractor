@@ -1,5 +1,6 @@
 import type { EventLevel, PluginEvent } from "../events.js";
 import { LEVEL_RANK, levelOf } from "../events.js";
+import { formatProgress } from "../heartbeat.js";
 import type { EventSink } from "./types.js";
 
 function formatTime(date: Date): string {
@@ -22,6 +23,8 @@ function render(event: PluginEvent): string {
 			return `✓ ${event.phase} (${event.durationMs}ms)`;
 		case "BuildCompleted":
 			return `API documentation complete (${(event.durationMs / 1000).toFixed(2)}s)`;
+		case "BuildProgress":
+			return formatProgress(event);
 		case "BuildFailed":
 			return `Error in ${event.phase}: ${event.error}`;
 		case "SlowOperation":

@@ -5,6 +5,7 @@ import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import { loadApiModel } from "api-extractor-llms";
 import { isLoadedModel, isVersionConfig } from "./config-utils.js";
 import type { LoadedModel, PackageJson } from "./internal-types.js";
+import { PluginEvent } from "./observability/events.js";
 import type {
 	AutoDetectDependencies,
 	CategoryConfig,
@@ -14,6 +15,28 @@ import type {
 	SourceConfig,
 	VersionConfig,
 } from "./schemas/index.js";
+
+/**
+ * Module-level emitter seam. `loadFromPath` is called from inside an
+ * `Effect.promise(async () => {...})` body in `ConfigServiceLive.ts`, so a
+ * load failure cannot `yield* emit(...)` — it mirrors the sync-island pattern
+ * used by `twoslash-transformer.ts` (`setEventEmitter`) and `loader.ts`
+ * (`setLoaderEventEmitter`, a DIFFERENT module — the ApiParser/TSDoc statics,
+ * not this one). Default is a no-op; wired in plugin.ts via
+ * `setModelLoaderEventEmitter(emitSync, buildId)` right after the runtime
+ * emitter is created.
+ */
+let emitEvent: (event: PluginEvent) => void = () => {};
+let currentBuildId = "";
+
+/**
+ * Inject the runtime-bound emitter into the model-loader module.
+ * Call this right after `makeRuntimeEmitter` in plugin.ts.
+ */
+export function setModelLoaderEventEmitter(fn: (event: PluginEvent) => void, buildId = ""): void {
+	emitEvent = fn;
+	currentBuildId = buildId;
+}
 
 /**
  * Utility class for loading API models from various sources
@@ -35,10 +58,30 @@ export class ApiModelLoader {
 		// even if api-extractor-llms changes its internal wording, then
 		// delegate the actual model parse.
 		const resolvedPath = path.resolve(modelPath.toString());
-		if (!fs.existsSync(resolvedPath)) {
-			throw new Error(`API model file not found: ${resolvedPath}`);
+		try {
+			if (!fs.existsSync(resolvedPath)) {
+				throw new Error(`API model file not found: ${resolvedPath}`);
+			}
+			return await loadApiModel(resolvedPath);
+		} catch (error) {
+			// Emit a typed ModelLoadFailed event via the sync-island seam, then
+			// rethrow unchanged — this is the load boundary, so the not-found and
+			// parse-failure contracts must never be swallowed here. The emit is
+			// guarded so a throwing event sink cannot replace the real load error.
+			try {
+				emitEvent(
+					PluginEvent.ModelLoadFailed({
+						ctx: { buildId: currentBuildId },
+						level: "error",
+						modelPath: resolvedPath,
+						reason: error instanceof Error ? error.message : String(error),
+					}),
+				);
+			} catch {
+				// event-delivery failure must not mask the original load error
+			}
+			throw error;
 		}
-		return loadApiModel(resolvedPath);
 	}
 
 	/**

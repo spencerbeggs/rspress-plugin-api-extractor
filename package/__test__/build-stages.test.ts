@@ -18,6 +18,7 @@ import {
 	crossLinkKindPriority,
 	generateSinglePage,
 	prepareWorkItems,
+	setBuildStagesEventEmitter,
 	writeMetadata,
 	writeSingleFile,
 } from "../src/build-stages.js";
@@ -25,6 +26,7 @@ import { CategoryResolver } from "../src/category-resolver.js";
 import { SnapshotServiceLive } from "../src/layers/SnapshotServiceLive.js";
 import { MarkdownCrossLinker } from "../src/markdown/cross-linker.js";
 import { ApiModelLoader } from "../src/model-loader.js";
+import type { PluginEvent } from "../src/observability/events.js";
 import type { CategoryConfig } from "../src/schemas/index.js";
 import { DEFAULT_CATEGORIES } from "../src/schemas/index.js";
 
@@ -130,6 +132,78 @@ describe("prepareWorkItems", () => {
 		expect(crossLinkData.routes.get("ActionSeverity")).toBe("/api/variable/actionseverity");
 		for (const wi of workItems) {
 			expect("routeSuffix" in wi).toBe(false);
+		}
+	});
+
+	it("emits RouteCollisionDetected via the sync-island seam before throwing", () => {
+		const model = new ApiModel();
+		const pkg = model.loadPackage(
+			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
+		);
+		// Force the companion `variables`/`types` categories to share one folder so a
+		// genuine ActionSeverity Variable + TypeAlias pair (see the companion-pattern
+		// test above) collides on the same route. Real fixture items, no mocked
+		// ApiItems — only the category config is synthetic.
+		const collidingCategories: Record<string, CategoryConfig> = {
+			...DEFAULT_CATEGORIES,
+			variables: { ...DEFAULT_CATEGORIES.variables, folderName: "type" },
+		};
+
+		const emitted: PluginEvent[] = [];
+		setBuildStagesEventEmitter((event) => emitted.push(event), "test-build-id");
+		try {
+			expect(() =>
+				prepareWorkItems({
+					apiPackage: pkg,
+					categories: collidingCategories,
+					baseRoute: "/api",
+					packageName: "effect-kit",
+				}),
+			).toThrow(/Route collision/);
+		} finally {
+			setBuildStagesEventEmitter(() => {});
+		}
+
+		const collisionEvents = emitted.filter((event) => event._tag === "RouteCollisionDetected");
+		expect(collisionEvents.length).toBeGreaterThan(0);
+		for (const event of collisionEvents) {
+			if (event._tag !== "RouteCollisionDetected") continue;
+			expect(event.ctx.buildId).toBe("test-build-id");
+			expect(event.level).toBe("error");
+			expect(event.items.length).toBeGreaterThanOrEqual(2);
+		}
+		expect(
+			collisionEvents.some(
+				(event) =>
+					event._tag === "RouteCollisionDetected" && event.items.some((item) => item.includes("ActionSeverity")),
+			),
+		).toBe(true);
+	});
+
+	it("preserves the route-collision error when the emitter throws", () => {
+		const model = new ApiModel();
+		const pkg = model.loadPackage(
+			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
+		);
+		const collidingCategories: Record<string, CategoryConfig> = {
+			...DEFAULT_CATEGORIES,
+			variables: { ...DEFAULT_CATEGORIES.variables, folderName: "type" },
+		};
+		setBuildStagesEventEmitter(() => {
+			throw new Error("emitter boom");
+		}, "test-build-id");
+		try {
+			// The guarded emit loop must not let the sink's failure replace the collision error.
+			expect(() =>
+				prepareWorkItems({
+					apiPackage: pkg,
+					categories: collidingCategories,
+					baseRoute: "/api",
+					packageName: "effect-kit",
+				}),
+			).toThrow(/Route collision/);
+		} finally {
+			setBuildStagesEventEmitter(() => {});
 		}
 	});
 

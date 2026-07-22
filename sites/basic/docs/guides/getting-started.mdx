@@ -17,11 +17,12 @@ import { Pipeline, JsonSource } from "@modules/kitchensink";
 
 const source = new JsonSource("./data/records.json");
 //    ^?
-const pipeline = Pipeline.create(source, (record: Record<string, unknown>) => ({
+const transform = (record: Record<string, unknown>) => ({
  ...record,
  processed: true,
-}));
-//  ^?
+});
+const pipeline = Pipeline.create(source, transform);
+//    ^?
 ```
 
 ## Executing and Checking Status

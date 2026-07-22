@@ -5,7 +5,8 @@ import type { ApiModel, ApiPackage } from "@microsoft/api-extractor-model";
 import { loadApiModel } from "api-extractor-llms";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LoadedModel, PackageJson } from "../src/internal-types.js";
-import { ApiModelLoader } from "../src/model-loader.js";
+import { ApiModelLoader, setModelLoaderEventEmitter } from "../src/model-loader.js";
+import type { PluginEvent } from "../src/observability/events.js";
 import type { SourceConfig, VersionConfig } from "../src/schemas/index.js";
 
 /**
@@ -132,6 +133,21 @@ describe("ApiModelLoader", () => {
 			await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow(`API model file not found: ${mockPath}`);
 		});
 
+		it("preserves the original load error when the ModelLoadFailed emitter throws", async () => {
+			const mockPath = "/path/to/missing.api.json";
+			vi.mocked(path.resolve).mockReturnValue(mockPath);
+			vi.mocked(fs.existsSync).mockReturnValue(false);
+			setModelLoaderEventEmitter(() => {
+				throw new Error("emitter boom");
+			}, "b");
+			try {
+				// The guarded emit must not let the sink's failure replace the real error.
+				await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow(`API model file not found: ${mockPath}`);
+			} finally {
+				setModelLoaderEventEmitter(() => {});
+			}
+		});
+
 		it("should load API model from async function returning ApiModel", async () => {
 			const mockPackage = { name: "test-package" } as ApiPackage;
 			const mockApiModel = {
@@ -223,6 +239,53 @@ describe("ApiModelLoader", () => {
 			await expect(ApiModelLoader.loadApiModel(loader)).rejects.toThrow(
 				"API model loader function must return an ApiModel",
 			);
+		});
+	});
+
+	describe("ModelLoadFailed event emission (sync-island seam)", () => {
+		afterEach(() => {
+			setModelLoaderEventEmitter(() => {});
+		});
+
+		it("emits ModelLoadFailed and still rethrows when the model file is not found", async () => {
+			const mockPath = "/path/to/missing.api.json";
+
+			vi.mocked(path.resolve).mockReturnValue(mockPath);
+			vi.mocked(fs.existsSync).mockReturnValue(false);
+
+			const emitted: PluginEvent[] = [];
+			setModelLoaderEventEmitter((event) => emitted.push(event), "test-build-id");
+
+			await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow(`API model file not found: ${mockPath}`);
+
+			const failedEvents = emitted.filter((event) => event._tag === "ModelLoadFailed");
+			expect(failedEvents).toHaveLength(1);
+			const [event] = failedEvents;
+			if (event?._tag !== "ModelLoadFailed") throw new Error("expected a ModelLoadFailed event");
+			expect(event.ctx.buildId).toBe("test-build-id");
+			expect(event.level).toBe("error");
+			expect(event.modelPath).toBe(mockPath);
+			expect(event.reason).toContain("not found");
+		});
+
+		it("emits ModelLoadFailed and still rethrows when the delegated parse fails", async () => {
+			const mockPath = "/path/to/broken.api.json";
+
+			vi.mocked(path.resolve).mockReturnValue(mockPath);
+			vi.mocked(fs.existsSync).mockReturnValue(true);
+			vi.mocked(loadApiModel).mockRejectedValue(new Error("malformed model"));
+
+			const emitted: PluginEvent[] = [];
+			setModelLoaderEventEmitter((event) => emitted.push(event), "test-build-id");
+
+			await expect(ApiModelLoader.loadApiModel(mockPath)).rejects.toThrow("malformed model");
+
+			const failedEvents = emitted.filter((event) => event._tag === "ModelLoadFailed");
+			expect(failedEvents).toHaveLength(1);
+			const [event] = failedEvents;
+			if (event?._tag !== "ModelLoadFailed") throw new Error("expected a ModelLoadFailed event");
+			expect(event.reason).toBe("malformed model");
+			expect(event.modelPath).toBe(mockPath);
 		});
 	});
 

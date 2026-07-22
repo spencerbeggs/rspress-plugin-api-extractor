@@ -34,8 +34,6 @@ sites/*/lib/models/
 sites/*/docs/api/
 sites/*/docs/*/api/
 sites/*/.rspress/
-api-docs-snapshot.db
-api-docs-snapshot.db-*
 
 # Claude AI files
 .claude/settings.local.json
@@ -47,3 +45,6 @@ docs/superpowers
 .mcp.json
 # dogfood mailbox (silk dogfood loops)
 .claude/dogfood/
+
+# Ephemeral plugin observability artifacts (issues.json, trace JSONL)
+.api-docs/

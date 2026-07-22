@@ -3,10 +3,11 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-01-17
-updated: 2026-07-14
-last-synced: 2026-07-14
+updated: 2026-07-22
+last-synced: 2026-07-22
 completeness: 90
 related:
+  - rspress-plugin-api-extractor/build-progress-and-issues.md
   - rspress-plugin-api-extractor/error-observability.md
   - rspress-plugin-api-extractor/build-architecture.md
   - rspress-plugin-api-extractor/snapshot-tracking-system.md
@@ -21,7 +22,8 @@ dependencies: []
 - [EventBus: Synchronous Fan-Out](#eventbus-synchronous-fan-out)
 - [PluginEvent Taxonomy](#pluginevent-taxonomy)
 - [Correlation Envelope and Level Ladder](#correlation-envelope-and-level-ladder)
-- [Three Sinks](#three-sinks)
+- [Four Sinks](#four-sinks)
+- [Progress Heartbeat](#progress-heartbeat)
 - [Span Substrate](#span-substrate)
 - [Build Metrics](#build-metrics)
 - [Build Summary](#build-summary)
@@ -34,13 +36,17 @@ dependencies: []
 ## Overview
 
 Build observability is wired through a **synchronous fan-out EventBus** backed
-by three sinks: a console sink (human-readable or JSON, level-filtered), a
-full-fidelity JSONL trace sink (opt-in, captures every event), and a metrics
-sink (translates events to `BuildMetrics` counters and histograms).
+by four sinks: a console sink (human-readable or JSON, level-filtered), an
+issues sink (accumulates diagnostic events into the `.api-docs/build/issues.json`
+artifact, production builds only), a full-fidelity JSONL trace sink (opt-in,
+captures every event), and a metrics sink (translates events to `BuildMetrics`
+counters and histograms).
 
 The entire observability module lives under `package/src/observability/`. The
 plugin creates the bus once during initialization and tears it down at the end
-of `afterBuild`.
+of `afterBuild`. A production-only progress heartbeat and the issues artifact
+are documented in full in `build-progress-and-issues.md`; this document covers
+the EventBus/sink/metrics substrate they ride on.
 
 ---
 
@@ -94,7 +100,7 @@ across seven subsystems:
 
 | Subsystem | Representative events |
 | --------- | --------------------- |
-| Lifecycle | `BuildStarted`, `BuildCompleted`, `PhaseStarted`, `PhaseCompleted`, `SlowOperation` |
+| Lifecycle | `BuildStarted`, `BuildCompleted`, `BuildProgress`, `ApiDocsCompleted`, `PhaseStarted`, `PhaseCompleted`, `SlowOperation` |
 | Config parse / merge | `OptionsDecoded`, `DefaultApplied`, `DeprecatedConfigUsed`, `ConfigResolved` |
 | Model loading | `ModelLoaded`, `ModelLoadFailed` |
 | Type loading / VFS | `VfsGenerated`, `ImportsPrepended`, `TypeRegistryEvent` |
@@ -108,6 +114,13 @@ of type `EventLevel`.
 
 **Known limitation:** `BuildStarted.mode` is always `"prod"` regardless of
 whether `rspress dev` or `rspress build` is running.
+
+`BuildProgress` is emitted only by the production-only heartbeat fiber, not by
+a build-stage emit site — see `build-progress-and-issues.md`. `RouteCollisionDetected`
+and `ModelLoadFailed` were long present in the taxonomy but unemitted; they are
+now emitted through new sync-island seams (`setBuildStagesEventEmitter`,
+`setModelLoaderEventEmitter`) so they feed both the console sink and the issues
+artifact — also documented there.
 
 ---
 
@@ -152,9 +165,9 @@ admits events ranked 0–2 — lower rank means higher severity and always emitt
 
 ---
 
-## Three Sinks
+## Four Sinks
 
-All three implement `EventSink` (`package/src/observability/sinks/types.ts`):
+All four implement `EventSink` (`package/src/observability/sinks/types.ts`):
 
 ```typescript
 interface EventSink {
@@ -182,22 +195,29 @@ Mode is selected by the sink's `json` option, which `buildEventBus` passes throu
 - **Human-readable mode** (default): `[HH:MM:SS] rendered-message`. `render(event)` switches on `_tag` to produce a one-liner per variant; unknown tags fall back to the bare `_tag`.
 - **JSON mode** (`json: true`): `console.log(JSON.stringify({ timestamp, ...event }))`. Also sets `capturesPayload: true`.
 
+### Issues Sink
+
+**Location:** `package/src/observability/sinks/issues-sink.ts`
+
+`makeIssuesSink()` returns an `EventSink & { snapshot: () => IssuesSnapshot }`. It accumulates a curated subset of diagnostic events (Twoslash, Prettier, Shiki, config-validation, route-collision, model-load-failure, build-failure) into in-memory `warnings`/`errors`/`suppressed` buckets. Collection is always-on (cheap); only the write to `.api-docs/build/issues.json` is gated by production and happens in `afterBuild`. Full schema, event-to-bucket mapping and the monitor that consumes the artifact are documented in `build-progress-and-issues.md`.
+
 ### Trace Sink
 
 **Location:** `package/src/observability/sinks/trace-sink.ts`
 
-`makeTraceSink(initialPath?)` returns
+`makeTraceSink(path)` returns
 `EventSink & { flush: () => void; setPath: (p: string) => void }`.
 
 - `minLevel: "trace"`, `capturesPayload: true` — captures every event regardless of console level.
-- **Eager mode** (`initialPath` supplied, i.e. an explicit `trace: "/some/path"` config): creates the parent directory and truncates the file at construction.
-- **Deferred mode** (`initialPath` omitted): events are silently dropped until `setPath(p)` is called, which opens and truncates the file. This exists because the plugin factory runs before RSPress's real `outDir` is known — when the trace path was derived from a *guessed* outDir, the sink is created deferred so no stray empty file is written to the wrong location, and `plugin.ts` calls `trace.setPath(realPath)` in the `config()` hook once `_config.outDir` is available.
+- The trace path is now resolved eagerly at plugin-factory time — `resolveObservability` derives `<cwd>/.api-docs/build/trace-<buildId>.jsonl` from `cwd` (known at factory time, unlike the RSPress `outDir`), so `buildEventBus` always constructs the sink with a concrete path and it opens (creates the parent directory, truncates the file) immediately.
+- `setPath` is retained on the returned sink but is no longer called anywhere in `plugin.ts`; the deferred-open mode it supports (construct without a path, bind one later) is unused now that the path no longer depends on RSPress's `outDir`.
 - Calls `appendFileSync` per event (synchronous, nothing buffered).
 - `flush()` is a no-op: sync appends mean nothing is held in memory.
 
 The trace sink and console level are **independent**. Running at
 `logLevel: "info"` with `trace: true` still writes every event to the JSONL
-file; the console shows only `info`-and-above messages.
+file; the console shows only `info`-and-above messages. See `build-progress-and-issues.md`
+for the `.api-docs/` directory this trace file now lives in, alongside `issues.json`.
 
 ### Metrics Sink
 
@@ -211,6 +231,7 @@ synchronous, so metric counts are exact when `logBuildSummary` reads them.
 | ----- | ----------------- |
 | `FileDecision` | `filesTotal`, `filesNew` / `filesModified` / `filesUnchanged` |
 | `PageGenerated` | `pagesGenerated` |
+| `ApiDocsCompleted` | `apisCompleted` |
 | `TwoslashDiagnostic` | `twoslashDiagnostics`, `twoslashErrors` |
 | `PrettierError` | `prettierErrors` |
 | `CodeBlockProcessed` | `codeblockTotal`, `codeblockDuration`, `codeblockShikiDuration` (if `shikiMs > 0`), `codeblockSlow` |
@@ -226,6 +247,19 @@ silently ignored. See the inline-metrics note below.
 inline `Metric.update` calls in `ConfigServiceLive`. The only candidate
 event (`TypeRegistryEvent{BatchComplete}`) carries a `loaded` (succeeded) count,
 not a configured count — deriving it here would change the metric's semantics.
+`apisCompleted`, by contrast, IS event-derived: `plugin.ts` emits an
+`ApiDocsCompleted` event via `Effect.tap` on each `generateApiDocs` result
+inside the `Effect.forEach` over `apiConfigs`, and the metrics sink maps it to
+`apisCompleted`. The heartbeat reads that counter for the generate-phase
+denominator — see `build-progress-and-issues.md`.
+
+---
+
+## Progress Heartbeat
+
+A production-only `forkScoped` fiber (`runHeartbeat`, `package/src/observability/heartbeat.ts`) emits a `BuildProgress` event on a timer so a long, silent build (many APIs, network fetches, hundreds of pages) does not read as hung. It rides the same EventBus as every other event — the console sink renders it via `formatProgress`, the trace sink records it, and the metrics sink ignores it. Full mechanism, configuration (`observability.progressInterval`) and rendered line format are documented in `build-progress-and-issues.md`.
+
+The heartbeat only covers the `config()` doc-generation phase (`resolve` + `generate`) — it does not run during RSPress's own render pass, where Twoslash type-checking of code blocks is often the dominant cost on a large site. See the Known Limitations section of `build-progress-and-issues.md`.
 
 ---
 
@@ -303,33 +337,29 @@ rebuilds). The summary covers file counts (new/modified/unchanged), pages and
 external packages, phase timing, slow code blocks, and Twoslash/Prettier error
 totals.
 
-`buildEventBus(obs, traceIsDefault?)` composes sinks into a layer:
+`buildEventBus(obs)` composes sinks into a layer:
 
 ```typescript
-function buildEventBus(
-  obs: ResolvedObservability,
-  traceIsDefault = false,
-): BuiltSinks {
+function buildEventBus(obs: ResolvedObservability): BuiltSinks {
+  const issues = makeIssuesSink();
   const sinks: EventSink[] = [
     makeConsoleSink(obs.logLevel, { json: obs.json }),
     makeMetricsSink(),
+    issues,
   ];
-  const trace = obs.tracePath
-    ? makeTraceSink(traceIsDefault ? undefined : obs.tracePath)
-    : null;
+  const trace = obs.tracePath ? makeTraceSink(obs.tracePath) : null;
   if (trace) sinks.push(trace);
-  return { layer: makeEventBusLayer(sinks), trace };
+  return { layer: makeEventBusLayer(sinks), trace, issues };
 }
 ```
 
-`traceIsDefault` marks a trace path derived from the *guessed* outDir at
-factory time. In that case the trace sink is created in deferred mode (no
-`initialPath`) and `plugin.ts` binds the real path with `trace.setPath(...)`
-in the `config()` hook. An explicitly configured path opens eagerly.
+`obs.tracePath` is always resolved eagerly now (see [Trace Sink](#trace-sink)), so there is no deferred-path parameter to thread through — the earlier `traceIsDefault` flag and the corresponding `setPath` rebind in `plugin.ts`'s `config()` hook are gone.
 
-`BuiltSinks.trace` is retained at the plugin level so `config()` can call
-`setPath` and `afterBuild` can call `trace.flush()` before disposing the
-runtime.
+`BuiltSinks.trace` is retained at the plugin level so `afterBuild` can call
+`trace.flush()` before disposing the runtime. `BuiltSinks.issues` is retained
+so `afterBuild` (and the `config()` catch block, on a fatal build) can read
+`issues.snapshot()` and write `.api-docs/build/issues.json` — see
+`build-progress-and-issues.md`.
 
 ---
 
@@ -365,6 +395,13 @@ The Twoslash transformer and Prettier formatter each maintain a module-level
 events flow through `emitEvent` and into the normal fan-out path. See
 `error-observability.md` for how the error variants are handled.
 
+The same pattern now also covers two previously-silent emit sites:
+`setBuildStagesEventEmitter` (`build-stages.ts`, detect-emit-throw at the
+route-collision check) and `setModelLoaderEventEmitter` (`model-loader.ts`,
+emit-then-rethrow on a failed model load). Both `RouteCollisionDetected` and
+`ModelLoadFailed` existed in the taxonomy from the start but had no emit site
+until these seams were added; see `build-progress-and-issues.md`.
+
 ---
 
 ## File Locations
@@ -377,6 +414,8 @@ events flow through `emitEvent` and into the normal fan-out path. See
 | `src/observability/sinks/console-sink.ts` | Level-filtered console output (human-readable or JSON) |
 | `src/observability/sinks/trace-sink.ts` | Full-fidelity JSONL file sink |
 | `src/observability/sinks/metrics-sink.ts` | Event-to-BuildMetrics translation |
+| `src/observability/sinks/issues-sink.ts` | Issues collector sink, `eventToIssue`, `writeIssuesJson` — see `build-progress-and-issues.md` |
+| `src/observability/heartbeat.ts` | Progress heartbeat fiber, `BuildProgress` event builder, `formatProgress` — see `build-progress-and-issues.md` |
 | `src/observability/spans.ts` | `withPhase`, `withOp`, `PHASE_THRESHOLD_KEY` |
 | `src/observability/stream.ts` | Best-effort sliding-queue stream tee (exported, not wired) |
 | `src/layers/build-metrics.ts` | `BuildMetrics` counters and histograms |
@@ -387,6 +426,7 @@ events flow through `emitEvent` and into the normal fan-out path. See
 
 ## Related Documentation
 
+- **Build Progress & Issues Artifact:** `build-progress-and-issues.md` — the progress heartbeat (and its known coverage gap), the `.api-docs/build/issues.json` artifact and its monitor
 - **Error Observability:** `error-observability.md` — how Twoslash and Prettier errors flow through the bus
 - **Build Architecture:** `build-architecture.md` — plugin structure and service layer
 - **Snapshot Tracking System:** `snapshot-tracking-system.md` — `FileDecision` events and file-write metrics

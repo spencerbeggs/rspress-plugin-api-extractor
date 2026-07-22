@@ -38,6 +38,18 @@ export type PluginEvent = Data.TaggedEnum<{
 	PhaseStarted: Base & { readonly phase: string };
 	PhaseCompleted: Base & { readonly phase: string; readonly durationMs: number };
 	BuildCompleted: Base & { readonly durationMs: number; readonly totals: Record<string, number> };
+	BuildProgress: Base & {
+		readonly phase: "resolve" | "generate";
+		readonly elapsedMs: number;
+		readonly vfsFiles: number;
+		readonly externalPackages: number;
+		readonly apisCompleted: number;
+		readonly apisTotal: number;
+		readonly pages: number;
+		readonly codeBlocks: number;
+		readonly delta: number;
+	};
+	ApiDocsCompleted: Base & { readonly packageName: string };
 	BuildFailed: Base & { readonly phase: string; readonly error: string };
 	SlowOperation: Base & { readonly operation: string; readonly durationMs: number; readonly threshold: number };
 

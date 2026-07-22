@@ -3,6 +3,8 @@ import { Effect, Layer, Logger, Metric, References } from "effect";
 import { makeEventBusLayer } from "../observability/EventBus.js";
 import type { EventLevel } from "../observability/events.js";
 import { makeConsoleSink } from "../observability/sinks/console-sink.js";
+import type { IssuesSnapshot } from "../observability/sinks/issues-sink.js";
+import { makeIssuesSink } from "../observability/sinks/issues-sink.js";
 import { makeMetricsSink } from "../observability/sinks/metrics-sink.js";
 import { makeTraceSink } from "../observability/sinks/trace-sink.js";
 import type { EventSink } from "../observability/sinks/types.js";
@@ -50,25 +52,22 @@ export function makeSummaryLoggerLayer(logLevel: EventLevel | "none"): Layer.Lay
 export interface BuiltSinks {
 	readonly layer: ReturnType<typeof makeEventBusLayer>;
 	readonly trace: (EventSink & { flush: () => void; setPath: (p: string) => void }) | null;
+	readonly issues: EventSink & { snapshot: () => IssuesSnapshot; reset: () => void };
 }
 
 /**
- * Compose the console + metrics (+ optional trace) sinks into an EventBus layer.
+ * Compose the console + metrics + issues (+ optional trace) sinks into an EventBus layer.
  *
- * When `traceIsDefault` is true the trace path was derived from the guessed
- * outDir at factory time.  In that case we create the sink in deferred mode
- * (no `initialPath`) so no stray empty file is written to the guessed path;
- * `plugin.ts` must call `trace.setPath(realPath)` in the `config()` hook once
- * the real RSPress `outDir` is known.
- *
- * When `traceIsDefault` is false the caller supplied an explicit path string,
- * so we open the file eagerly (existing behaviour).
+ * `cwd` is known at plugin-factory time (unlike the RSPress `outDir`), so the
+ * trace path is resolved eagerly by `resolveObservability` and the trace sink
+ * opens its file immediately — no deferred re-binding is needed.
  */
-export function buildEventBus(obs: ResolvedObservability, traceIsDefault = false): BuiltSinks {
-	const sinks: EventSink[] = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink()];
-	const trace = obs.tracePath ? makeTraceSink(traceIsDefault ? undefined : obs.tracePath) : null;
+export function buildEventBus(obs: ResolvedObservability): BuiltSinks {
+	const issues = makeIssuesSink();
+	const sinks: EventSink[] = [makeConsoleSink(obs.logLevel, { json: obs.json }), makeMetricsSink(), issues];
+	const trace = obs.tracePath ? makeTraceSink(obs.tracePath) : null;
 	if (trace) sinks.push(trace);
-	return { layer: makeEventBusLayer(sinks), trace };
+	return { layer: makeEventBusLayer(sinks), trace, issues };
 }
 
 /**
