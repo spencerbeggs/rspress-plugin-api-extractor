@@ -92,11 +92,12 @@ export function resolveObservability(input: ResolveObservabilityInput): {
 	};
 
 	const pi = input.observability?.progressInterval;
-	// A non-positive number (0 or negative) disables the heartbeat. A negative
-	// interval would otherwise become a negative sleep that resolves instantly,
-	// turning the heartbeat into a tight loop.
-	const progressIntervalMs =
-		pi === false || (typeof pi === "number" && pi <= 0) ? null : typeof pi === "number" ? pi * 1000 : 10_000;
+	// Seconds between heartbeat ticks. Disable (null) for `false` and for any
+	// non-positive or non-finite number — 0, negative, NaN, Infinity — so the
+	// heartbeat can never become a zero, negative, or NaN sleep. Absent/`true`
+	// falls through to the 10s default.
+	const seconds = pi === false ? null : typeof pi === "number" ? pi : 10;
+	const progressIntervalMs = seconds !== null && Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
 
 	return {
 		resolved: { logLevel: level, json: level === "debug", tracePath, progressIntervalMs, thresholds },

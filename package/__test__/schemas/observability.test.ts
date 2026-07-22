@@ -86,6 +86,15 @@ describe("resolveObservability progressInterval", () => {
 			resolveObservability({ ...base, observability: { progressInterval: -5 } }).resolved.progressIntervalMs,
 		).toBeNull();
 	});
+	it("disables on a non-finite interval (NaN or Infinity)", () => {
+		expect(
+			resolveObservability({ ...base, observability: { progressInterval: Number.NaN } }).resolved.progressIntervalMs,
+		).toBeNull();
+		expect(
+			resolveObservability({ ...base, observability: { progressInterval: Number.POSITIVE_INFINITY } }).resolved
+				.progressIntervalMs,
+		).toBeNull();
+	});
 	it("converts seconds to ms", () => {
 		expect(resolveObservability({ ...base, observability: { progressInterval: 5 } }).resolved.progressIntervalMs).toBe(
 			5_000,
