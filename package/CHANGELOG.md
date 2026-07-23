@@ -1,5 +1,17 @@
 # rspress-plugin-api-extractor
 
+## 0.7.1
+
+### Dependencies
+
+* | Dependency           | Type       | Action  | From   | To     |                                                                            |
+  | -------------------- | ---------- | ------- | ------ | ------ | -------------------------------------------------------------------------- |
+  | type-registry-effect | dependency | updated | ^2.2.0 | ^2.3.0 | [#106][#106] Thanks [@spencerbeggs](https://github.com/apps/spencerbeggs)! |
+
+### Patch Changes
+
+[#106]: https://github.com/spencerbeggs/rspress-plugin-api-extractor/pull/106
+
 ## 0.7.0
 
 ### Features
