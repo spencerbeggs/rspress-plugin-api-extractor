@@ -1,5 +1,23 @@
 # rspress-plugin-api-extractor
 
+## 0.7.2
+
+### Dependencies
+
+* | Dependency              | Type       | Action  | From          | To             |                                                                            |
+  | ----------------------- | ---------- | ------- | ------------- | -------------- | -------------------------------------------------------------------------- |
+  | @effect/platform-node   | dependency | updated | 4.0.0-beta.99 | 4.0.0-beta.101 |                                                                            |
+  | @effect/sql-sqlite-node | dependency | updated | 4.0.0-beta.99 | 4.0.0-beta.101 |                                                                            |
+  | @effected/semver        | dependency | updated | ^0.2.0        | ^0.2.1         |                                                                            |
+  | @effected/store         | dependency | updated | ^0.1.1        | ^0.1.2         |                                                                            |
+  | @effected/tsconfig-json | dependency | updated | ^0.3.0        | ^0.3.1         |                                                                            |
+  | @effected/xdg           | dependency | updated | ^0.1.7        | ^0.1.8         |                                                                            |
+  | effect                  | dependency | updated | 4.0.0-beta.99 | 4.0.0-beta.101 | [#108][#108] Thanks [@spencerbeggs](https://github.com/apps/spencerbeggs)! |
+
+### Patch Changes
+
+[#108]: https://github.com/spencerbeggs/rspress-plugin-api-extractor/pull/108
+
 ## 0.7.1
 
 ### Dependencies
