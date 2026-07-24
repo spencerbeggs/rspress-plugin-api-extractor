@@ -27,10 +27,10 @@
 	"dependencies": {
 		"@effect/platform-node": "catalog:effect",
 		"@effect/sql-sqlite-node": "catalog:effect",
-		"@effected/semver": "^0.2.0",
-		"@effected/store": "^0.1.1",
-		"@effected/tsconfig-json": "^0.3.0",
-		"@effected/xdg": "^0.1.7",
+		"@effected/semver": "^0.2.1",
+		"@effected/store": "^0.1.2",
+		"@effected/tsconfig-json": "^0.3.1",
+		"@effected/xdg": "^0.1.8",
 		"@microsoft/api-extractor-model": "^7.33.10",
 		"@shikijs/twoslash": "^4.3.1",
 		"@typescript/vfs": "^1.6.4",
@@ -54,7 +54,7 @@
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "catalog:silk",
-		"@savvy-web/rspress-builder": "^1.0.25",
+		"@savvy-web/rspress-builder": "^1.0.26",
 		"@types/hast": "^3.0.5",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "catalog:silk",
