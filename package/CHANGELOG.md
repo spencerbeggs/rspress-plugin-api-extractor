@@ -1,5 +1,17 @@
 # rspress-plugin-api-extractor
 
+## 0.7.3
+
+### Dependencies
+
+* | Dependency              | Type       | Action  | From   | To     |                                                                            |
+  | ----------------------- | ---------- | ------- | ------ | ------ | -------------------------------------------------------------------------- |
+  | @effected/tsconfig-json | dependency | updated | ^0.3.1 | ^0.3.2 | [#110][#110] Thanks [@spencerbeggs](https://github.com/apps/spencerbeggs)! |
+
+### Patch Changes
+
+[#110]: https://github.com/spencerbeggs/rspress-plugin-api-extractor/pull/110
+
 ## 0.7.2
 
 ### Dependencies
