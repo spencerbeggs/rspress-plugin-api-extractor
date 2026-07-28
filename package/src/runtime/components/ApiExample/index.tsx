@@ -29,8 +29,9 @@ export interface ApiExampleProps {
  */
 export function ApiExample({ code, hast }: ApiExampleProps): ReactElement {
 	const parsedHast = useMemo(() => decodeHast(hast, "ApiExample"), [hast]);
+	const isSsgMd = (import.meta as ImportMeta & { env?: { SSG_MD?: boolean } }).env?.SSG_MD === true;
 
-	if (import.meta.env.SSG_MD) {
+	if (isSsgMd) {
 		// SSG-MD mode: Render simple HTML that RSPress converts to clean markdown
 		// Use both className and lang attribute for maximum compatibility with markdown converters.
 		const header = "```typescript\n";

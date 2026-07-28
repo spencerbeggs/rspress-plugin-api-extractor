@@ -36,7 +36,10 @@
 		"${configDir}/docs/**/*.mdx",
 		"${configDir}/theme/**/*.ts",
 		"${configDir}/theme/**/*.tsx",
-		"${configDir}/theme/**/*.mdx"
+		"${configDir}/theme/**/*.mdx",
+		"${configDir}/components/**/*.ts",
+		"${configDir}/components/**/*.tsx",
+		"${configDir}/components/**/*.mdx"
 	],
 	"mdx": {
 		"checkMdx": true

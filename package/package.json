@@ -15,6 +15,9 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./env": {
+			"types": "./src/env.d.ts"
+		},
 		"./runtime": "./src/runtime/index.tsx",
 		"./tsconfig/rspress.json": "./public/tsconfig/rspress.json"
 	},
@@ -47,7 +50,7 @@
 		"prettier": "^3.9.6",
 		"react-markdown": "^10.1.0",
 		"shiki": "^4.3.1",
-		"type-registry-effect": "^2.3.0",
+		"type-registry-effect": "^2.3.1",
 		"typescript": "^6.0.3",
 		"unist-util-visit": "^5.1.0"
 	},

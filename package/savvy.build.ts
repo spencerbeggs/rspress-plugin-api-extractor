@@ -2,8 +2,8 @@ import { build } from "@savvy-web/rspress-builder";
 
 await build({
 	runtime: true,
-	dtsBundledPackages: ["@rspress/core", "@type/mdast", "@type/unist"],
-	apiModel: {
+	bundledPackages: ["@rspress/core", "@type/mdast", "@type/unist"],
+	meta: {
 		tsdoc: {
 			suppressWarnings: [
 				{ messageId: "ae-forgotten-export", pattern: "_base" },

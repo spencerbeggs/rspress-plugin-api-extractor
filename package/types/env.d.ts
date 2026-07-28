@@ -1,1 +1,1 @@
-/// <reference types="@savvy-web/rspress-builder/rspress-env.d.ts" />
+/// <reference types="@savvy-web/rspress-builder/env"/>

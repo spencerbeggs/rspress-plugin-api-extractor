@@ -14,9 +14,13 @@ export default defineConfig({
 	},
 	plugins: [
 		ApiExtractorPlugin({
-			logLevel: "info",
 			apis: ApiExtractorPlugin.apis.fromDir("./lib/models"),
+			observability: {
+				logLevel: "info",
+			},
 		}),
 	],
-	route: { cleanUrls: true },
+	route: {
+		cleanUrls: true,
+	},
 });

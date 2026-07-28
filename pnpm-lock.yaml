@@ -208,8 +208,8 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
       type-registry-effect:
-        specifier: ^2.3.0
-        version: 2.3.0(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.2.1(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3)
+        specifier: ^2.3.1
+        version: 2.3.1(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.2.1(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -4181,17 +4181,17 @@ packages:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
 
-  type-registry-effect@2.3.0:
-    resolution: {integrity: sha512-S+PT5sPFoTEjFs2UpivUvb+tjG5d9SGjwi1nlVi/annaZhXJWnsrvo9uMobznZnyJ7uPRrOicQRwZLQptXcIjg==}
+  type-registry-effect@2.3.1:
+    resolution: {integrity: sha512-v5eA+DYnjKa1Zx0aVvbexZ/M4kvjIyng0MPT9u1/uhaUrgBhJe96Pdq8ir3TWju1Cet7TD2g7rE9aHE4kXyH5A==}
     engines: {node: '>=24.11.0'}
     peerDependencies:
-      '@effect/platform-node': 4.0.0-beta.99
+      '@effect/platform-node': 4.0.0-beta.101
       '@effected/semver': ^0.2.0
       '@effected/store': ^0.1.1
-      '@effected/tsconfig-json': ^0.3.0
+      '@effected/tsconfig-json': ^0.4.0
       '@effected/xdg': ^0.1.7
       '@typescript/vfs': ^1.6.4
-      effect: 4.0.0-beta.99
+      effect: 4.0.0-beta.101
       typescript: ^6.0.3
     peerDependenciesMeta:
       '@typescript/vfs':
@@ -9028,7 +9028,7 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  type-registry-effect@2.3.0(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.2.1(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3):
+  type-registry-effect@2.3.1(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.2.1(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3):
     dependencies:
       '@effect/platform-node': 4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1))
       '@effected/semver': 0.2.1(effect@4.0.0-beta.101)

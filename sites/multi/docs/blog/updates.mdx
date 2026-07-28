@@ -32,22 +32,6 @@ enhancements:
   straightforward to check whether a pipeline is idle, running, or
   completed
 
-## Logger Enhancements
-
-The [Logger](/versioned/api/class/logger) in the versioned module now
-accepts an optional [LogLevel](/versioned/api/enum/loglevel) parameter in
-its constructor. This controls the minimum severity level for output:
-
-| Level | Behavior |
-| --- | --- |
-| `LogLevel.Info` | All messages emitted |
-| `LogLevel.Warning` | Warnings and errors only |
-| `LogLevel.Error` | Errors only |
-
-Combine this with the `logPath` property in
-[Config](/versioned/api/interface/config) to direct structured log output
-to a file for later analysis.
-
 ## Documentation Quality
 
 The generated API documentation now includes:
