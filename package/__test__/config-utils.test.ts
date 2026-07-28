@@ -425,6 +425,15 @@ describe("classifyApiConfig", () => {
 		expect(classifyApiConfig({})).toBe("missing");
 	});
 
+	it("reports 'missing' for an explicitly undefined option", () => {
+		// An `undefined` value is what a spread or conditional yields when it
+		// produces nothing — indistinguishable from an omitted key, so it must not
+		// silently disable the build the way `null` / `[]` deliberately do.
+		expect(classifyApiConfig({ api: undefined })).toBe("missing");
+		expect(classifyApiConfig({ apis: undefined })).toBe("missing");
+		expect(classifyApiConfig({ api: undefined, apis: undefined })).toBe("missing");
+	});
+
 	it("prefers a populated option over an empty sibling", () => {
 		expect(classifyApiConfig({ api: null, apis: [{ packageName: "foo" }] })).toBe("configured");
 		expect(classifyApiConfig({ api: { packageName: "foo" }, apis: [] })).toBe("configured");

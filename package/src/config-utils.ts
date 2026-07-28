@@ -45,10 +45,11 @@ export interface ApiConfigInput {
  * How the `api` / `apis` options describe the work to do:
  *
  * - `configured` — at least one API config is present; generate docs.
- * - `disabled` — a key was supplied but carries no config (`api: null`,
- *   `apis: null`, `apis: []`). An explicit opt-in to an inert plugin, so a site
- *   can pre-configure the plugin before any API model exists.
- * - `missing` — neither key was supplied at all. A misconfiguration.
+ * - `disabled` — a key carries an empty value (`api: null`, `apis: null`,
+ *   `apis: []`). An explicit opt-in to an inert plugin, so a site can
+ *   pre-configure the plugin before any API model exists.
+ * - `missing` — neither key was supplied, or one was supplied as `undefined`.
+ *   A misconfiguration.
  */
 export type ApiConfigMode = "configured" | "disabled" | "missing";
 
@@ -63,7 +64,11 @@ export function classifyApiConfig(options: ApiConfigInput): ApiConfigMode {
 	if (options.apis != null && options.apis.length > 0) {
 		return "configured";
 	}
-	return "api" in options || "apis" in options ? "disabled" : "missing";
+	// Only a present, non-`undefined` value — `null` or `[]` — is a deliberate
+	// opt-in. An explicit `undefined` reads exactly like an omitted key (it is
+	// what a spread or a conditional produces when it yields nothing), so it
+	// stays "missing" rather than silently disabling the build.
+	return options.api !== undefined || options.apis !== undefined ? "disabled" : "missing";
 }
 
 /**

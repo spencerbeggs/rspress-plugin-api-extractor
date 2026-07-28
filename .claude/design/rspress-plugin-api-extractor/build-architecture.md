@@ -292,10 +292,12 @@ The pure classifier `classifyApiConfig(options)` (`config-utils.ts`) collapses t
 | Mode | Meaning |
 | --- | --- |
 | `configured` | At least one option carries real config. Generate docs. |
-| `disabled` | A key was supplied but carries no config (`api: null`, `apis: null`, `apis: []`). Inert. |
-| `missing` | Neither key was supplied. Fail validation. |
+| `disabled` | A key carries an empty value (`api: null`, `apis: null`, `apis: []`). Inert. |
+| `missing` | Neither key was supplied, or one was supplied as `undefined`. Fail validation. |
 
 A populated option wins over an empty sibling, so `{ api: cfg, apis: [] }` classifies as `configured` rather than tripping the both-provided error — that error now fires only when both options carry real config.
+
+An explicit `undefined` classifies as `missing`, not `disabled`, even though `Schema.optional` accepts it and the decoded object keeps the key. `undefined` is what a spread or a conditional produces when it yields nothing, so it is indistinguishable from a forgotten key and must keep failing validation; only a present, non-`undefined` value reads as a deliberate opt-in. That is why the classifier tests the values (`options.api !== undefined || options.apis !== undefined`) rather than key presence via `in`.
 
 Two consumers read the classification:
 

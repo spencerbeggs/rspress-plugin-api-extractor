@@ -51,7 +51,7 @@ Stream.mapEffect(writeSingleFile) -> Stream.runFold`
 
 ### Inert configuration
 
-`api: null`, `apis: null` and `apis: []` are valid `PluginOptions` that make the plugin **inert**. `classifyApiConfig` (`config-utils.ts`) returns `"disabled"`, `plugin.ts` computes `isInert` once at factory time, and `config()` / `afterBuild()` then skip the doc-generation Effect program, the LLMs alias + scope/`globalUIComponents` injection, the build summary, `issues.json` and LLMs post-processing. Remark plugin registration and the runtime `source.include` entry still run so user-authored `with-api` blocks keep working. Omitting BOTH keys remains a configuration error.
+`api: null`, `apis: null` and `apis: []` are valid `PluginOptions` that make the plugin **inert**. `classifyApiConfig` (`config-utils.ts`) returns `"disabled"`, `plugin.ts` computes `isInert` once at factory time, and `config()` / `afterBuild()` then skip the doc-generation Effect program, the LLMs alias + scope/`globalUIComponents` injection, the build summary, `issues.json` and LLMs post-processing. Remark plugin registration and the runtime `source.include` entry still run so user-authored `with-api` blocks keep working. Omitting BOTH keys remains a configuration error, as does an explicit `undefined` — only a present, non-`undefined` empty value is an opt-in.
 
 Keep creating the empty `.api-docs/snapshot/` directory on the inert path: no runtime is built there, but a stray sync emitter can still force one and SQLite opens its file eagerly. Details in `build-architecture.md`.
 

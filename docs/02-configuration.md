@@ -30,7 +30,7 @@ ApiExtractorPlugin({
 | `logLevel` | string | Deprecated alias for `observability.logLevel`. |
 | `performance` | object | Deprecated alias for `observability.thresholds`. |
 
-Provide exactly one of `api` or `apis`. Use `api` for a single package — it also supports RSPress multiVersion through `versions` — and `apis` for a portal that hosts more than one package. To keep the plugin wired up without documenting anything yet, pass an empty value for either key; see [inert configuration](#inert-configuration).
+Provide at most one non-empty option between `api` and `apis`. Use `api` for a single package — it also supports RSPress multiVersion through `versions` — and `apis` for a portal that hosts more than one package. To keep the plugin wired up without documenting anything yet, pass an empty value for either key; see [inert configuration](#inert-configuration).
 
 ## Inert configuration
 
