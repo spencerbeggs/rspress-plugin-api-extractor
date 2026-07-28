@@ -24,7 +24,7 @@
 		"types:check": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@savvy-web/bundler": "^2.0.13",
+		"@savvy-web/bundler": "^2.1.0",
 		"@types/node": "catalog:silk",
 		"typescript": "catalog:silk"
 	},
