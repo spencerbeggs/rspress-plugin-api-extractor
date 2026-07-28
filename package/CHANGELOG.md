@@ -2,6 +2,16 @@
 
 ## 0.7.5
 
+### Maintenance
+
+* Even out `type-registry-effect` dependency version
+
+### Patch Changes
+
+Thanks to [@spencerbeggs](https://github.com/spencerbeggs) for their contributions!
+
+## 0.7.5
+
 ### Dependencies
 
 * | Dependency              | Type       | Action  | From   | To     |                                                                            |
