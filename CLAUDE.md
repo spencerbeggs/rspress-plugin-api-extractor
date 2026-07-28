@@ -146,11 +146,12 @@ per-package file generation, or scope-aware UI components:
 
 - @./.claude/design/rspress-plugin-api-extractor/llms-integration.md
 
-**Observability** — load when modifying Effect Metrics, logging, or
-error tracking:
+**Observability** — load when modifying Effect Metrics, logging, error
+tracking, the progress heartbeat, or the `issues.json` artifact:
 
 - @./.claude/design/rspress-plugin-api-extractor/performance-observability.md
 - @./.claude/design/rspress-plugin-api-extractor/error-observability.md
+- @./.claude/design/rspress-plugin-api-extractor/build-progress-and-issues.md
 
 ## Build Pipeline
 

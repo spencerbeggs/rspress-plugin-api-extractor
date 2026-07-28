@@ -145,6 +145,22 @@ describe("ConfigServiceLive.resolve", () => {
 		expect(result._tag).toBe("Failure");
 	});
 
+	it.each([
+		["apis: []", { apis: [] } satisfies PluginOptions],
+		["apis: null", { apis: null } satisfies PluginOptions],
+		["api: null", { api: null } satisfies PluginOptions],
+	])("resolves to an empty build context when disabled with %s", async (_label, options) => {
+		const program = Effect.gen(function* () {
+			const config = yield* ConfigService;
+			return yield* config.resolve({});
+		}).pipe(Effect.scoped);
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
+
+		expect(result.apiConfigs).toEqual([]);
+		expect(result.combinedVfs.size).toBe(0);
+	});
+
 	it("resolves multi-API config", async () => {
 		const options: PluginOptions = {
 			apis: [
@@ -184,18 +200,6 @@ describe("ConfigServiceLive.resolve", () => {
 		const result = await Effect.runPromise(program.pipe(Effect.provide(makeTestLayer(options))));
 
 		expect(result.apiConfigs).toHaveLength(2);
-	});
-
-	it("fails when apis array is empty", async () => {
-		const options: PluginOptions = { apis: [] };
-
-		const program = Effect.gen(function* () {
-			const config = yield* ConfigService;
-			return yield* config.resolve({});
-		}).pipe(Effect.scoped);
-
-		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(makeTestLayer(options))));
-		expect(result._tag).toBe("Failure");
 	});
 
 	it("fails when multiVersion active but no versions provided", async () => {

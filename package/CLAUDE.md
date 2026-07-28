@@ -24,9 +24,7 @@ The component paths in `plugin.ts` are a **zero-level** resolve to the published
 
 ### Effect Service Layer
 
-The plugin runs on **Effect v4** (`effect@4.0.0-beta.98`, pinned via
-`catalog:effect`). `plugin.ts` is a thin RSPress adapter (~430 lines) that
-wires an Effect `ManagedRuntime` with a composed `Layer` stack:
+The plugin runs on **Effect v4** (`effect@4.0.0-beta.98`, pinned via `catalog:effect`). `plugin.ts` is a thin RSPress adapter (~530 lines) that wires an Effect `ManagedRuntime` with a composed `Layer` stack:
 
 - `ConfigServiceLive` — resolves plugin options + RSPress config into build
   context (model loading, type resolution, highlighter creation)
@@ -50,6 +48,12 @@ for defaults, `typeof X.Type`/`typeof X.Encoded` for extraction,
 Doc generation runs as a `Stream` pipeline in `build-stages.ts`:
 `Stream.fromIterable -> Stream.mapEffect(generateSinglePage) ->
 Stream.mapEffect(writeSingleFile) -> Stream.runFold`
+
+### Inert configuration
+
+`api: null`, `apis: null` and `apis: []` are valid `PluginOptions` that make the plugin **inert**. `classifyApiConfig` (`config-utils.ts`) returns `"disabled"`, `plugin.ts` computes `isInert` once at factory time, and `config()` / `afterBuild()` then skip the doc-generation Effect program, the LLMs alias + scope/`globalUIComponents` injection, the build summary, `issues.json` and LLMs post-processing. Remark plugin registration and the runtime `source.include` entry still run so user-authored `with-api` blocks keep working. Omitting BOTH keys remains a configuration error, as does an explicit `undefined` — only a present, non-`undefined` empty value is an opt-in.
+
+Keep creating the empty `.api-docs/snapshot/` directory on the inert path: no runtime is built there, but a stray sync emitter can still force one and SQLite opens its file eagerly. Details in `build-architecture.md`.
 
 ### Observability
 
@@ -107,10 +111,11 @@ which the global biome rule would rewrite to `.js`.
 ## Source Structure
 
 - `src/index.ts` — main plugin entry (re-exports plugin.ts, serve.ts)
-- `src/plugin.ts` — RSPress adapter (~430 lines), runtime management
+- `src/plugin.ts` — RSPress adapter (~530 lines), runtime management, `isInert` lifecycle gating
 - `src/serve.ts` — public `serve(options?)` dev/preview RSPress server runner (exports `ServeOptions`/`ServeMode`/`ResolvedServeConfig`/`isServerReady`/`resolveServeConfig`); used by the sites' `lib/scripts/dev.mts` and `preview.mts`
 - `src/build-program.ts` — doc generation orchestration (5-stage pipeline)
-- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1330 lines)
+- `src/build-stages.ts` — Stream pipeline, page gen, file writes (~1380 lines)
+- `src/config-utils.ts` — pure config helpers shared by `ConfigServiceLive` and `plugin.ts`: `classifyApiConfig` (inert detection), `mergeLlmsPluginConfig`, dependency extraction
 - `src/multi-entry-resolver.ts` — multi-entry point deduplication and collision detection
 - `src/synthetic-bases.ts` — `detectSyntheticBases` + `BASE_CLASS_ANCHOR`: unexported `Foo_base` class heritage (Effect `Schema.Class`, mixins) gets no page; it is inlined on the owner class page's "Base Class" section
 - `src/content-hash.ts` — SHA-256 hashing (pure, standalone)
@@ -219,7 +224,9 @@ per-package file generation, or scope-aware UI components:
 
 - @../.claude/design/rspress-plugin-api-extractor/llms-integration.md
 
-**Observability** — load when modifying metrics, logging, or error tracking:
+**Observability** — load when modifying metrics, logging, error tracking, the
+progress heartbeat, or the `issues.json` artifact:
 
 - @../.claude/design/rspress-plugin-api-extractor/performance-observability.md
 - @../.claude/design/rspress-plugin-api-extractor/error-observability.md
+- @../.claude/design/rspress-plugin-api-extractor/build-progress-and-issues.md

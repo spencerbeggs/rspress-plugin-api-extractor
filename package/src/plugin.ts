@@ -10,7 +10,7 @@ import type { GenerateApiDocsResult } from "./build-program.js";
 import { generateApiDocs } from "./build-program.js";
 import { setBuildStagesEventEmitter } from "./build-stages.js";
 import { fromDir, fromParentDir } from "./config-helpers.js";
-import { mergeLlmsPluginConfig } from "./config-utils.js";
+import { classifyApiConfig, mergeLlmsPluginConfig } from "./config-utils.js";
 import { ConfigServiceLive } from "./layers/ConfigServiceLive.js";
 import { buildEventBus, logBuildSummary, makeSummaryLoggerLayer } from "./layers/ObservabilityLive.js";
 import { PathDerivationServiceLive } from "./layers/PathDerivationServiceLive.js";
@@ -81,6 +81,10 @@ function normalizeThemeConfig(
 function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	// Validate and decode options at factory time — catches structural issues via ParseError
 	const options = Schema.decodeUnknownSync(PluginOptions)(rawOptions);
+	// `api: null` / `apis: null` / `apis: []` opt into an inert plugin: options are
+	// still validated, but nothing is generated and no artifacts are written, so a
+	// site can pre-configure the plugin before any API model exists.
+	const isInert = classifyApiConfig(options) === "disabled";
 	// Create instances once at plugin initialization and reuse across all builds
 	const shikiCrossLinker = new ShikiCrossLinker();
 
@@ -106,6 +110,9 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 	const dbPath = path.resolve(process.cwd(), ".api-docs", "snapshot", "api-docs.db");
 	// SQLite opens the file eagerly at layer construction, so the snapshot
 	// directory must exist first (cwd always does; `.api-docs/snapshot` may not).
+	// Created even for an inert plugin: the runtime is not built on the inert
+	// path, but a stray sync emitter (a deprecation warning, a `with-api` code
+	// block) can still build it, and SQLite would then fail to open the file.
 	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const BaseLayer = Layer.mergeAll(
 		PathDerivationServiceLive,
@@ -157,8 +164,10 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 		// Use afterBuild hook to log statistics
 		async afterBuild(_config: UserConfig, isProd: boolean): Promise<void> {
-			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce noise)
-			if (isFirstBuild) {
+			// Only emit detailed summary on first build (skip on HMR rebuilds to reduce
+			// noise). An inert plugin generated nothing, so there is no summary to log,
+			// no issues to write and no LLMs output to post-process.
+			if (isFirstBuild && !isInert) {
 				// Log build summary via Effect metrics
 				await effectRuntime.runPromise(logBuildSummary(obs.thresholds.slowCodeBlock));
 
@@ -282,98 +291,102 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 				);
 			}
 
-			try {
-				const rspressConfigSubset = {
-					...(rspressMultiVersion != null ? { multiVersion: rspressMultiVersion } : {}),
-					...(rspressLocales.length > 0 ? { locales: rspressLocales.map((lang) => ({ lang })) } : {}),
-					...(rspressLang != null ? { lang: rspressLang } : {}),
-					...(docsRoot != null ? { root: docsRoot } : {}),
-				};
+			// An inert plugin (`api: null` / `apis: null` / `apis: []`) skips the whole
+			// program: no model loading, no Effect runtime, no snapshot database.
+			if (!isInert) {
+				try {
+					const rspressConfigSubset = {
+						...(rspressMultiVersion != null ? { multiVersion: rspressMultiVersion } : {}),
+						...(rspressLocales.length > 0 ? { locales: rspressLocales.map((lang) => ({ lang })) } : {}),
+						...(rspressLang != null ? { lang: rspressLang } : {}),
+						...(docsRoot != null ? { root: docsRoot } : {}),
+					};
 
-				await effectRuntime.runPromise(
-					Effect.gen(function* () {
-						const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
-						yield* emit(PluginEvent.BuildStarted({ ctx: { buildId }, level: "info", mode: "prod", apiCount }));
+					await effectRuntime.runPromise(
+						Effect.gen(function* () {
+							const apiCount = options.api ? 1 : (options.apis?.length ?? 0);
+							yield* emit(PluginEvent.BuildStarted({ ctx: { buildId }, level: "info", mode: "prod", apiCount }));
 
-						const phaseRef = yield* Ref.make<ProgressPhase>("resolve");
-						if (isProd && obs.progressIntervalMs !== null) {
-							yield* Effect.forkScoped(
-								runHeartbeat({
-									phaseRef,
-									intervalMs: obs.progressIntervalMs,
-									startTime: buildStartTime,
-									apisTotal: apiCount,
-									buildId,
+							const phaseRef = yield* Ref.make<ProgressPhase>("resolve");
+							if (isProd && obs.progressIntervalMs !== null) {
+								yield* Effect.forkScoped(
+									runHeartbeat({
+										phaseRef,
+										intervalMs: obs.progressIntervalMs,
+										startTime: buildStartTime,
+										apisTotal: apiCount,
+										buildId,
+									}),
+								);
+							}
+
+							const configSvc = yield* ConfigService;
+							const buildContext = yield* configSvc.resolve(rspressConfigSubset);
+
+							// Clear previous build results (for HMR rebuilds)
+							buildResults.length = 0;
+
+							yield* Ref.set(phaseRef, "generate");
+
+							yield* Effect.forEach(
+								buildContext.apiConfigs,
+								(apiConfig) =>
+									generateApiDocs(
+										{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
+										buildContext,
+										fileContextMap,
+									).pipe(
+										Effect.tap((result) => {
+											buildResults.push(result);
+											return emit(
+												PluginEvent.ApiDocsCompleted({
+													ctx: { buildId },
+													level: "debug",
+													packageName: result.packageName,
+												}),
+											);
+										}),
+									),
+								{ concurrency: 2 },
+							);
+
+							yield* Ref.set(phaseRef, "done");
+
+							const totalMs = performance.now() - buildStartTime;
+							yield* emit(
+								PluginEvent.BuildCompleted({ ctx: { buildId }, level: "info", durationMs: totalMs, totals: {} }),
+							);
+						}).pipe(Effect.scoped),
+					);
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					emitSync(PluginEvent.BuildFailed({ ctx: { buildId }, level: "error", phase: "generate", error: message }));
+					if (traceSink) traceSink.flush();
+
+					// Best-effort: write .api-docs/build/issues.json on the fatal path too, since
+					// afterBuild (where this normally happens) never runs when config()
+					// throws. Collision/model-load errors emitted above (RouteCollisionDetected,
+					// ModelLoadFailed) would otherwise never reach disk. Never mask the
+					// original build failure with a write failure.
+					if (isProd) {
+						try {
+							await effectRuntime.runPromise(
+								Effect.gen(function* () {
+									const packageName = yield* readSitePackageName;
+									yield* writeIssuesJson(issuesSink.snapshot(), {
+										cwd: process.cwd(),
+										packageName,
+										generatedAt: new Date().toISOString(),
+									});
 								}),
 							);
+						} catch {
+							// ignore — never mask the build failure
 						}
-
-						const configSvc = yield* ConfigService;
-						const buildContext = yield* configSvc.resolve(rspressConfigSubset);
-
-						// Clear previous build results (for HMR rebuilds)
-						buildResults.length = 0;
-
-						yield* Ref.set(phaseRef, "generate");
-
-						yield* Effect.forEach(
-							buildContext.apiConfigs,
-							(apiConfig) =>
-								generateApiDocs(
-									{ ...apiConfig, suppressExampleErrors: buildContext.suppressExampleErrors },
-									buildContext,
-									fileContextMap,
-								).pipe(
-									Effect.tap((result) => {
-										buildResults.push(result);
-										return emit(
-											PluginEvent.ApiDocsCompleted({
-												ctx: { buildId },
-												level: "debug",
-												packageName: result.packageName,
-											}),
-										);
-									}),
-								),
-							{ concurrency: 2 },
-						);
-
-						yield* Ref.set(phaseRef, "done");
-
-						const totalMs = performance.now() - buildStartTime;
-						yield* emit(
-							PluginEvent.BuildCompleted({ ctx: { buildId }, level: "info", durationMs: totalMs, totals: {} }),
-						);
-					}).pipe(Effect.scoped),
-				);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				emitSync(PluginEvent.BuildFailed({ ctx: { buildId }, level: "error", phase: "generate", error: message }));
-				if (traceSink) traceSink.flush();
-
-				// Best-effort: write .api-docs/build/issues.json on the fatal path too, since
-				// afterBuild (where this normally happens) never runs when config()
-				// throws. Collision/model-load errors emitted above (RouteCollisionDetected,
-				// ModelLoadFailed) would otherwise never reach disk. Never mask the
-				// original build failure with a write failure.
-				if (isProd) {
-					try {
-						await effectRuntime.runPromise(
-							Effect.gen(function* () {
-								const packageName = yield* readSitePackageName;
-								yield* writeIssuesJson(issuesSink.snapshot(), {
-									cwd: process.cwd(),
-									packageName,
-									generatedAt: new Date().toISOString(),
-								});
-							}),
-						);
-					} catch {
-						// ignore — never mask the build failure
 					}
-				}
 
-				throw error;
+					throw error;
+				}
 			}
 
 			// === RSPress configuration modifications ===
@@ -389,7 +402,8 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 
 			// Replace RSPress's LlmsViewOptions with our custom version via resolve.alias.
 			// This lets us extend the default dropdown with package-level actions.
-			if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
+			// Skipped when inert — there are no package scopes to add.
+			if (!isInert && rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
 				if (!updatedConfig.builderConfig.resolve) {
 					updatedConfig.builderConfig.resolve = {};
 				}
@@ -440,8 +454,9 @@ function ApiExtractorPluginImpl(rawOptions: PluginOptions): RspressPlugin {
 			updatedConfig.markdown.remarkPlugins.push([remarkApiCodeblocks]);
 
 			// Inject API scope metadata into themeConfig for the runtime UI component
-			// (e.g., per-scope llms.txt links). Only when both RSPress llms plugin and our scopes are enabled.
-			if (rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
+			// (e.g., per-scope llms.txt links). Only when both RSPress llms plugin and our
+			// scopes are enabled, and never when inert (no packages, so no scopes).
+			if (!isInert && rspressLlmsEnabled && resolvedLlmsPlugin.enabled && resolvedLlmsPlugin.scopes) {
 				// Populate the packageRoutes map (hoisted to plugin level for afterBuild use).
 				// Maps packageName -> package-level route (without apiFolder).
 				// e.g., "kitchensink" -> "/kitchensink" (not "/kitchensink/api")

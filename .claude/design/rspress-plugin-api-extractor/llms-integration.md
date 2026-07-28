@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-06-15
-last-synced: 2026-06-15
+updated: 2026-07-28
+last-synced: 2026-07-28
 completeness: 90
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -499,6 +499,8 @@ active:
    is aliased to `ApiLlmsViewOptions` so the title-mode dropdown
    includes package-scoped actions.
 
+All three are additionally gated on the plugin not being **inert**. An inert plugin (`api: null`, `apis: null` or `apis: []` — see the inert configuration section of `build-architecture.md`) documents no packages, so there are no scopes to inject, nothing for `ApiLlmsPackageActions` to match against and no package-level actions to add to the dropdown. Aliasing RSPress's own `LlmsViewOptions` in that state would replace a working component with one that can never enter a package scope, so the alias is skipped entirely and RSPress's default LLMs UI is left untouched.
+
 ### afterBuild() Hook
 
 Post-processing runs once on the first build (skipped on HMR rebuilds):
@@ -510,6 +512,8 @@ Post-processing runs once on the first build (skipped on HMR rebuilds):
      `FileSystem.FileSystem` from the existing ManagedRuntime
 3. `isFirstBuild` set to false.
 4. Runtime disposed in production builds.
+
+Steps 1 and 2 sit behind the same inert check: with no `buildResults` there are no API routes to filter out of the global `llms.txt` / `llms-full.txt` and no per-package files to emit, so RSPress's own LLMs output is left exactly as `@rspress/plugin-llms` produced it.
 
 ### State Hoisted to Plugin Level
 

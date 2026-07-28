@@ -329,13 +329,19 @@ export type MultiApiConfig = typeof MultiApiConfig.Encoded;
 /**
  * Top-level options passed to {@link ApiExtractorPlugin}.
  *
+ * @remarks
+ * Supplying `api: null`, `apis: null` or `apis: []` opts into an inert plugin:
+ * the options are validated but no documentation is generated. This lets a site
+ * pre-configure the plugin before any API model exists. Omitting both keys
+ * entirely is still a configuration error.
+ *
  * @public
  */
 export const PluginOptions = Schema.Struct({
-	/** Single-API configuration (mutually exclusive with `apis`). */
-	api: Schema.optional(SingleApiConfig),
-	/** Multi-API portal configuration (mutually exclusive with `api`). */
-	apis: Schema.optional(Schema.mutable(Schema.Array(MultiApiConfig))),
+	/** Single-API configuration (mutually exclusive with `apis`). `null` disables generation. */
+	api: Schema.optional(Schema.NullOr(SingleApiConfig)),
+	/** Multi-API portal configuration (mutually exclusive with `api`). `null` or `[]` disables generation. */
+	apis: Schema.optional(Schema.NullOr(Schema.mutable(Schema.Array(MultiApiConfig)))),
 	/** Canonical site URL used for Open Graph absolute URLs. */
 	siteUrl: Schema.optional(Schema.String),
 	/** Global Open Graph image configuration (overridden per-API). */

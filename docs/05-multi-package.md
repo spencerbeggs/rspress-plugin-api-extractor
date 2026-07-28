@@ -76,6 +76,8 @@ export default defineConfig({
 
 Each subfolder becomes one package, with its `baseRoute` defaulting to `/{packageName}/api` unless you override it. The shared options — here, `theme` — apply to every package. To include only some folders, call `api.fromDir` per package instead of scanning the whole directory.
 
+`apis.fromDir` throws when `lib/models` holds no model folders, so it never hands you an empty array; build the package models first. For a site that has to build before any model exists, write `apis: []` instead. An empty array is a valid no-op — the plugin validates the rest of your options and generates nothing — so the config can stay in place until the first package is ready. See [inert configuration](./02-configuration.md#inert-configuration).
+
 ## Per-package LLMs files
 
 With LLMs enabled, a multi-package portal writes scoped `llms*.txt` files under each package's route and a structured global `llms.txt` grouped by package. See the [LLMs guide](./09-llms.md).

@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-07-21
-last-synced: 2026-07-21
+updated: 2026-07-28
+last-synced: 2026-07-28
 completeness: 90
 related:
   - rspress-plugin-api-extractor/build-architecture.md
@@ -185,6 +185,10 @@ yield* Effect.addFinalizer(() =>
 
 In production builds, the runtime is disposed in `afterBuild`, triggering
 the checkpoint. In dev mode, the runtime stays alive for HMR rebuilds.
+
+### Inert builds never open the database
+
+`SnapshotServiceLive(dbPath)` is composed into the layer stack unconditionally, but SQLite only opens the file when the `ManagedRuntime` is actually built. An inert plugin (`api: null`, `apis: null` or `apis: []` — see the inert configuration section of `build-architecture.md`) never runs the doc generation program, so no runtime is built and no `api-docs.db` appears. `plugin.ts` still creates the empty `<cwd>/.api-docs/snapshot/` directory on that path, deliberately: a stray sync emitter (a deprecation warning, a user-authored `with-api` code block) can force the runtime to build after all, and SQLite's eager open would fail without the parent directory.
 
 ---
 

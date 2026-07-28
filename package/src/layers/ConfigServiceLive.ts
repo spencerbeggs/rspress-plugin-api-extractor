@@ -10,6 +10,7 @@ import type { VirtualFileSystem } from "type-registry-effect";
 import { ApiExtractedPackage } from "../api-extracted-package.js";
 import { CategoryResolver } from "../category-resolver.js";
 import {
+	classifyApiConfig,
 	extractAutoDetectedPackages,
 	isVersionConfig,
 	mergeLlmsPluginConfig,
@@ -150,7 +151,8 @@ function validateOptions(
 	rspressConfig: { multiVersion?: RspressMultiVersion },
 ): Effect.Effect<void, ConfigValidationError> {
 	return Effect.gen(function* () {
-		const { api, apis } = options;
+		const api = options.api ?? undefined;
+		const apis = options.apis != null && options.apis.length > 0 ? options.apis : undefined;
 		const { multiVersion } = rspressConfig;
 
 		if (api && apis) {
@@ -161,19 +163,19 @@ function validateOptions(
 			});
 		}
 		if (!api && !apis) {
-			return yield* new ConfigValidationError({
-				field: "api/apis",
-				reason: "Must provide either 'api' or 'apis'.",
-			});
+			// `api: null` / `apis: null` / `apis: []` explicitly opt into an inert
+			// plugin — valid, and resolved to an empty build context. Omitting both
+			// keys is still a misconfiguration.
+			if (classifyApiConfig(options) === "missing") {
+				return yield* new ConfigValidationError({
+					field: "api/apis",
+					reason: "Must provide either 'api' or 'apis'.",
+				});
+			}
+			return;
 		}
 
 		if (apis) {
-			if (apis.length === 0) {
-				return yield* new ConfigValidationError({
-					field: "apis",
-					reason: "'apis' must contain at least one API configuration.",
-				});
-			}
 			if (multiVersion) {
 				return yield* new ConfigValidationError({
 					field: "apis",
