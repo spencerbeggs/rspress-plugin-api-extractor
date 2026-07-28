@@ -19,8 +19,8 @@ ApiExtractorPlugin({
 
 | Option | Type | Purpose |
 | --- | --- | --- |
-| `api` | single-API config | Document one package. Mutually exclusive with `apis`. |
-| `apis` | multi-API config array | Document several packages in one portal. |
+| `api` | single-API config or `null` | Document one package. Mutually exclusive with a non-empty `apis`. `null` makes the plugin inert. |
+| `apis` | multi-API config array or `null` | Document several packages in one portal. `null` or `[]` makes the plugin inert. |
 | `siteUrl` | string | Absolute site URL, used for Open Graph tags. |
 | `ogImage` | string or object | Default Open Graph image for generated pages. |
 | `defaultCategories` | category record | Override the built-in categories for every API. |
@@ -30,7 +30,24 @@ ApiExtractorPlugin({
 | `logLevel` | string | Deprecated alias for `observability.logLevel`. |
 | `performance` | object | Deprecated alias for `observability.thresholds`. |
 
-Provide exactly one of `api` or `apis`. Use `api` for a single package — it also supports RSPress multiVersion through `versions` — and `apis` for a portal that hosts more than one package.
+Provide exactly one of `api` or `apis`. Use `api` for a single package — it also supports RSPress multiVersion through `versions` — and `apis` for a portal that hosts more than one package. To keep the plugin wired up without documenting anything yet, pass an empty value for either key; see [inert configuration](#inert-configuration).
+
+## Inert configuration
+
+Sometimes the plugin has to be in `rspress.config.ts` before there is anything to document: a docs site that ships ahead of its first release, or a config that discovers packages on disk and finds none yet. Passing an empty value for `api` or `apis` makes the plugin a no-op. `api: null`, `apis: null` and `apis: []` all validate the rest of your options and then generate nothing — no pages, no snapshot database, no `llms*.txt` post-processing and no LLMs UI wiring. The rest of your options stay in place, so filling in a model later is a one-line change.
+
+```ts
+ApiExtractorPlugin({
+  apis: [],
+  siteUrl: "https://docs.example.com",
+  llmsPlugin: { scopes: true },
+});
+// Options are validated; the build produces no API pages.
+```
+
+The plugin stays wired into RSPress either way. A `with-api` code block in one of your own guides still renders with syntax highlighting; it just loses the Twoslash type-checking and hover tooltips that a loaded model supplies, and picks them up once you fill one in.
+
+The empty value must be explicit — that is what separates a deliberate no-op from a misconfiguration. Omitting both keys still fails validation with `Must provide either 'api' or 'apis'.` An empty sibling is fine: `{ api: cfg, apis: [] }` is valid and documents `cfg`, because only a non-empty `apis` conflicts with `api`. Earlier releases rejected `apis: []`; it is now an accepted no-op.
 
 ## Single-API config (`api`)
 

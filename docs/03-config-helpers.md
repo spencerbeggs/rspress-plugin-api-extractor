@@ -106,6 +106,8 @@ Every option except `cwd` becomes a shared default across the discovered package
 
 `apis.fromDir` is strict on purpose. Every non-dotfile subdirectory must be a valid model folder — a `package.json` plus a `*.api.json`. If one is not, the helper throws and names the offending folder, which catches stray directories before they silently drop a package from the portal. To include only some folders, call `api.fromDir` for each one instead.
 
+The same strictness covers the parent directory itself: when it holds no model folders at all, the helper throws rather than returning an empty array, since that usually means the package models have not been built. If you want the site to build before any model exists, pass an explicit `apis: []` and swap the helper call back in once the models land — the plugin accepts an empty value as a no-op. See [inert configuration](./02-configuration.md#inert-configuration).
+
 ```ts
 // Three documented packages, plus one stray folder → apis.fromDir throws.
 // Use api.fromDir per package for selective inclusion:

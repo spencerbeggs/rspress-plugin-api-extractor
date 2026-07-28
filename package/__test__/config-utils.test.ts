@@ -5,6 +5,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import {
+	classifyApiConfig,
 	extractAutoDetectedPackages,
 	extractPeerDependencies,
 	extractTypeUtilities,
@@ -401,5 +402,31 @@ describe("resolvePackageVersionConflicts", () => {
 
 		// Should preserve the caret (^) in the version
 		expect(result[0].version).toMatch(/^\^/);
+	});
+});
+
+describe("classifyApiConfig", () => {
+	it("reports 'configured' when api is set", () => {
+		expect(classifyApiConfig({ api: { packageName: "foo" } })).toBe("configured");
+	});
+
+	it("reports 'configured' when apis has at least one entry", () => {
+		expect(classifyApiConfig({ apis: [{ packageName: "foo" }] })).toBe("configured");
+	});
+
+	it("reports 'disabled' for an explicitly empty api/apis option", () => {
+		expect(classifyApiConfig({ apis: [] })).toBe("disabled");
+		expect(classifyApiConfig({ apis: null })).toBe("disabled");
+		expect(classifyApiConfig({ api: null })).toBe("disabled");
+		expect(classifyApiConfig({ api: null, apis: [] })).toBe("disabled");
+	});
+
+	it("reports 'missing' when neither key is supplied", () => {
+		expect(classifyApiConfig({})).toBe("missing");
+	});
+
+	it("prefers a populated option over an empty sibling", () => {
+		expect(classifyApiConfig({ api: null, apis: [{ packageName: "foo" }] })).toBe("configured");
+		expect(classifyApiConfig({ api: { packageName: "foo" }, apis: [] })).toBe("configured");
 	});
 });

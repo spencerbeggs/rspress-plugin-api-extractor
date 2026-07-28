@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: architecture
 created: 2026-01-17
-updated: 2026-07-22
-last-synced: 2026-07-22
+updated: 2026-07-28
+last-synced: 2026-07-28
 completeness: 90
 related:
   - rspress-plugin-api-extractor/component-development.md
@@ -207,33 +207,35 @@ A "Stage 2" that would emit the MDX pages on top of the library's `renderItem` b
 ```text
 1. ApiExtractorPlugin(rawOptions)  -- factory
    - Decode options via Effect Schema
+   - Classify api/apis via classifyApiConfig -> isInert
    - Create ShikiCrossLinker instance
    - Build Layer stack and ManagedRuntime
 
 2. config(config, utils, isProd)  -- BEFORE route scanning
    - Pre-create output directories
-   - Run Effect program:
+   - Run Effect program (SKIPPED when inert):
      - ConfigService.resolve() loads models, creates highlighter,
        resolves types
      - generateApiDocs() for each API config (concurrent)
      - Progress heartbeat forked when isProd (see build-progress-and-issues.md)
    - Register remark plugins (remarkWithApi, remarkApiCodeblocks)
+   - Add runtime to builderConfig.source.include
+   - LLMs resolve.alias + scope/globalUIComponents injection (SKIPPED when inert)
    - On failure: best-effort issues.json write (isProd only), then rethrow
 
 3. beforeBuild()  -- intentionally empty
    (doc generation happens in config() to fix cold-start issues)
 
 4. afterBuild(config, isProd)
-   - Log build summary (first build only, skip HMR)
-   - Write .api-docs/build/issues.json (isProd only, first build only)
+   - Log build summary (first build only, skip HMR; SKIPPED when inert)
+   - Write .api-docs/build/issues.json (isProd only, first build only; SKIPPED when inert)
+   - LLMs post-processing (SKIPPED when inert)
    - Dispose runtime in production (preserves it for dev HMR)
 ```
 
-RSPress invokes `config` as `config(config, utils, isProd)`; the plugin now
-consumes the real `isProd` flag (previously ignored) to gate the heartbeat
-fork and the `issues.json` write — see
-[Build Progress Heartbeat and Issues Artifact](build-progress-and-issues.md)
-for both.
+RSPress invokes `config` as `config(config, utils, isProd)`; the plugin now consumes the real `isProd` flag (previously ignored) to gate the heartbeat fork and the `issues.json` write — see [Build Progress Heartbeat and Issues Artifact](build-progress-and-issues.md) for both.
+
+The `isInert` steps are the [inert configuration](#inert-configuration) path: an explicitly empty `api`/`apis` option skips everything that depends on an API model, while the RSPress-facing wiring that must exist regardless (remark plugins, `source.include`) still runs.
 
 ### Doc Generation Pipeline
 
@@ -281,6 +283,29 @@ All of the plugin's on-disk artifacts live under `<cwd>/.api-docs/`, split into 
 
 ## Configuration System
 
+### Inert configuration
+
+`api` and `apis` are both optional and both nullable (`Schema.optional(Schema.NullOr(...))` in `schemas/config.ts`). Supplying `api: null`, `apis: null` or `apis: []` is an **explicit opt-in to an inert plugin** — the plugin validates its options and installs its RSPress wiring, but generates nothing. This lets a site add the plugin to `rspress.config.ts` before any API model exists, rather than having to comment the plugin out until the first model is built. Omitting BOTH keys entirely remains a configuration error (`"Must provide either 'api' or 'apis'."`); the distinction is between "I said there is no API" and "I forgot to say anything".
+
+The pure classifier `classifyApiConfig(options)` (`config-utils.ts`) collapses the option shapes into an `ApiConfigMode`:
+
+| Mode | Meaning |
+| --- | --- |
+| `configured` | At least one option carries real config. Generate docs. |
+| `disabled` | A key was supplied but carries no config (`api: null`, `apis: null`, `apis: []`). Inert. |
+| `missing` | Neither key was supplied. Fail validation. |
+
+A populated option wins over an empty sibling, so `{ api: cfg, apis: [] }` classifies as `configured` rather than tripping the both-provided error — that error now fires only when both options carry real config.
+
+Two consumers read the classification:
+
+- `validateOptions` (`layers/ConfigServiceLive.ts`) treats null/empty as absent (`apis: []` is no longer an error on its own) and returns successfully on `disabled`, so `resolve()` produces a `ResolvedBuildContext` with an empty `apiConfigs` array.
+- `plugin.ts` computes `const isInert = classifyApiConfig(options) === "disabled"` once at factory time and uses it to gate the lifecycle hooks — see [Hook Execution Order](#hook-execution-order).
+
+When inert, `config()` never runs the doc generation Effect program at all: no model loading, no `ManagedRuntime` build and therefore no snapshot SQLite database. The empty `.api-docs/snapshot/` directory is still created, deliberately — a stray sync emitter (a deprecation warning, a user-authored `with-api` code block) can still force the runtime to build, and SQLite opens its file eagerly at layer construction, so it would fail without the directory. `afterBuild` likewise skips the build summary, the `issues.json` write and LLMs post-processing, and `config()` skips the LLMs `resolve.alias` plus the `themeConfig.apiExtractorScopes` / `globalUIComponents` injection (see `llms-integration.md`). The remark plugin registration and the runtime `source.include` entry still happen, because user-authored `with-api` code blocks work without any API model.
+
+The classifier is covered by `__test__/config-utils.test.ts`; the empty-build-context resolution for each inert spelling is covered by `__test__/config-service.test.ts`.
+
 ### ConfigService.resolve()
 
 The `ConfigServiceLive` (`layers/ConfigServiceLive.ts`) resolves raw plugin
@@ -307,7 +332,7 @@ options + RSPress config into a `ResolvedBuildContext`:
 
 Key config types defined via Effect Schema:
 
-- `PluginOptions` -- Top-level plugin config
+- `PluginOptions` -- Top-level plugin config; `api` and `apis` are each optional and nullable (see [Inert configuration](#inert-configuration))
 - `SingleApiConfig` -- Config for single-API mode (`api:`)
 - `MultiApiConfig` -- Config for multi-API mode (`apis:[]`)
 - `CategoryConfig` -- API category definition (display name, folder, kinds)
@@ -393,6 +418,7 @@ The plugin exports a `serve(options?: ServeOptions): Promise<void>` runner (`src
 | `build-program.ts` | Doc generation orchestration |
 | `build-stages.ts` | Stream pipeline, page gen, file writes |
 | `config-helpers.ts` | `fromDir` / `fromParentDir` config builders |
+| `config-utils.ts` | `classifyApiConfig`, `mergeLlmsPluginConfig`, dependency extraction |
 | `layers/ConfigServiceLive.ts` | Config resolution, model loading |
 | `layers/SnapshotServiceLive.ts` | SQLite snapshot implementation |
 | `layers/ObservabilityLive.ts` | Metrics, logger, build summary |

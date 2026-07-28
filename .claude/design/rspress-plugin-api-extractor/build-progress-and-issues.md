@@ -3,8 +3,8 @@ status: current
 module: rspress-plugin-api-extractor
 category: observability
 created: 2026-07-22
-updated: 2026-07-22
-last-synced: 2026-07-22
+updated: 2026-07-28
+last-synced: 2026-07-28
 completeness: 90
 related:
   - rspress-plugin-api-extractor/performance-observability.md
@@ -46,7 +46,7 @@ Both gaps are closed by riding the existing `EventBus` / sink architecture (`per
     └── trace-<buildId>.jsonl # the EventBus trace sink's JSONL output
 ```
 
-`snapshot/` holds the **one** artifact a production consumer site may choose to commit for CI/local build idempotency — the snapshot DB (`<cwd>/.api-docs/snapshot/api-docs.db`, previously `<cwd>/api-docs.db`). `build/` holds everything regenerated fresh on every build and never worth persisting: `issues.json` and the opt-in trace JSONL. The plugin `mkdirSync`s `.api-docs/snapshot/` at factory time, before `SnapshotServiceLive` opens the SQLite client — unlike `cwd`, this nested path is not guaranteed to exist and SQLite does not create intermediate directories itself.
+`snapshot/` holds the **one** artifact a production consumer site may choose to commit for CI/local build idempotency — the snapshot DB (`<cwd>/.api-docs/snapshot/api-docs.db`, previously `<cwd>/api-docs.db`). `build/` holds everything regenerated fresh on every build and never worth persisting: `issues.json` and the opt-in trace JSONL. The plugin `mkdirSync`s `.api-docs/snapshot/` at factory time, before `SnapshotServiceLive` opens the SQLite client — unlike `cwd`, this nested path is not guaranteed to exist and SQLite does not create intermediate directories itself. The `mkdirSync` is unconditional, so an inert plugin leaves an empty `snapshot/` with no DB inside it; that is deliberate, and `snapshot-tracking-system.md` explains why.
 
 The trace JSONL moved here (originally from `<outDir>/.api-extractor/`, then briefly `<cwd>/.api-docs/trace-<buildId>.jsonl` before the `build/` split). Because `cwd` (unlike RSPress's `outDir`) is known at plugin-factory time, `resolveObservability` (`schemas/observability.ts`) derives the trace path eagerly — `${cwd}/.api-docs/build/trace-${buildId}.jsonl` when `observability.trace: true` — and `buildEventBus` opens the file immediately. This removed the trace sink's deferred-open mode (construct without a path, `setPath()` it once RSPress's real `outDir` was known in `config()`); see `performance-observability.md`'s Trace Sink section for what remains of that mechanism as dead code.
 
@@ -83,7 +83,7 @@ The console sink dispatches `BuildProgress` to `formatProgress` (`console-sink.t
 
 ### Configuration
 
-`observability.progressInterval` (`schemas/observability.ts`) accepts a number of seconds or `false`; it resolves to `ResolvedObservability.progressIntervalMs`, defaulting to `10_000`, with `false` or `0` resolving to `null` (heartbeat disabled). The heartbeat only forks when `isProd` is true — it never runs in dev/HMR builds.
+`observability.progressInterval` (`schemas/observability.ts`) accepts a number of seconds or `false`; it resolves to `ResolvedObservability.progressIntervalMs`, defaulting to `10_000`, with `false` or `0` resolving to `null` (heartbeat disabled). The heartbeat only forks when `isProd` is true — it never runs in dev/HMR builds, and never on the inert path (the fork sits inside the doc-generation block an inert plugin skips entirely; see the inert configuration section of `build-architecture.md`).
 
 ## Issues Artifact
 
@@ -145,7 +145,7 @@ Both seams are wired in `plugin.ts` immediately after the runtime emitter is cre
 
 ### Write path
 
-`writeIssuesJson` is called from two places in `plugin.ts`, both gated on `isProd`:
+`writeIssuesJson` is called from two places in `plugin.ts`, both gated on `isProd` and both skipped when the plugin is inert (`api: null` / `apis: null` / `apis: []` — see the inert configuration section of `build-architecture.md`). An inert plugin runs no doc generation, so it collects no diagnostics worth persisting and cannot reach the fatal path at all: the `catch` block below lives inside the same skipped region. No `issues.json` is written, and any artifact from a previous non-inert build is left in place rather than overwritten with an empty one.
 
 - **`afterBuild`**, alongside `logBuildSummary`, on the first build only (skipped on HMR rebuilds) — the normal path.
 - **The `config()` `catch` block**, best-effort, when the build program throws. `afterBuild` never runs on a fatal `config()` failure, so without this second write path a `RouteCollisionDetected` or `ModelLoadFailed` event emitted just before the throw would never reach disk. The write is wrapped so a failure here can never mask the original build error — it is swallowed silently and the original error is still rethrown.

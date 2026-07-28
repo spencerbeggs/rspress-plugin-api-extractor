@@ -33,6 +33,40 @@ export function isLoadedModel(result: ApiModel | LoadedModel): result is LoadedM
 }
 
 /**
+ * Minimal structural shape of the `api` / `apis` plugin options, so the
+ * classifier accepts both the encoded and the decoded option objects.
+ */
+export interface ApiConfigInput {
+	readonly api?: unknown;
+	readonly apis?: { readonly length: number } | null | undefined;
+}
+
+/**
+ * How the `api` / `apis` options describe the work to do:
+ *
+ * - `configured` — at least one API config is present; generate docs.
+ * - `disabled` — a key was supplied but carries no config (`api: null`,
+ *   `apis: null`, `apis: []`). An explicit opt-in to an inert plugin, so a site
+ *   can pre-configure the plugin before any API model exists.
+ * - `missing` — neither key was supplied at all. A misconfiguration.
+ */
+export type ApiConfigMode = "configured" | "disabled" | "missing";
+
+/**
+ * Classify the `api` / `apis` options. Callers use `disabled` to skip doc
+ * generation without failing the build, and `missing` to fail it.
+ */
+export function classifyApiConfig(options: ApiConfigInput): ApiConfigMode {
+	if (options.api != null) {
+		return "configured";
+	}
+	if (options.apis != null && options.apis.length > 0) {
+		return "configured";
+	}
+	return "api" in options || "apis" in options ? "disabled" : "missing";
+}
+
+/**
  * Normalize llmsPlugin config to always be an LlmsPlugin object
  */
 export function normalizeLlmsPluginConfig(config: boolean | LlmsPlugin | undefined): LlmsPlugin {
