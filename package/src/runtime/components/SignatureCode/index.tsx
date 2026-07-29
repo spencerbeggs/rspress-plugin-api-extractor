@@ -26,7 +26,9 @@ export function SignatureCode({ hast, wrapped }: SignatureCodeProps): ReactEleme
 
 		const handleMouseOver = (e: Event): void => {
 			const target = e.target as HTMLElement;
-			const hover = target.closest?.(".twoslash-hover");
+			const hover = target.closest?.(
+				".twoslash-hover, .twoslash-query-persisted, .twoslash-query-line, .twoslash-error-hover",
+			);
 			if (!hover) return;
 
 			const popup = hover.querySelector(".twoslash-popup-container") as HTMLElement | null;

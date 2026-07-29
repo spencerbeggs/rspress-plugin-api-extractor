@@ -166,8 +166,8 @@ html.rp-dark {
 	/* --- Show Popup (hover, error-hover, query, persisted) --- */
 	& .twoslash-hover:hover .twoslash-popup-container,
 	& .twoslash-error-hover:hover .twoslash-popup-container,
-	& .twoslash-query-persisted .twoslash-popup-container,
-	& .twoslash-query-line .twoslash-popup-container {
+	& .twoslash-query-persisted:hover .twoslash-popup-container,
+	& .twoslash-query-line:hover .twoslash-popup-container {
 		opacity: 1;
 		pointer-events: auto;
 		/* Expand from collapsed hidden state */
@@ -186,16 +186,16 @@ html.rp-dark {
 		transition: opacity 0.3s;
 	}
 
-	/* --- Query Persisted Position (// ^? annotations, always visible inline) --- */
-	& .twoslash-query-persisted .twoslash-popup-container {
+	/* --- Query Persisted Position (// ^? annotations, visible on hover) --- */
+	& .twoslash-query-persisted:hover .twoslash-popup-container {
 		position: absolute;
 		left: 0;
 		z-index: 999;
 		transform: translateY(1.5em);
 	}
 
-	/* --- Query Line Position (// ^? annotations on their own line) --- */
-	& .twoslash-query-line .twoslash-popup-container {
+	/* --- Query Line Position (// ^? annotations on their own line, visible on hover) --- */
+	& .twoslash-query-line:hover .twoslash-popup-container {
 		position: relative;
 		left: auto;
 		top: auto;
