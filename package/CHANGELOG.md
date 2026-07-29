@@ -1,5 +1,15 @@
 # rspress-plugin-api-extractor
 
+## 0.8.1
+
+### Bug Fixes
+
+* Hides popovers by default in `with-api` blocks.
+
+### Patch Changes
+
+Thanks to [@spencerbeggs](https://github.com/spencerbeggs) for their contributions!
+
 ## 0.8.0
 
 ### Features
