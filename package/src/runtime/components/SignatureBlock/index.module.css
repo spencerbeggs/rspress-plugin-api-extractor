@@ -3,9 +3,12 @@
  * Wrapper styles for signature blocks
  */
 
+.blockWrapper {
+	padding: var(--api-spacing-xl) 0;
+}
+
 .block {
 	position: relative;
-	margin: var(--api-spacing-xl) 0;
 	border-radius: var(--api-border-radius);
 	overflow: visible;
 	border: 1px solid var(--api-color-border);
@@ -17,7 +20,8 @@ html.rp-dark .block {
 
 /* Connected to parameters table - remove bottom border radius */
 .hasParameters {
-	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom-width: 0;
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
 }

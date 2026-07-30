@@ -15,9 +15,11 @@ import type { MdxJsxAttributeValueExpression, MdxJsxFlowElement } from "mdast-ut
 import type { ShikiTransformer } from "shiki";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
+import { generateShikiHast } from "./markdown/shiki-utils.js";
 import type { PluginEvent } from "./observability/events.js";
 import { PluginEvent as PE } from "./observability/events.js";
 import { TwoslashManager } from "./twoslash-transformer.js";
+import { VfsRegistry } from "./vfs-registry.js";
 
 /** Module-level emitter injected by plugin.ts at startup. */
 let emitEvent: (event: PluginEvent) => void = () => {};
@@ -103,9 +105,6 @@ function removeJsxAttrs(node: MdxJsxFlowElement, attrNames: string[]): void {
 		return !removeSet.has(attr.name);
 	});
 }
-
-import { generateShikiHast } from "./markdown/shiki-utils.js";
-import { VfsRegistry } from "./vfs-registry.js";
 
 /**
  * Remark plugin that processes API JSX components for browser rendering.

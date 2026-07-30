@@ -6,7 +6,6 @@ import { WrapSignatureButton } from "../buttons/WrapSignatureButton.js";
 import { SignatureCode } from "../SignatureCode/index.js";
 import { SignatureToolbar } from "../SignatureToolbar/index.js";
 import styles from "./index.module.css";
-
 /**
  * Props for {@link MemberSignature}.
  *
@@ -66,18 +65,20 @@ export function MemberSignature({
 	// Browser mode: return interactive component
 
 	return (
-		<div className={clsx(styles.block, hasParameters && styles.hasParameters)}>
-			<SignatureToolbar
-				heading={{
-					text: memberName,
-					...(id != null ? { id } : {}),
-					level: "h3",
-				}}
-				{...(summary != null ? { summary } : {})}
-				buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
-			/>
-			<SignatureCode hast={hast} wrapped={wrapped} />
-		</div>
+		<section className={clsx(styles.blockWrapper, hasParameters && styles.hasParameters)}>
+			<div className={styles.block}>
+				<SignatureToolbar
+					heading={{
+						text: memberName,
+						...(id != null ? { id } : {}),
+						level: "h3",
+					}}
+					{...(summary != null ? { summary } : {})}
+					buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
+				/>
+				<SignatureCode hast={hast} wrapped={wrapped} />
+			</div>
+		</section>
 	);
 }
 

@@ -113,5 +113,6 @@
 		"editor.formatOnPaste": true
 	},
 	"markdown.styles": [".vscode/static/github-markdown.css"],
-	"vitest.disableWorkspaceWarning": true
+	"vitest.disableWorkspaceWarning": true,
+	"deno.enable": false
 }

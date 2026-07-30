@@ -38,21 +38,23 @@ export function SignatureBlock({
 	const { wrapped, toggleWrap } = useWrapToggle();
 
 	return (
-		<div className={clsx(styles.block, hasParameters && styles.hasParameters)}>
-			<SignatureToolbar
-				{...(heading && id
-					? {
-							heading: {
-								text: heading,
-								id,
-								level: "h2" as const,
-							},
-						}
-					: {})}
-				buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
-			/>
-			<SignatureCode hast={hast} wrapped={wrapped} />
-		</div>
+		<section id={id} className={clsx("rp-toc-include", styles.blockWrapper, hasParameters && styles.hasParameters)}>
+			<div className={styles.block}>
+				<SignatureToolbar
+					{...(heading && id
+						? {
+								heading: {
+									text: heading,
+									id,
+									level: "h2" as const,
+								},
+							}
+						: {})}
+					buttons={<WrapSignatureButton wrapped={wrapped} onToggle={toggleWrap} />}
+				/>
+				<SignatureCode hast={hast} wrapped={wrapped} />
+			</div>
+		</section>
 	);
 }
 

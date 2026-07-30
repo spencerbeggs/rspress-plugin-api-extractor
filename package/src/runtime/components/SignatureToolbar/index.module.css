@@ -43,6 +43,7 @@ html.rp-dark .toolbar {
 
 /* ===== Member Heading ===== */
 .memberHeading {
+	scroll-margin-top: 1.5rem;
 	position: relative;
 	margin: 0;
 	font-size: var(--api-font-size-md);
@@ -61,13 +62,14 @@ html.rp-dark .memberHeading {
 /* Anchor link positioning */
 .memberHeading :global(.rp-header-anchor) {
 	position: absolute;
-	left: -1.2rem;
+	left: -0.6rem;
+	top: -0.1rem;
+	font-size: 1.5rem;
 	opacity: 0;
 	transition:
 		color 0.25s,
 		opacity 0.25s;
 	font-weight: 500;
-	font-size: inherit;
 	text-decoration: none;
 	color: var(--rp-c-brand);
 }
@@ -77,12 +79,13 @@ html.rp-dark .memberHeading {
 }
 
 .memberHeading :global(.rp-header-anchor):hover {
-	border-bottom: 1px solid var(--rp-c-brand);
+	border-bottom: 0px solid var(--rp-c-brand);
 	opacity: 0.85;
 }
 
 /* h2 signature heading needs to match RSPress h2 styles */
 .memberHeadingH2 {
+	scroll-margin-top: 1.5rem;
 	font-size: var(--api-font-size-lg);
 	font-weight: 600;
 	margin-top: 0;

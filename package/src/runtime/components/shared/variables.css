@@ -22,8 +22,8 @@
 	--api-spacing-xs: 0.375rem;
 	--api-spacing-sm: 0.5rem;
 	--api-spacing-md: 0.75rem;
-	--api-spacing-lg: 1rem;
-	--api-spacing-xl: 1.5rem;
+	--api-spacing-lg: 1.15rem;
+	--api-spacing-xl: 1.15rem;
 
 	/* Border radius */
 	--api-border-radius: 6px;
@@ -69,6 +69,10 @@
 	font-style: var(--api-shiki-light-font-style, inherit);
 	font-weight: var(--api-shiki-light-font-weight, inherit);
 	text-decoration: var(--api-shiki-light-text-decoration, inherit);
+}
+
+.api-doc-code .shiki span.line {
+	padding-left: 0;
 }
 
 /* Dark mode: switch to --api-shiki-dark color */
