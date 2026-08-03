@@ -50,7 +50,7 @@
 		"prettier": "^3.9.6",
 		"react-markdown": "^10.1.0",
 		"shiki": "^4.4.1",
-		"type-registry-effect": "^2.3.1",
+		"type-registry-effect": "^2.3.2",
 		"typescript": "^6.0.3",
 		"unist-util-visit": "^5.1.0"
 	},
@@ -65,14 +65,14 @@
 		"@types/react-dom": "catalog:silk",
 		"@types/unist": "^3.0.3",
 		"mdast-util-mdx-jsx": "^3.2.0",
-		"react": "catalog:silk",
-		"react-dom": "catalog:silk",
+		"react": "catalog:build",
+		"react-dom": "catalog:build",
 		"unified": "^11.0.5"
 	},
 	"peerDependencies": {
-		"@rspress/core": "catalog:silkPeers",
-		"react": "catalog:silkPeers",
-		"react-dom": "catalog:silkPeers"
+		"@rspress/core": "catalog:docs",
+		"react": "catalog:docs:peers",
+		"react-dom": "catalog:docs:peers"
 	},
 	"engines": {
 		"node": ">=24.11.0"

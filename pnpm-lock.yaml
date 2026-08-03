@@ -34,6 +34,38 @@ settings:
   excludeLinksFromLockfile: false
 
 catalogs:
+  build:
+    '@types/node':
+      specifier: ^26.1.2
+      version: 26.1.2
+    react:
+      specifier: ^19.2.8
+      version: 19.2.8
+    react-dom:
+      specifier: ^19.2.8
+      version: 19.2.8
+    typescript:
+      specifier: ^7.0.2
+      version: 7.0.2
+  docs:
+    '@rspress/core':
+      specifier: ^2.0.19
+      version: 2.0.19
+    '@types/node':
+      specifier: ^26.1.2
+      version: 26.1.2
+    '@types/react':
+      specifier: ^19.2.18
+      version: 19.2.18
+    '@types/react-dom':
+      specifier: ^19.2.4
+      version: 19.2.4
+    react:
+      specifier: ^19.2.8
+      version: 19.2.8
+    react-dom:
+      specifier: ^19.2.8
+      version: 19.2.8
   effect:
     '@effect/platform-node':
       specifier: 4.0.0-beta.101
@@ -57,15 +89,6 @@ catalogs:
     '@types/react-dom':
       specifier: ^19.2.4
       version: 19.2.4
-    react:
-      specifier: ^19.2.8
-      version: 19.2.8
-    react-dom:
-      specifier: ^19.2.8
-      version: 19.2.8
-    typescript:
-      specifier: ^7.0.2
-      version: 7.0.2
 
 overrides:
   '@microsoft/api-extractor>typescript': ^6.0.3
@@ -93,10 +116,10 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@tsdown/css@0.22.14(jiti@2.6.1)(postcss@8.5.25)(tsdown@0.22.14)(tsx@4.23.4)(yaml@2.9.0))(@types/node@26.1.2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ioredis@5.11.1(supports-color@8.1.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tsx@4.23.4)(typescript@7.0.2)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 26.1.2
       typescript:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 7.0.2
     publishDirectory: dist/dev/pkg
 
@@ -106,10 +129,10 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@tsdown/css@0.22.14)(@types/node@26.1.2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ioredis@5.11.1(supports-color@8.1.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tsx@4.23.4)(typescript@7.0.2)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 26.1.2
       typescript:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 7.0.2
     publishDirectory: dist/dev/pkg
 
@@ -119,10 +142,10 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@tsdown/css@0.22.14)(@types/node@26.1.2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ioredis@5.11.1(supports-color@8.1.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tsx@4.23.4)(typescript@7.0.2)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 26.1.2
       typescript:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 7.0.2
     publishDirectory: dist/dev/pkg
 
@@ -132,10 +155,10 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@tsdown/css@0.22.14)(@types/node@26.1.2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ioredis@5.11.1(supports-color@8.1.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tsx@4.23.4)(typescript@7.0.2)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 26.1.2
       typescript:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 7.0.2
     publishDirectory: dist/dev/pkg
 
@@ -208,8 +231,8 @@ importers:
         specifier: ^4.4.1
         version: 4.4.1
       type-registry-effect:
-        specifier: ^2.3.1
-        version: 2.3.1(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3)
+        specifier: ^2.3.2
+        version: 2.3.2(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -248,10 +271,10 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0(supports-color@8.1.1)
       react:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:build
         version: 19.2.8(react@19.2.8)
       unified:
         specifier: ^11.0.5
@@ -265,22 +288,22 @@ importers:
         version: link:../../modules/kitchensink/dist/dev/pkg
     devDependencies:
       '@rspress/core':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2(supports-color@8.1.1))(supports-color@8.1.1)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 26.1.2
       '@types/react':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.18
       '@types/react-dom':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.4(@types/react@19.2.18)
       react:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8(react@19.2.8)
       rspress-plugin-api-extractor:
         specifier: workspace:*
@@ -293,22 +316,22 @@ importers:
         version: link:../../modules/effect-kit/dist/dev/pkg
     devDependencies:
       '@rspress/core':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2(supports-color@8.1.1))(supports-color@8.1.1)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 26.1.2
       '@types/react':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.18
       '@types/react-dom':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.4(@types/react@19.2.18)
       react:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8(react@19.2.8)
       rspress-plugin-api-extractor:
         specifier: workspace:*
@@ -321,22 +344,22 @@ importers:
         version: link:../../modules/kitchensink/dist/dev/pkg
     devDependencies:
       '@rspress/core':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2(supports-color@8.1.1))(supports-color@8.1.1)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 26.1.2
       '@types/react':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.18
       '@types/react-dom':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.4(@types/react@19.2.18)
       react:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8(react@19.2.8)
       rspress-plugin-api-extractor:
         specifier: workspace:*
@@ -352,22 +375,22 @@ importers:
         version: link:../../modules/kitchensink/dist/dev/pkg
     devDependencies:
       '@rspress/core':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2(supports-color@8.1.1))(supports-color@8.1.1)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 26.1.2
       '@types/react':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.18
       '@types/react-dom':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.4(@types/react@19.2.18)
       react:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8(react@19.2.8)
       rspress-plugin-api-extractor:
         specifier: workspace:*
@@ -383,22 +406,22 @@ importers:
         version: link:../../modules/versioned-v2/dist/dev/pkg
     devDependencies:
       '@rspress/core':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2(supports-color@8.1.1))(supports-color@8.1.1)
       '@types/node':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 26.1.2
       '@types/react':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.18
       '@types/react-dom':
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.4(@types/react@19.2.18)
       react:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8
       react-dom:
-        specifier: catalog:silk
+        specifier: catalog:docs
         version: 19.2.8(react@19.2.8)
       rspress-plugin-api-extractor:
         specifier: workspace:*
@@ -4097,12 +4120,12 @@ packages:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
 
-  type-registry-effect@2.3.1:
-    resolution: {integrity: sha512-v5eA+DYnjKa1Zx0aVvbexZ/M4kvjIyng0MPT9u1/uhaUrgBhJe96Pdq8ir3TWju1Cet7TD2g7rE9aHE4kXyH5A==}
+  type-registry-effect@2.3.2:
+    resolution: {integrity: sha512-9BinOYl5f0Xyy1AVhNXh73m4eAUyRu1XEz+H3g/UF1A+/RCnF2GjDcFr17nPnLSnIAIG+7E01p7LWGicudSFww==}
     engines: {node: '>=24.11.0'}
     peerDependencies:
       '@effect/platform-node': 4.0.0-beta.101
-      '@effected/semver': ^0.2.0
+      '@effected/semver': ^0.3.0
       '@effected/store': ^0.1.1
       '@effected/tsconfig-json': ^0.4.0
       '@effected/xdg': ^0.1.7
@@ -8881,7 +8904,7 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  type-registry-effect@2.3.1(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3):
+  type-registry-effect@2.3.2(@effect/platform-node@4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1)))(@effected/semver@0.3.0(effect@4.0.0-beta.101))(@effected/store@0.1.2(effect@4.0.0-beta.101))(@effected/tsconfig-json@0.4.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/xdg@0.1.9(@effected/config-file@0.2.0(@effected/jsonc@0.5.1(effect@4.0.0-beta.101))(@effected/toml@0.3.1(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/yaml@0.6.0(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@effected/walker@0.3.3(@effected/glob@0.2.1(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(effect@4.0.0-beta.101))(@typescript/vfs@1.6.4(supports-color@8.1.1)(typescript@6.0.3))(effect@4.0.0-beta.101)(typescript@6.0.3):
     dependencies:
       '@effect/platform-node': 4.0.0-beta.101(effect@4.0.0-beta.101)(ioredis@5.11.1(supports-color@8.1.1))
       '@effected/semver': 0.3.0(effect@4.0.0-beta.101)
