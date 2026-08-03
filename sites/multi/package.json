@@ -14,12 +14,12 @@
 		"@modules/kitchensink": "workspace:*"
 	},
 	"devDependencies": {
-		"@rspress/core": "catalog:silk",
-		"@types/node": "catalog:silk",
-		"@types/react": "catalog:silk",
-		"@types/react-dom": "catalog:silk",
-		"react": "catalog:silk",
-		"react-dom": "catalog:silk",
+		"@rspress/core": "catalog:docs",
+		"@types/node": "catalog:docs",
+		"@types/react": "catalog:docs",
+		"@types/react-dom": "catalog:docs",
+		"react": "catalog:docs",
+		"react-dom": "catalog:docs",
 		"rspress-plugin-api-extractor": "workspace:*"
 	}
 }

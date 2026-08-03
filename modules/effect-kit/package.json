@@ -30,9 +30,9 @@
 		"effect": "catalog:effect"
 	},
 	"devDependencies": {
-		"@savvy-web/bundler": "^2.1.0",
-		"@types/node": "catalog:silk",
-		"typescript": "catalog:silk"
+		"@savvy-web/bundler": "^2.1.2",
+		"@types/node": "catalog:build",
+		"typescript": "catalog:build"
 	},
 	"publishConfig": {
 		"directory": "dist/dev/pkg",

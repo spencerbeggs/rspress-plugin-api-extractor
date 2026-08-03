@@ -30,12 +30,12 @@
 	"dependencies": {
 		"@effect/platform-node": "catalog:effect",
 		"@effect/sql-sqlite-node": "catalog:effect",
-		"@effected/semver": "^0.2.1",
+		"@effected/semver": "^0.3.0",
 		"@effected/store": "^0.1.2",
 		"@effected/tsconfig-json": "^0.4.0",
 		"@effected/xdg": "^0.1.9",
 		"@microsoft/api-extractor-model": "^7.33.10",
-		"@shikijs/twoslash": "^4.3.1",
+		"@shikijs/twoslash": "^4.4.1",
 		"@typescript/vfs": "^1.6.4",
 		"api-extractor-llms": "^0.2.0",
 		"clsx": "^2.1.1",
@@ -49,15 +49,15 @@
 		"open": "^11.0.0",
 		"prettier": "^3.9.6",
 		"react-markdown": "^10.1.0",
-		"shiki": "^4.3.1",
-		"type-registry-effect": "^2.3.1",
+		"shiki": "^4.4.1",
+		"type-registry-effect": "^2.3.2",
 		"typescript": "^6.0.3",
 		"unist-util-visit": "^5.1.0"
 	},
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "catalog:silk",
-		"@savvy-web/rspress-builder": "^1.1.0",
+		"@savvy-web/rspress-builder": "^1.1.2",
 		"@types/hast": "^3.0.5",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "catalog:silk",
@@ -65,14 +65,14 @@
 		"@types/react-dom": "catalog:silk",
 		"@types/unist": "^3.0.3",
 		"mdast-util-mdx-jsx": "^3.2.0",
-		"react": "catalog:silk",
-		"react-dom": "catalog:silk",
+		"react": "catalog:build",
+		"react-dom": "catalog:build",
 		"unified": "^11.0.5"
 	},
 	"peerDependencies": {
-		"@rspress/core": "catalog:silkPeers",
-		"react": "catalog:silkPeers",
-		"react-dom": "catalog:silkPeers"
+		"@rspress/core": "catalog:docs",
+		"react": "catalog:docs:peers",
+		"react-dom": "catalog:docs:peers"
 	},
 	"engines": {
 		"node": ">=24.11.0"
