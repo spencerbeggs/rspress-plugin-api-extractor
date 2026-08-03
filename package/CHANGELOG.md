@@ -1,5 +1,20 @@
 # rspress-plugin-api-extractor
 
+## 0.8.2
+
+### Dependencies
+
+* | Dependency        | Type           | Action  | From   | To     |                                                                            |
+  | ----------------- | -------------- | ------- | ------ | ------ | -------------------------------------------------------------------------- |
+  | @effected/semver  | dependency     | updated | ^0.2.1 | ^0.3.0 |                                                                            |
+  | @shikijs/twoslash | dependency     | updated | ^4.3.1 | ^4.4.1 |                                                                            |
+  | shiki             | dependency     | updated | ^4.3.1 | ^4.4.1 |                                                                            |
+  | @rspress/core     | peerDependency | updated | 2.0.18 | 2.0.19 | [#124][#124] Thanks [@spencerbeggs](https://github.com/apps/spencerbeggs)! |
+
+### Patch Changes
+
+[#124]: https://github.com/spencerbeggs/rspress-plugin-api-extractor/pull/124
+
 ## 0.8.1
 
 ### Bug Fixes
