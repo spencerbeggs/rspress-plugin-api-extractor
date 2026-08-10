@@ -43,7 +43,7 @@
 		"gray-matter": "^4.0.3",
 		"hast-util-to-jsx-runtime": "^2.3.6",
 		"image-size": "^2.0.2",
-		"ioredis": "^5.7.0",
+		"ioredis": "^6.0.0",
 		"mdast-util-from-markdown": "^2.0.3",
 		"mdast-util-to-hast": "^13.2.1",
 		"open": "^11.0.0",
