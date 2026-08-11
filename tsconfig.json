@@ -1,4 +1,11 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig.json",
+	"compilerOptions": {
+		// Matches every workspace tsconfig base (bundler/ecma.json, rspress-builder/plugin.json),
+		// which all set skipLibCheck; the root config was the sole exception. Required while
+		// effect@4.0.0-beta.107 ships a Schema.d.ts that publicly references SchemaAST.Sentinel,
+		// a type stripped from the published SchemaAST.d.ts as @internal (Effect-TS/effect#7187).
+		"skipLibCheck": true
+	},
 	"extends": ["@savvy-web/silk/tsconfig/node/root.json"]
 }

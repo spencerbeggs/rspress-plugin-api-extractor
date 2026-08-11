@@ -218,6 +218,7 @@ Upstream source for the frameworks this plugin builds on is vendored under `.rep
 | `.repos/twoslash` | v0.3.9 | Twoslash engine + notation semantics |
 | `.repos/shiki` | v4.3.1 | `@shikijs/twoslash` transformer + Shiki core |
 | `.repos/rsbuild` | v2.1.5 | `@rsbuild/core` (bundler under RSPress) + official docs |
+| `.repos/effect` | effect@4.0.0-beta.107 | Effect v4 core source + the `migration/` v3-to-v4 notes |
 
 ## Commands
 

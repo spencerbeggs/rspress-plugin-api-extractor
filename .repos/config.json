@@ -64,15 +64,45 @@
 				"website/docs/en"
 			],
 			"orientation": {
-				"startHere": "packages/core/src/index.ts",
 				"layout": "packages/core/src is @rsbuild/core: createRsbuild.ts / createCompiler.ts (entry flow), hooks.ts and pluginManager.ts (plugin system), rspackConfig.ts + plugins/ (how user config becomes rspack config), server/ (dev server), configChain.ts / mergeConfig.ts. website/docs/en is the official docs: config/ (every rsbuild config option), api/ (JS API + plugin API), guide/, plugins/.",
 				"keyPaths": {
 					"packages/core/src/rspackConfig.ts": "how rsbuild config is lowered to rspack config — where builderConfig options land",
 					"packages/core/src/pluginManager.ts": "rsbuild plugin system — hook registration and ordering",
 					"website/docs/en/config": "authoritative reference for the builderConfig surface RSPress exposes",
 					"website/docs/en/api": "JS API and plugin API docs"
-				}
+				},
+				"startHere": "packages/core/src/index.ts"
 			}
+		},
+		"effect": {
+			"url": "https://github.com/Effect-TS/effect",
+			"ref": "effect@4.0.0-beta.107",
+			"purpose": "Effect v4 authority: core source (packages/effect/src) and the v3-to-v4 migration notes (migration/); pinned to the installed effect version via the catalog:effect pin",
+			"sparse": [
+				"packages/effect/src",
+				"migration"
+			],
+			"orientation": {
+				"layout": "Sparse checkout of two trees. packages/effect/src is the effect core source: flat top-level modules (Effect.ts, Schema.ts, Context.ts, Layer.ts, FileSystem.ts, ...) plus internal/, testing/ and unstable/. In v4 the former separate packages merged into this core — @effect/platform's FileSystem is the top-level FileSystem.ts, and @effect/sql is unstable/sql. migration/ is the v3-to-v4 note set: v3-to-v4.md is the full rename ledger, with per-topic notes alongside it (schema.md, services.md, layer-memoization.md, error-handling.md, cause.md, ...). Note the sparse cut excludes test/ and typetest/ — source and notes settle existence and signature, but only a runtime probe against the installed beta settles semantics.",
+				"keyPaths": {
+					"packages/effect/src/Schema.ts": "the Schema surface — the module that churns most between betas (TaggedError, Error/ErrorInstance, toArbitrary, SchemaIssue)",
+					"packages/effect/src/Context.ts": "Context.Service tags — the v4 service-declaration form",
+					"packages/effect/src/Layer.ts": "Layer composition and memoization",
+					"packages/effect/src/FileSystem.ts": "FileSystem, merged into core from the former @effect/platform",
+					"packages/effect/src/unstable/sql": "the SQL modules (SqlClient, Migrator), merged into core from the former @effect/sql",
+					"migration/v3-to-v4.md": "the authoritative v3-to-v4 rename ledger",
+					"migration/schema.md": "Schema-specific migration notes"
+				},
+				"startHere": "packages/effect/src/index.ts"
+			},
+			"notes": [
+				{
+					"id": "n-e2e3",
+					"date": "2026-08-11",
+					"ref": "effect@4.0.0-beta.107",
+					"note": "Re-pin target: the v4 betas are tagged in the MAIN Effect-TS/effect repo as `effect@<version>` (e.g. `effect@4.0.0-beta.107` -> 3c495ae), NOT in Effect-TS/effect-smol — effect-smol has no beta.10x tags at all, despite being where the v4 rewrite originally lived. Confirm the tag exists with `git ls-remote --tags https://github.com/Effect-TS/effect | grep 'effect@<version>'` before pinning. This is a monorepo, so sibling packages carry their own tags; verify a pin with `git rev-parse HEAD` inside the checkout against `git ls-files -s .repos/effect`, never `git describe --tags`."
+				}
+			]
 		}
 	}
 }

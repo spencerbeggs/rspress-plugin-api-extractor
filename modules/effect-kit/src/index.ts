@@ -54,7 +54,7 @@ export interface AcceptanceMetrics {
  * Error raised when an agent cannot be located.
  * @public
  */
-export class AgentNotFoundError extends Schema.TaggedErrorClass<AgentNotFoundError>()("AgentNotFoundError", {
+export class AgentNotFoundError extends Schema.TaggedError<AgentNotFoundError>()("AgentNotFoundError", {
 	agentId: Schema.String,
 }) {}
 
