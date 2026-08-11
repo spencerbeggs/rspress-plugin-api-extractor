@@ -40,12 +40,11 @@
 		"preview:i18n": "turbo run preview --filter=@sites/i18n",
 		"preview:multi": "turbo run preview --filter=@sites/multi",
 		"preview:versioned": "turbo run preview --filter=@sites/versioned",
-		"reset": "node lib/scripts/hard-reset.mts",
 		"test": "vitest run",
 		"test:bats": "bats --recursive plugin",
 		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest --watch",
-		"typecheck": "turbo run types:check //#types:check --log-prefix=none --log-order=grouped",
+		"typecheck": "turbo run types:check --log-prefix=none --log-order=grouped",
 		"types:check": "tsc --noEmit"
 	},
 	"devDependencies": {
