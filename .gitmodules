@@ -14,3 +14,7 @@
 	path = .repos/rsbuild
 	url = https://github.com/web-infra-dev/rsbuild
 	shallow = true
+[submodule ".repos/effect"]
+	path = .repos/effect
+	url = https://github.com/Effect-TS/effect
+	shallow = true
