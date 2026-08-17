@@ -91,7 +91,7 @@ configurations. Each site depends on `rspress-plugin-api-extractor` via
 
 ## Effect-TS Architecture
 
-The plugin uses **Effect v4** (`effect@4.0.0-beta.98`, pinned through the
+The plugin uses **Effect v4** (`effect@4.0.0-rc.109`, pinned through the
 `catalog:effect` catalog) for all build orchestration. Key patterns:
 
 - **Services** in the Layer stack, declared as
@@ -218,7 +218,7 @@ Upstream source for the frameworks this plugin builds on is vendored under `.rep
 | `.repos/twoslash` | v0.3.9 | Twoslash engine + notation semantics |
 | `.repos/shiki` | v4.3.1 | `@shikijs/twoslash` transformer + Shiki core |
 | `.repos/rsbuild` | v2.1.5 | `@rsbuild/core` (bundler under RSPress) + official docs |
-| `.repos/effect` | effect@4.0.0-beta.107 | Effect v4 core source + the `migration/` v3-to-v4 notes |
+| `.repos/effect` | effect@4.0.0-rc.109 | Effect v4 core source + the `migration/` v3-to-v4 notes |
 
 ## Commands
 

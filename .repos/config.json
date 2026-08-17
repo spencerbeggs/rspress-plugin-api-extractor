@@ -76,7 +76,7 @@
 		},
 		"effect": {
 			"url": "https://github.com/Effect-TS/effect",
-			"ref": "effect@4.0.0-beta.107",
+			"ref": "effect@4.0.0-rc.109",
 			"purpose": "Effect v4 authority: core source (packages/effect/src) and the v3-to-v4 migration notes (migration/); pinned to the installed effect version via the catalog:effect pin",
 			"sparse": [
 				"packages/effect/src",
@@ -97,10 +97,10 @@
 			},
 			"notes": [
 				{
-					"id": "n-e2e3",
-					"date": "2026-08-11",
-					"ref": "effect@4.0.0-beta.107",
-					"note": "Re-pin target: the v4 betas are tagged in the MAIN Effect-TS/effect repo as `effect@<version>` (e.g. `effect@4.0.0-beta.107` -> 3c495ae), NOT in Effect-TS/effect-smol — effect-smol has no beta.10x tags at all, despite being where the v4 rewrite originally lived. Confirm the tag exists with `git ls-remote --tags https://github.com/Effect-TS/effect | grep 'effect@<version>'` before pinning. This is a monorepo, so sibling packages carry their own tags; verify a pin with `git rev-parse HEAD` inside the checkout against `git ls-files -s .repos/effect`, never `git describe --tags`."
+					"id": "n-580c",
+					"date": "2026-08-17",
+					"ref": "effect@4.0.0-rc.109",
+					"note": "Re-pin target: v4 pre-releases (beta and rc alike) are tagged in the MAIN Effect-TS/effect repo as `effect@<version>` (e.g. `effect@4.0.0-rc.109` -> b5946ec), NOT in Effect-TS/effect-smol — effect-smol has no 4.0.0 pre-release tags at all, despite being where the v4 rewrite originally lived. Confirm the tag exists with `git ls-remote --tags https://github.com/Effect-TS/effect | grep 'effect@<version>'` before pinning. This is a monorepo, so sibling packages carry their own tags; verify a pin with `git rev-parse HEAD` inside the checkout against `git ls-files -s .repos/effect`, never `git describe --tags`."
 				}
 			]
 		}

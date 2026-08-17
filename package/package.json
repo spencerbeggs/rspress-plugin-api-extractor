@@ -1,6 +1,6 @@
 {
 	"name": "rspress-plugin-api-extractor",
-	"version": "0.8.6",
+	"version": "0.8.7",
 	"private": true,
 	"description": "RSPress plugin for generating API documentation from TypeScript API Extractor models",
 	"keywords": ["rspress", "plugin", "api-extractor", "documentation", "typescript"],
@@ -30,10 +30,10 @@
 	"dependencies": {
 		"@effect/platform-node": "catalog:effect",
 		"@effect/sql-sqlite-node": "catalog:effect",
-		"@effected/semver": "^0.4.0",
-		"@effected/store": "^0.3.0",
-		"@effected/tsconfig-json": "^0.5.0",
-		"@effected/xdg": "^0.2.1",
+		"@effected/semver": "^0.5.0",
+		"@effected/store": "^0.4.0",
+		"@effected/tsconfig-json": "^0.6.0",
+		"@effected/xdg": "^0.3.0",
 		"@microsoft/api-extractor-model": "^7.33.10",
 		"@shikijs/twoslash": "^4.4.3",
 		"@typescript/vfs": "^1.6.4",
@@ -50,19 +50,19 @@
 		"prettier": "^3.9.6",
 		"react-markdown": "^10.1.0",
 		"shiki": "^4.4.3",
-		"type-registry-effect": "^2.3.4",
+		"type-registry-effect": "^2.3.5",
 		"typescript": "^6.0.3",
 		"unist-util-visit": "^5.1.0"
 	},
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
-		"@rspress/core": "catalog:silk",
-		"@savvy-web/rspress-builder": "^1.1.13",
+		"@rspress/core": "catalog:docs",
+		"@savvy-web/rspress-builder": "^1.1.15",
 		"@types/hast": "^3.0.5",
 		"@types/mdast": "^4.0.4",
-		"@types/node": "catalog:silk",
-		"@types/react": "catalog:silk",
-		"@types/react-dom": "catalog:silk",
+		"@types/node": "catalog:build",
+		"@types/react": "catalog:build",
+		"@types/react-dom": "catalog:build",
 		"@types/unist": "^3.0.3",
 		"mdast-util-mdx-jsx": "^3.2.0",
 		"react": "catalog:build",
@@ -70,7 +70,7 @@
 		"unified": "^11.0.5"
 	},
 	"peerDependencies": {
-		"@rspress/core": "catalog:docs",
+		"@rspress/core": "catalog:docs:peers",
 		"react": "catalog:docs:peers",
 		"react-dom": "catalog:docs:peers"
 	},
