@@ -24,7 +24,7 @@ The component paths in `plugin.ts` are a **zero-level** resolve to the published
 
 ### Effect Service Layer
 
-The plugin runs on **Effect v4** (`effect@4.0.0-beta.98`, pinned via `catalog:effect`). `plugin.ts` is a thin RSPress adapter (~530 lines) that wires an Effect `ManagedRuntime` with a composed `Layer` stack:
+The plugin runs on **Effect v4** (`effect@4.0.0-rc.109`, pinned via `catalog:effect`). `plugin.ts` is a thin RSPress adapter (~530 lines) that wires an Effect `ManagedRuntime` with a composed `Layer` stack:
 
 - `ConfigServiceLive` — resolves plugin options + RSPress config into build
   context (model loading, type resolution, highlighter creation)
