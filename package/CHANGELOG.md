@@ -1,5 +1,15 @@
 # rspress-plugin-api-extractor
 
+## 0.8.7
+
+### Maintenance
+
+* Upgrades to `effect@rc.109`
+
+### Patch Changes
+
+Thanks to [@spencerbeggs](https://github.com/spencerbeggs) for their contributions!
+
 ## 0.8.6
 
 ### Dependencies
