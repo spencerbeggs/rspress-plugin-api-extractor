@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { resolveEntryPoints } from "../src/multi-entry-resolver.js";
 
 function loadKitchensinkModel(): InstanceType<typeof ApiModel> {
-	const modelPath = resolve(import.meta.dirname, "../src/__fixtures__/kitchensink/kitchensink.api.json");
+	const modelPath = resolve(import.meta.dirname, "__fixtures__/kitchensink/kitchensink.api.json");
 	const model = new ApiModel();
 	model.loadPackage(modelPath);
 	return model;

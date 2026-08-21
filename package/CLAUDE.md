@@ -134,7 +134,6 @@ which the global biome rule would rewrite to `.js`.
 - `src/markdown/` — page generators (class, enum, function, interface, etc.)
 - `src/runtime/` — React components for SSG-compatible rendering
 - `src/runtime/components/` — UI components (SignatureBlock, etc.)
-- `src/__fixtures__/` — test fixtures (API model JSON, declarations)
 
 `model-loader.ts`, `formatter.ts`, the `ApiParser` TSDoc statics in `loader.ts`, and `MarkdownCrossLinker.addCrossLinks` are thin adapters over `api-extractor-llms`. Page generators, call sites, and `ApiExtractedPackage.extractPlainText` (a distinct `.d.ts` algorithm preserving `{@link}` and code fences) stay plugin-local.
 
@@ -147,7 +146,7 @@ pnpm vitest run package/            # Run all plugin tests
 pnpm vitest run package/__test__/   # Run only the canonical test directory
 ```
 
-`__test__/**/*.ts` is in this workspace's `tsconfig.json` `include`, so tests are typechecked by `pnpm typecheck`. Fixtures in `src/__fixtures__/`. Mock layers in `__test__/utils/layers.ts`.
+`__test__/**/*.ts` is in this workspace's `tsconfig.json` `include`, so tests are typechecked by `pnpm typecheck`. Fixtures in `__test__/__fixtures__/`. Mock layers in `__test__/utils/layers.ts`. Fixture-regeneration scripts in `__test__/scripts/` (e.g. `regenerate-declarations.ts`, run via `pnpm exec tsx`).
 
 ## Interactive Frontend Debugging
 

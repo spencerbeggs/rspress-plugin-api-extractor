@@ -15,7 +15,7 @@ import { MockSnapshotServiceLayer } from "./utils/layers.js";
 
 describe("generateApiDocs (Effect program)", () => {
 	it("generates docs for fixture model and populates crossLinkData + fileContextMap", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);

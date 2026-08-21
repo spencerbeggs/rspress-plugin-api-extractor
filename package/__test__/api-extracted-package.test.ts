@@ -5,7 +5,7 @@ import { VirtualPackage as VirtualPackageClass } from "type-registry-effect";
 import { describe, expect, it } from "vitest";
 import { ApiExtractedPackage } from "../src/api-extracted-package.js";
 
-const FIXTURES_DIR = path.join(import.meta.dirname, "../src/__fixtures__", "example-module");
+const FIXTURES_DIR = path.join(import.meta.dirname, "__fixtures__", "example-module");
 const API_MODEL_PATH = path.join(FIXTURES_DIR, "example-module.api.json");
 const EXPECTED_DTS_PATH = path.join(FIXTURES_DIR, "index.d.ts");
 
@@ -316,12 +316,7 @@ describe("ApiExtractedPackage", () => {
 	});
 
 	describe("abstract classes", () => {
-		const ABSTRACT_MODEL_PATH = path.join(
-			import.meta.dirname,
-			"../src/__fixtures__",
-			"abstract-class",
-			"abstract.api.json",
-		);
+		const ABSTRACT_MODEL_PATH = path.join(import.meta.dirname, "__fixtures__", "abstract-class", "abstract.api.json");
 		const generated = ApiExtractedPackage.fromApiModel(ABSTRACT_MODEL_PATH)
 			.generateVfs()
 			.get("node_modules/abstract-fixture/index.d.ts") as string;
@@ -339,7 +334,7 @@ describe("ApiExtractedPackage", () => {
 	});
 
 	describe("rollup alias collisions", () => {
-		const ALIAS_MODEL_PATH = path.join(import.meta.dirname, "../src/__fixtures__", "alias-collision", "alias.api.json");
+		const ALIAS_MODEL_PATH = path.join(import.meta.dirname, "__fixtures__", "alias-collision", "alias.api.json");
 		const generated = ApiExtractedPackage.fromApiModel(ALIAS_MODEL_PATH)
 			.generateVfs()
 			.get("node_modules/alias-fixture/index.d.ts") as string;

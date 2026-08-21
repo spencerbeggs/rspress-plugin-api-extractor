@@ -7,16 +7,7 @@ import { ClassPageGenerator } from "../../../src/markdown/page-generators/class-
 function loadFixtureMembers(): readonly ApiItem[] {
 	const model = new ApiModel();
 	const pkg = model.loadPackage(
-		path.join(
-			import.meta.dirname,
-			"..",
-			"..",
-			"..",
-			"src",
-			"__fixtures__",
-			"synthetic-base",
-			"synthetic-base.api.json",
-		),
+		path.join(import.meta.dirname, "..", "..", "__fixtures__", "synthetic-base", "synthetic-base.api.json"),
 	);
 	const entryPoint = pkg.entryPoints[0];
 	if (!entryPoint) throw new Error("fixture has no entry point");

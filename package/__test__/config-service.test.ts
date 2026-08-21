@@ -11,7 +11,7 @@ import { TypeRegistryService } from "../src/services/TypeRegistryService.js";
 import { ShikiCrossLinker } from "../src/shiki-transformer.js";
 import { MockTypeRegistryServiceLayer } from "./utils/layers.js";
 
-const fixtureModel = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+const fixtureModel = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 
 const makeTestLayer = (options: PluginOptions) =>
 	Layer.provideMerge(
