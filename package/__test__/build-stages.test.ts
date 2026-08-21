@@ -73,7 +73,7 @@ describe("build-stages types", () => {
 
 describe("prepareWorkItems", () => {
 	it("returns work items and cross-link data from fixture API model", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
@@ -96,7 +96,7 @@ describe("prepareWorkItems", () => {
 	});
 
 	it("returns empty arrays for empty categories", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const result = prepareWorkItems({
 			apiPackage,
@@ -110,9 +110,7 @@ describe("prepareWorkItems", () => {
 
 	it("generates companion pages cleanly and resolves the bare cross-link to the value page", () => {
 		const model = new ApiModel();
-		const pkg = model.loadPackage(
-			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
-		);
+		const pkg = model.loadPackage(path.join(import.meta.dirname, "__fixtures__", "effect-kit", "effect-kit.api.json"));
 		const { workItems, crossLinkData } = prepareWorkItems({
 			apiPackage: pkg,
 			categories: DEFAULT_CATEGORIES,
@@ -137,9 +135,7 @@ describe("prepareWorkItems", () => {
 
 	it("emits RouteCollisionDetected via the sync-island seam before throwing", () => {
 		const model = new ApiModel();
-		const pkg = model.loadPackage(
-			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
-		);
+		const pkg = model.loadPackage(path.join(import.meta.dirname, "__fixtures__", "effect-kit", "effect-kit.api.json"));
 		// Force the companion `variables`/`types` categories to share one folder so a
 		// genuine ActionSeverity Variable + TypeAlias pair (see the companion-pattern
 		// test above) collides on the same route. Real fixture items, no mocked
@@ -182,9 +178,7 @@ describe("prepareWorkItems", () => {
 
 	it("preserves the route-collision error when the emitter throws", () => {
 		const model = new ApiModel();
-		const pkg = model.loadPackage(
-			path.join(import.meta.dirname, "..", "src", "__fixtures__", "effect-kit", "effect-kit.api.json"),
-		);
+		const pkg = model.loadPackage(path.join(import.meta.dirname, "__fixtures__", "effect-kit", "effect-kit.api.json"));
 		const collidingCategories: Record<string, CategoryConfig> = {
 			...DEFAULT_CATEGORIES,
 			variables: { ...DEFAULT_CATEGORIES.variables, folderName: "type" },
@@ -210,7 +204,7 @@ describe("prepareWorkItems", () => {
 	it("inlines synthetic base declarations instead of paging them", () => {
 		const model = new ApiModel();
 		const pkg = model.loadPackage(
-			path.join(import.meta.dirname, "..", "src", "__fixtures__", "synthetic-base", "synthetic-base.api.json"),
+			path.join(import.meta.dirname, "__fixtures__", "synthetic-base", "synthetic-base.api.json"),
 		);
 		const { workItems, crossLinkData } = prepareWorkItems({
 			apiPackage: pkg,
@@ -711,7 +705,7 @@ describe("cleanupAndCommit", () => {
 
 describe("generateSinglePage", () => {
 	it("generates a page result with valid hashes", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
@@ -774,7 +768,7 @@ describe("generateSinglePage", () => {
 	});
 
 	it("marks unchanged when snapshot hashes match", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
@@ -825,7 +819,7 @@ describe("generateSinglePage", () => {
 	});
 
 	it("routes qualified namespace members whose simple name matches the category folder", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/qualified-alias/qualified-alias.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/qualified-alias/qualified-alias.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
@@ -963,7 +957,7 @@ describe("writeSingleFile", () => {
 
 describe("Stream pipeline (native)", () => {
 	it("streams items through generate → write → fold", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);
@@ -1006,7 +1000,7 @@ describe("Stream pipeline (native)", () => {
 	});
 
 	it("includes unchanged files in results when snapshots match", async () => {
-		const modelPath = path.join(import.meta.dirname, "../src/__fixtures__/example-module/example-module.api.json");
+		const modelPath = path.join(import.meta.dirname, "__fixtures__/example-module/example-module.api.json");
 		const { apiPackage } = await ApiModelLoader.loadApiModel(modelPath);
 		const resolver = new CategoryResolver();
 		const categories = resolver.mergeCategories(DEFAULT_CATEGORIES, undefined);

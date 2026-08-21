@@ -7,7 +7,7 @@ import { SourceMapGenerator } from "../src/source-map-generator.js";
 describe("SourceMapGenerator", () => {
 	const apiModel = new ApiModel();
 	const apiPackage = apiModel.loadPackage(
-		path.join(import.meta.dirname, "../src/__fixtures__/kitchensink/kitchensink.api.json"),
+		path.join(import.meta.dirname, "__fixtures__/kitchensink/kitchensink.api.json"),
 	);
 	const entryPoint = apiPackage.entryPoints[0];
 

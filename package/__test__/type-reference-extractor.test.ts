@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { ImportStatement } from "../src/type-reference-extractor.js";
 import { TypeReferenceExtractor } from "../src/type-reference-extractor.js";
 
-const fixtureModel = path.join(import.meta.dirname, "../src/__fixtures__/kitchensink/kitchensink.api.json");
+const fixtureModel = path.join(import.meta.dirname, "__fixtures__/kitchensink/kitchensink.api.json");
 
 /**
  * Build a mock excerpt Reference token. Pass `canonicalRef: null` to simulate

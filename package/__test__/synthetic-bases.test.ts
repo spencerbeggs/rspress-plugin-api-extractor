@@ -6,7 +6,7 @@ import { BASE_CLASS_ANCHOR, detectSyntheticBases } from "../src/synthetic-bases.
 
 function loadFixtureMembers(fixture: string): readonly ApiItem[] {
 	const model = new ApiModel();
-	const pkg = model.loadPackage(path.join(import.meta.dirname, "..", "src", "__fixtures__", fixture));
+	const pkg = model.loadPackage(path.join(import.meta.dirname, "__fixtures__", fixture));
 	const entryPoint = pkg.entryPoints[0];
 	if (!entryPoint) throw new Error(`fixture ${fixture} has no entry point`);
 	return entryPoint.members;
