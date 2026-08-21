@@ -1,5 +1,17 @@
 # rspress-plugin-api-extractor
 
+## 0.8.8
+
+### Dependencies
+
+* | Dependency                     | Type       | Action  | From     | To       |                                                                            |
+  | ------------------------------ | ---------- | ------- | -------- | -------- | -------------------------------------------------------------------------- |
+  | @microsoft/api-extractor-model | dependency | updated | ^7.33.10 | ^7.33.11 | [#148][#148] Thanks [@spencerbeggs](https://github.com/apps/spencerbeggs)! |
+
+### Patch Changes
+
+[#148]: https://github.com/spencerbeggs/rspress-plugin-api-extractor/pull/148
+
 ## 0.8.7
 
 ### Maintenance
