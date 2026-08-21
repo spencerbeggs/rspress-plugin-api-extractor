@@ -34,7 +34,7 @@
 		"@effected/store": "^0.4.0",
 		"@effected/tsconfig-json": "^0.6.0",
 		"@effected/xdg": "^0.3.0",
-		"@microsoft/api-extractor-model": "^7.33.10",
+		"@microsoft/api-extractor-model": "^7.33.11",
 		"@shikijs/twoslash": "^4.4.3",
 		"@typescript/vfs": "^1.6.4",
 		"api-extractor-llms": "^0.2.0",
@@ -57,7 +57,7 @@
 	"devDependencies": {
 		"@microsoft/tsdoc": "^0.16.0",
 		"@rspress/core": "catalog:docs",
-		"@savvy-web/rspress-builder": "^1.1.18",
+		"@savvy-web/rspress-builder": "^1.1.20",
 		"@types/hast": "^3.0.5",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "catalog:build",
